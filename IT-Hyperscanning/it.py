@@ -191,30 +191,27 @@ def mi_gaussian(s1: np.ndarray, s2: np.ndarray, is_epoched: bool) -> float:
     Args:
         s1            (np.ndarray): EEG time series 1
         s2            (np.ndarray): EEG time series 2
-        is_epoched          (bool): Whether the data is epoched. If True, data takes shape (n_epo, n_chan, n_samples); if False, data takes shape (n_chan, n_samples)
+        is_epoched          (bool): Whether the data is epoched. If True, s1 and s2 take shape (n_epo, n_chan, n_samples); if False, take shape (n_chan, n_samples).
 
     Returns:
                            (float): Gaussian mutual information between s1 and s2.
     """
 
-    n_epo = s1.shape[0] if is_epoched else 1
-    result = 0
-
     miCalcClass = JPackage("infodynamics.measures.continuous.gaussian").MutualInfoCalculatorMultiVariateGaussian
     miCalc = miCalcClass()
-    miCalc.initialise()
 
-    for epo_i in range(n_epo):
+    n_epo = s1.shape[0] if is_epoched else 1
 
-        X, Y = (s1[epo_i, :], s2[epo_i, :]) if is_epoched else (s1, s2)
+    if is_epoched:
+        X, Y = JArray(JDouble, 2)(s1.T), JArray(JDouble, 2)(s2.T) # shape: ([n_samples, n_chan])
+    else:
+        X, Y = JArray(JDouble, 1)(s1), JArray(JDouble, 1)(s2) # ([n_samples])
+    
+    miCalc.initialise(n_epo, n_epo)
+    miCalc.setObservations(X, Y)
+    result = miCalc.computeAverageLocalOfObservations()
 
-        sig1 = setup_JArray(X)
-        sig2 = setup_JArray(Y)
-        
-        miCalc.setObservations(sig1, sig2)
-        result += miCalc.computeAverageLocalOfObservations()
-
-    return result / n_epo
+    return result
 
 def entropy_symb(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, l: int, m: int) -> np.ndarray:
     """Calculate 3H symbolic Shannon entropic measures of two given time series signals
@@ -433,7 +430,6 @@ def te_ksg(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, optimise: bool = Fa
                         teCalcClass.AUTO_EMBED_METHOD_RAGWITZ)
         teCalc.setProperty(teCalcClass.PROP_K_SEARCH_MAX, "6")
         teCalc.setProperty(teCalcClass.PROP_TAU_SEARCH_MAX, "6")
-        teCalc.initialise()
 
         for i in tqdm(range(n_chan)):
             for j in range(n_chan):
@@ -443,6 +439,7 @@ def te_ksg(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, optimise: bool = Fa
                     s1 = setup_JArray(X)
                     s2 = setup_JArray(Y)
 
+                    teCalc.initialise()
                     teCalc.setObservations(s1, s2)
 
                     K_values.append(int(str(teCalc.getProperty(teCalcClass.K_PROP_NAME))))
@@ -479,7 +476,6 @@ def te_ksg(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, optimise: bool = Fa
     teCalc.setProperty("l_TAU", str(l_tau))
     teCalc.setProperty("DELAY", str(delay))
     teCalc.setProperty("k", str(kraskov_param))
-    teCalc.initialise() 
 
     for epo_i in range(n_epo):
 
@@ -488,6 +484,7 @@ def te_ksg(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, optimise: bool = Fa
         sig1 = setup_JArray(X)
         sig2 = setup_JArray(Y)
         
+        teCalc.initialise() 
         teCalc.setObservations(sig1, sig2)
 
         result += teCalc.computeAverageLocalOfObservations()
@@ -514,7 +511,6 @@ def te_kernel(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, k: int = 1, kern
     teCalcClass = JPackage("infodynamics.measures.continuous.kernel").TransferEntropyCalculatorKernel
     teCalc = teCalcClass()
     teCalc.setProperty("NORMALISE", "true") 
-    teCalc.initialise(k, kernel_width) 
 
     for epo_i in range(n_epo):
 
@@ -523,6 +519,7 @@ def te_kernel(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, k: int = 1, kern
         sig1 = setup_JArray(X)
         sig2 = setup_JArray(Y)
     
+        teCalc.initialise(k, kernel_width) 
         teCalc.setObservations(sig1, sig2)
 
         result += teCalc.computeAverageLocalOfObservations()
@@ -557,7 +554,6 @@ def te_gaussian(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, k: int = 1, k_
     teCalc.setProperty("l_TAU", str(l_tau))
     teCalc.setProperty("DELAY", str(delay))
     teCalc.setProperty("BIAS_CORRECTION", str(bias_correction).lower())
-    teCalc.initialise()
 
     for epo_i in range(n_epo):
 
@@ -566,6 +562,7 @@ def te_gaussian(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, k: int = 1, k_
         sig1 = setup_JArray(X)
         sig2 = setup_JArray(Y)
 
+        teCalc.initialise()
         teCalc.setObservations(sig1, sig2)
         result += teCalc.computeAverageLocalOfObservations()
 
@@ -589,7 +586,6 @@ def te_symbolic(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, k: int = 1) ->
     teCalcClass = JPackage("infodynamics.measures.continuous.symbolic").TransferEntropyCalculatorSymbolic
     teCalc = teCalcClass()
     teCalc.setProperty("k_HISTORY", str(k))
-    teCalc.initialise(2) # base = 2
 
     for epo_i in range(n_epo):
 
@@ -598,6 +594,7 @@ def te_symbolic(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, k: int = 1) ->
         sig1 = setup_JArray(X)
         sig2 = setup_JArray(Y)
 
+        teCalc.initialise(2) # base = 2
         teCalc.setObservations(sig1, sig2)
         result += teCalc.computeAverageLocalOfObservations()
 
