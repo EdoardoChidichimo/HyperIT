@@ -733,13 +733,8 @@ def cte_hist(s1: np.ndarray, s2: np.ndarray, s3: np.ndarray, is_epoched: bool, k
 
 
 def cte_ksg(s1: np.ndarray, s2: np.ndarray, s3: np.ndarray, is_epoched: bool, k: int = 1, k_tau: int = 1, l: int = 1, l_tau: int = 1, m: int = 1, m_tau: int = 1, delay: int = 1, cond_delay: int = 1, kraskov_param: int = 4, stat_sig_perm_num: int = 100) -> np.ndarray:
-    assert (s1.shape == s2.shape == s3.shape), "All signals passed to cte_[mode] should have the same shape"
-
+    
     n_epo = s1.shape[0] if is_epoched else 1
-    result = 0
-    distr_mean = 0
-    distr_std = 0
-    p_val = 0
 
     cteCalcClass = JPackage("infodynamics.measures.continuous.kraskov").ConditionalTransferEntropyCalculatorKraskov
     cteCalc = cteCalcClass()
@@ -752,29 +747,42 @@ def cte_ksg(s1: np.ndarray, s2: np.ndarray, s3: np.ndarray, is_epoched: bool, k:
     cteCalc.setProperty("COND_DELAYS", str(cond_delay))
     cteCalc.setProperty("k", str(kraskov_param))
 
-    for epo_i in range(n_epo):
+    base_2 = np.log(2)
+    n_chan = s3.shape[1 if is_epoched else 0]
 
-        X, Y, Z = (s1[epo_i, :], s2[epo_i, :], s3[epo_i, :]) if is_epoched else (s1, s2, s3)
+    cte = np.zeros((n_chan, n_epo, 4)) # this stores the CTE values for channel Y --> channel X conditioned on Z; array is specified for every other channel Z and for each epoch [which conditioning channel, which epoch]: {te_result, distr_mean, distr_std, p_val}
 
-        source = setup_JArray(X)
-        dest = setup_JArray(Y)
-        cond = setup_JArray(Z)
+    for ch_z in range(s3.shape[1 if is_epoched else 0]):
+        
+        new_z = s3[:, ch_z, :] if is_epoched else s3[ch_z, :] 
 
-        cteCalc.initialise() 
-        cteCalc.setObservations(source, dest, cond)
-        result += cteCalc.computeAverageLocalOfObservations()
+        result = 0
+        distr_mean = 0
+        distr_std = 0
+        p_val = 0
 
-        stat_sig = cteCalc.computeSignificance(stat_sig_perm_num)
-        distr_mean += stat_sig.getMeanOfDistribution()
-        distr_std += stat_sig.getStdOfDistribution()
-        p_val += stat_sig.pValue
+        for epo_i in range(n_epo):
 
-    result /= (n_epo * np.log(2))
-    distr_mean /= n_epo
-    distr_std /= n_epo
-    p_val /= n_epo
+            X, Y, Z = (s1[epo_i, :], s2[epo_i, :], new_z[epo_i, :]) if is_epoched else (s1, s2, new_z)
 
-    return np.array((result, distr_mean, distr_std, p_val))
+            source = setup_JArray(X)
+            dest = setup_JArray(Y)
+            cond = setup_JArray(Z)
+
+            cteCalc.initialise() 
+            cteCalc.setObservations(source, dest, cond)
+            
+            result = cteCalc.computeAverageLocalOfObservations() * base_2
+            stat_sig = cteCalc.computeSignificance(stat_sig_perm_num)
+            distr_mean = stat_sig.getMeanOfDistribution()
+            distr_std = stat_sig.getStdOfDistribution()
+            p_val = stat_sig.pValue
+
+            cte[ch_z, epo_i] = [result, distr_mean, distr_std, p_val]
+
+    print("cte:",cte.shape)
+
+    return cte
 
 
 def cte_gaussian() -> float:
@@ -783,7 +791,7 @@ def cte_gaussian() -> float:
 
 
 
-def compute_complete_te(eeg_1: np.ndarray, eeg_2: np.ndarray = None, is_epoched: bool = True, mode: str = "kernel", **kwargs) -> np.ndarray:
+def compute_complete_te(eeg_1: np.ndarray, eeg_2: np.ndarray = None, is_epoched: bool = True, mode: str = "ksg", **kwargs) -> np.ndarray:
     """Computes complete transfer entropy by calculating conditional transfer entropy between two EEG signals conditioned on all other EEG signals.
 
     Args:
@@ -802,6 +810,7 @@ def compute_complete_te(eeg_1: np.ndarray, eeg_2: np.ndarray = None, is_epoched:
     signal2 = check_eeg_data(eeg_2, is_epoched) if inter_brain else signal1
 
     n_chan = signal1.shape[1 if is_epoched else 0]
+    ch_axis = 1 if is_epoched else 0 # which axis represents channels
 
     cte_estimation_methods = {
         "hist": cte_hist,
@@ -810,12 +819,42 @@ def compute_complete_te(eeg_1: np.ndarray, eeg_2: np.ndarray = None, is_epoched:
     }
 
     if mode not in cte_estimation_methods:
-        raise ValueError(f"Unsupported mode '{mode}'. Supported modes are: {list(te_estimation_methods.keys())}.")
+        raise ValueError(f"Unsupported mode '{mode}'. Supported modes are: {list(cte_estimation_methods.keys())}.")
     
     te_func = cte_estimation_methods[mode]
 
-    te_matrix_xy = np.zeros((n_chan, n_chan))
-    te_matrix_yx = np.zeros((n_chan, n_chan))
+    cte_matrix_xy = np.zeros((n_chan, n_chan))
+
+    for i in tqdm(range(n_chan)):
+
+        if inter_brain:
+            non_i = np.delete(signal1, i, axis=ch_axis) # if epoched, (epo, ch w/out i, s); if not, (ch w/out i, s)
+
+        for j in range(n_chan):
+
+            if inter_brain or i != j:
+                # remember that s2 = s1 for INTRA_brain
+                s1, s2 = (signal1[:, i, :], signal2[:, j, :]) if is_epoched else (signal1[i, :], signal2[j, :])
+                
+                if inter_brain:
+                    # Can put non_i definition here but not dependent on j-for-loop so left outside to save redundant computation
+                    non_j = np.delete(signal2, j, axis=ch_axis)
+                    s3 = np.concatenate((non_i, non_j), axis=ch_axis) # if epoched, (epo, 2x(n_chan-1),s); if not, (2x(n_chan-1), s)
+
+                else:
+                    # has all non i and j channels of EEG data. s3: epoched (n_epo, n_chan w/out i or j, n_s) or not epoched (n_chan-2 w/out i or j, n_s)
+                    s3 = np.delete(signal1, [i, j], axis=ch_axis)
+
+                cte_matrix_xy[i, j] = te_func(s1, s2, s3, is_epoched, **kwargs)
+
+
+    return cte_matrix_xy
+                
+if __name__ == "__main__":
+    setup_JIDT(os.getcwd())
+    x = np.random.rand(32, 500)
+    y = np.random.rand(32, 500)
+    compute_complete_te(x, is_epoched=False, mode="ksg")
 
 
 
