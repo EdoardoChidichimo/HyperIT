@@ -752,7 +752,7 @@ def cte_ksg(s1: np.ndarray, s2: np.ndarray, s3: np.ndarray, is_epoched: bool, k:
 
     cte = np.zeros((n_chan, n_epo, 4)) # this stores the CTE values for channel Y --> channel X conditioned on Z; array is specified for every other channel Z and for each epoch [which conditioning channel, which epoch]: {te_result, distr_mean, distr_std, p_val}
 
-    for ch_z in range(s3.shape[1 if is_epoched else 0]):
+    for ch_z in tqdm(range(s3.shape[1 if is_epoched else 0])):
         
         new_z = s3[:, ch_z, :] if is_epoched else s3[ch_z, :] 
 
@@ -825,7 +825,7 @@ def compute_complete_te(eeg_1: np.ndarray, eeg_2: np.ndarray = None, is_epoched:
 
     cte_matrix_xy = np.zeros((n_chan, n_chan))
 
-    for i in tqdm(range(n_chan)):
+    for i in range(n_chan):
 
         if inter_brain:
             non_i = np.delete(signal1, i, axis=ch_axis) # if epoched, (epo, ch w/out i, s); if not, (ch w/out i, s)
@@ -852,9 +852,9 @@ def compute_complete_te(eeg_1: np.ndarray, eeg_2: np.ndarray = None, is_epoched:
                 
 if __name__ == "__main__":
     setup_JIDT(os.getcwd())
-    x = np.random.rand(32, 500)
+    x = np.random.rand(10, 32, 500)
     y = np.random.rand(32, 500)
-    compute_complete_te(x, is_epoched=False, mode="ksg")
+    compute_complete_te(x, is_epoched=True, mode="ksg")
 
 
 
