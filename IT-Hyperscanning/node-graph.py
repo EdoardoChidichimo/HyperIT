@@ -82,41 +82,42 @@ for t in range(1, n):
 
 
 
-# def epoch_it(data, n_epochs):
-#     if len(data) % n_epochs != 0:
-#         raise ValueError("The length of the time series must be divisible by the number of epochs.")
-#     epoch_length = len(data) // n_epochs
-#     return data.reshape(n_epochs, epoch_length)
+def epoch_it(data, n_epochs):
+    if len(data) % n_epochs != 0:
+        raise ValueError("The length of the time series must be divisible by the number of epochs.")
+    epoch_length = len(data) // n_epochs
+    return data.reshape(n_epochs, epoch_length)
 
 
-# A = epoch_it(A, 10)
-# B = epoch_it(B, 10)
-# C = epoch_it(C, 10)
-# D = epoch_it(D, 10)
-# E = epoch_it(E, 10)
-# F = epoch_it(F, 10)
+A = epoch_it(A, 10)
+B = epoch_it(B, 10)
+C = epoch_it(C, 10)
+D = epoch_it(D, 10)
+E = epoch_it(E, 10)
+F = epoch_it(F, 10)
 
 
     
-# setup_JIDT(os.getcwd())
+setup_JIDT(os.getcwd())
 
-# eeg_data = np.stack([A, B, C, D, E, F], axis = 1) # EPOCHED 10, 5, 100 (epo, ch, sample)
-# #eeg_data = np.vstack([A, B, C, D, E, F]) # UNEPOCHED 5, 1000 (ch, sample)
-
-# te, sigstats = compute_te(eeg_data, mode = 'ksg')
-# plot_it(te, sigstats, False, np.array(['A', 'B', 'C', 'D', 'E', 'F']))
+eeg_data = np.stack([A, B, C, D, E, F], axis = 1) # EPOCHED 10, 5, 100 (epo, ch, sample)
+#eeg_data = np.vstack([A, B, C, D, E, F]) # UNEPOCHED 5, 1000 (ch, sample)
 
 
+te, sigstats = compute_mi(eeg_data, mode = 'kernel')
+plot_it(te, sigstats, False, np.array(['A', 'B', 'C', 'D', 'E', 'F']))
 
 
-G = nx.DiGraph()
-G.add_nodes_from(['A', 'B', 'C', 'D', 'E', 'F'])
 
-edges = [('A', 'B', {'interaction': 'linear'}),
-         ('B', 'C', {'interaction': 'linear'}), ('B', 'E', {'interaction': 'linear'}),
-         ('A', 'E', {'interaction': 'non-linear'}), ('D', 'D', {'interaction': 'non-linear'}),
-         ('C', 'A', {'interaction': 'non-linear'}), ('D', 'C', {'interaction': 'non-linear'}),
-         ('E', 'A', {'interaction': 'non-linear'}), ('F', 'F', {'interaction': 'non-linear'})]
+
+# G = nx.DiGraph()
+# G.add_nodes_from(['A', 'B', 'C', 'D', 'E', 'F'])
+
+# edges = [('A', 'B', {'interaction': 'linear'}),
+#          ('B', 'C', {'interaction': 'linear'}), ('B', 'E', {'interaction': 'linear'}),
+#          ('A', 'E', {'interaction': 'non-linear'}), ('D', 'D', {'interaction': 'non-linear'}),
+#          ('C', 'A', {'interaction': 'non-linear'}), ('D', 'C', {'interaction': 'non-linear'}),
+#          ('E', 'A', {'interaction': 'non-linear'}), ('F', 'F', {'interaction': 'non-linear'})]
 
 # for u, v, interaction in edges:
 #     G.add_edge(u, v, interaction=interaction['interaction'])
