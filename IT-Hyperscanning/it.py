@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import stats
 from scipy.stats import mode
-from typing import List
+from typing import Tuple, List
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import os
@@ -114,7 +114,7 @@ def mi_hist(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, bins: int) -> floa
 
     return mi
     
-def mi_ksg(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, version: int = 1, kraskov_param: int = 4, stat_sig_perm_num: int = 100) -> np.ndarray:
+def mi_ksg(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, version: int = 1, kraskov_param: int = 4, stat_sig_perm_num: int = 100) -> Tuple[float, np.ndarray]:
     """Calculate mutual information between two time series using Kraskov-Stögbauer-Grassberger estimator 1 or 2
 
     Args:
@@ -128,7 +128,7 @@ def mi_ksg(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, version: int = 1, k
                                  (float): KSG mutual information between s1 and s2.
     """
     n_epo = s1.shape[0] if is_epoched else 1
-    result = 0
+    mi = np.zeros((n_epo, 4))
 
     miCalcClass = JPackage("infodynamics.measures.continuous.kraskov")\
                   .MutualInfoCalculatorMultiVariateKraskov1 if version == 1 else \
@@ -147,21 +147,21 @@ def mi_ksg(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, version: int = 1, k
 
         miCalc.initialise()
         miCalc.setObservations(sig1, sig2)
-        result += miCalc.computeAverageLocalOfObservations()
+
+        result = miCalc.computeAverageLocalOfObservations() * np.log(2)
 
         stat_sig = miCalc.computeSignificance(stat_sig_perm_num)
-        distr_mean += stat_sig.getMeanOfDistribution()
-        distr_std += stat_sig.getStdOfDistribution()
-        p_val += stat_sig.pValue
+        distr_mean = stat_sig.getMeanOfDistribution()
+        distr_std = stat_sig.getStdOfDistribution()
+        p_val = stat_sig.pValue
 
-    result /= (n_epo * np.log(2))
-    distr_mean /= n_epo
-    distr_std /= n_epo
-    p_val /= n_epo
+        mi[epo_i] = [result, distr_mean, distr_std, p_val]
 
-    return np.array((result, distr_mean, distr_std, p_val))
+    average_result = np.mean(mi[:, 0])
 
-def mi_kernel(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, kernel_width: float = 0.25, stat_sig_perm_num: int = 100) -> np.ndarray:
+    return average_result, mi
+
+def mi_kernel(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, kernel_width: float = 0.25, stat_sig_perm_num: int = 100) -> Tuple[float, np.ndarray]:
     """Calculate mutual information between two time series using a kernel estimator
     
     Args:
@@ -174,7 +174,7 @@ def mi_kernel(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, kernel_width: fl
                                  (float): Kernel mutual information between s1 and s2.
     """
     n_epo = s1.shape[0] if is_epoched else 1
-    result = 0
+    mi = np.zeros((n_epo, 4))
 
     miCalcClass = JPackage("infodynamics.measures.continuous.kernel").MutualInfoCalculatorMultiVariateKernel
     miCalc = miCalcClass()
@@ -189,19 +189,19 @@ def mi_kernel(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, kernel_width: fl
 
         miCalc.initialise()
         miCalc.setObservations(sig1, sig2)
-        result += miCalc.computeAverageLocalOfObservations()
+        
+        result = miCalc.computeAverageLocalOfObservations() * np.log(2)
 
         stat_sig = miCalc.computeSignificance(stat_sig_perm_num)
-        distr_mean += stat_sig.getMeanOfDistribution()
-        distr_std += stat_sig.getStdOfDistribution()
-        p_val += stat_sig.pValue
+        distr_mean = stat_sig.getMeanOfDistribution()
+        distr_std = stat_sig.getStdOfDistribution()
+        p_val = stat_sig.pValue
 
-    result /= (n_epo * np.log(2))
-    distr_mean /= n_epo
-    distr_std /= n_epo
-    p_val /= n_epo
+        mi[epo_i] = [result, distr_mean, distr_std, p_val]
 
-    return np.array((result, distr_mean, distr_std, p_val))
+    average_result = np.mean(mi[:, 0])
+
+    return average_result, mi
 
 def mi_gaussian(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, stat_sig_perm_num: int = 100) -> np.ndarray:
     """Calculate mutual information between two time series using Gaussian estimator
@@ -215,10 +215,12 @@ def mi_gaussian(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, stat_sig_perm_
                            (float): Gaussian mutual information between s1 and s2.
     """
 
-    miCalcClass = JPackage("infodynamics.measures.continuous.gaussian").MutualInfoCalculatorMultiVariateGaussian
-    miCalc = miCalcClass()
 
     n_epo = s1.shape[0] if is_epoched else 1
+    mi = np.zeros((n_epo, 4))
+
+    miCalcClass = JPackage("infodynamics.measures.continuous.gaussian").MutualInfoCalculatorMultiVariateGaussian
+    miCalc = miCalcClass()
 
     if is_epoched:
         X, Y = JArray(JDouble, 2)(s1.T), JArray(JDouble, 2)(s2.T) # shape: ([n_samples, n_chan])
@@ -227,14 +229,12 @@ def mi_gaussian(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, stat_sig_perm_
     
     miCalc.initialise(n_epo, n_epo)
     miCalc.setObservations(X, Y)
-    result = miCalc.computeAverageLocalOfObservations()
+    result = miCalc.computeAverageLocalOfObservations() * np.log(2)
 
     stat_sig = miCalc.computeSignificance(stat_sig_perm_num)
     distr_mean = stat_sig.getMeanOfDistribution()
     distr_std = stat_sig.getStdOfDistribution()
     p_val = stat_sig.pValue
-
-    result /= np.log(2)
 
     return np.array((result, distr_mean, distr_std, p_val))
 
@@ -334,7 +334,7 @@ def mi_symbolic(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, l: int = 1, m:
     return np.ndarray((mi))
 
 
-def compute_mi(eeg_1: np.ndarray, eeg_2: np.ndarray = None, is_epoched: bool = True, mode: str = "kernel",  **kwargs) -> np.ndarray:
+def compute_mi(eeg_1: np.ndarray, eeg_2: np.ndarray = None, mode: str = "kernel",  **kwargs) -> Tuple[np.ndarray, np.ndarray]:
     """Main function to compute mutual information between all EEG channel combinations, whether intra- or inter-brain. 
        Incoming data can be epoched or already epoch-averaged. 
        Different estimators (mode) available:
@@ -357,11 +357,13 @@ def compute_mi(eeg_1: np.ndarray, eeg_2: np.ndarray = None, is_epoched: bool = T
 
 
     inter_brain = eeg_2 is not None
+    is_epoched = eeg_1.ndim == 3 or (eeg_1.ndim == 3 and eeg_2.ndim == 3) 
 
     signal1 = check_eeg_data(eeg_1, is_epoched)
     signal2 = check_eeg_data(eeg_2, is_epoched) if inter_brain else signal1
 
     n_chan = signal1.shape[1 if is_epoched else 0]
+    n_epo = signal1.shape[0] if is_epoched else 1
     
 
     mi_estimation_methods = {
@@ -390,26 +392,23 @@ def compute_mi(eeg_1: np.ndarray, eeg_2: np.ndarray = None, is_epoched: bool = T
     mi_func = mi_estimation_methods[mode]
 
     mi_matrix = np.zeros((n_chan, n_chan))
-    mi_distr_mean = np.zeros((n_chan, n_chan))
-    mi_distr_std = np.zeros((n_chan, n_chan))
-    mi_p_val = np.zeros((n_chan, n_chan))
-    ## STORE ALL ABOVE IN ONE LARGE, 4-DIMENSTIONAL MATRIX
+    sigstats = np.zeros((n_chan, n_chan, n_epo, 4))
 
     for i in tqdm(range(n_chan)):
         start_j = 0 if inter_brain else i
         for j in range(start_j, n_chan):
             if inter_brain or i != j:
                 s1, s2 = (signal1[:, i, :], signal2[:, j, :]) if is_epoched else (signal1[i, :], signal2[j, :]) # whether to keep epochs
-                mi_matrix[i, j], mi_distr_mean[i,j], mi_distr_std[i,j], mi_p_val[i,j] = mi_func(s1, s2, is_epoched, **kwargs)
+                mi_matrix[i, j], sigstats[i,j] = mi_func(s1, s2, is_epoched, **kwargs)
                 if not inter_brain:
-                    mi_matrix[j, i] = mi_matrix[i, j] # or 0 if you want to avoid symmetry
+                    mi_matrix[j, i], sigstats[j,i] = mi_matrix[i, j], sigstats[i,j] # or 0 if you want to avoid symmetry
 
-    return mi_matrix
+    return mi_matrix, sigstats
 
 
 
 ## TRANSFER ENTROPY
-def te_ksg(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, optimise: bool = False, k: int = 1, k_tau: int = 1, l: int = 1, l_tau: int = 1, delay: int = 1, kraskov_param: int = 4) ->  np.ndarray:
+def te_ksg(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, optimise: bool = False, k: int = 1, k_tau: int = 1, l: int = 1, l_tau: int = 1, delay: int = 1, kraskov_param: int = 4, stat_sig_perm_num: int = 100) -> Tuple[float, np.ndarray]:
     """Calculates transfer entropy between 2 time series using Kraskov-Stögbauer-Grassberger (KSG) Estimator 
 
     Args:
@@ -428,7 +427,7 @@ def te_ksg(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, optimise: bool = Fa
                                (float): KSG TE estimation (s1->s2)
     """
 
-    def te_kraskov_find_optimal_parameters(eeg_1: np.ndarray, eeg_2: np.ndarray = None, is_epoched: bool = True, stat_sig_perm_num: int = 100) -> np.ndarray:
+    def te_kraskov_find_optimal_parameters(eeg_1: np.ndarray, eeg_2: np.ndarray = None, is_epoched: bool = True) -> np.ndarray:
         """Find the optimal k, k_tau, l, l_tau, and delay values for Kraskov Transfor Entropy estimation using the Ragwitz method
 
         Args:
@@ -494,7 +493,7 @@ def te_ksg(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, optimise: bool = Fa
         k, k_tau, l, l_tau, delay = te_kraskov_find_optimal_parameters(s1, s2, is_epoched)
 
     n_epo = s1.shape[0] if is_epoched else 1
-    result = 0
+    te = np.zeros((n_epo, 4))
 
     teCalcClass = JPackage("infodynamics.measures.continuous.kraskov").TransferEntropyCalculatorKraskov
     teCalc = teCalcClass()
@@ -515,21 +514,20 @@ def te_ksg(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, optimise: bool = Fa
         teCalc.initialise() 
         teCalc.setObservations(sig1, sig2)
 
-        result += teCalc.computeAverageLocalOfObservations()
+        result = teCalc.computeAverageLocalOfObservations() * np.log(2)
 
         stat_sig = teCalc.computeSignificance(stat_sig_perm_num)
-        distr_mean += stat_sig.getMeanOfDistribution()
-        distr_std += stat_sig.getStdOfDistribution()
-        p_val += stat_sig.pValue
+        distr_mean = stat_sig.getMeanOfDistribution()
+        distr_std = stat_sig.getStdOfDistribution()
+        p_val = stat_sig.pValue
 
-    result /= (n_epo * np.log(2))
-    distr_mean /= n_epo
-    distr_std /= n_epo
-    p_val /= n_epo
+        te[epo_i] = [result, distr_mean, distr_std, p_val]
 
-    return np.array((result, distr_mean, distr_std, p_val))
+    average_result = np.mean(te[:, 0])
 
-def te_kernel(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, k: int = 1, kernel_width: float = 0.5, stat_sig_perm_num: int = 100) -> np.ndarray:
+    return average_result, te
+
+def te_kernel(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, k: int = 1, kernel_width: float = 0.5, stat_sig_perm_num: int = 100) -> Tuple[float, np.ndarray]:
     """Calculates transfer entropy between 2 time series using kernel estimator
 
     Args:
@@ -544,7 +542,7 @@ def te_kernel(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, k: int = 1, kern
     """
 
     n_epo = s1.shape[0] if is_epoched else 1
-    result = 0
+    te = np.zeros((n_epo, 4))
 
     teCalcClass = JPackage("infodynamics.measures.continuous.kernel").TransferEntropyCalculatorKernel
     teCalc = teCalcClass()
@@ -560,21 +558,20 @@ def te_kernel(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, k: int = 1, kern
         teCalc.initialise(k, kernel_width) 
         teCalc.setObservations(sig1, sig2)
 
-        result += teCalc.computeAverageLocalOfObservations()
+        result = teCalc.computeAverageLocalOfObservations() * np.log(2)
 
         stat_sig = teCalc.computeSignificance(stat_sig_perm_num)
-        distr_mean += stat_sig.getMeanOfDistribution()
-        distr_std += stat_sig.getStdOfDistribution()
-        p_val += stat_sig.pValue
+        distr_mean = stat_sig.getMeanOfDistribution()
+        distr_std = stat_sig.getStdOfDistribution()
+        p_val = stat_sig.pValue
 
-    result /= (n_epo * np.log(2))
-    distr_mean /= n_epo
-    distr_std /= n_epo
-    p_val /= n_epo
+        te[epo_i] = [result, distr_mean, distr_std, p_val]
 
-    return np.array((result, distr_mean, distr_std, p_val))
+    average_result = np.mean(te[:, 0])
 
-def te_gaussian(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, k: int = 1, k_tau: int = 1, l: int = 1, l_tau: int = 1, delay: int = 1, bias_correction: bool = False, stat_sig_perm_num: int = 100) -> np.ndarray:
+    return average_result, te
+
+def te_gaussian(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, k: int = 1, k_tau: int = 1, l: int = 1, l_tau: int = 1, delay: int = 1, bias_correction: bool = False, stat_sig_perm_num: int = 100) -> Tuple[float, np.ndarray]:
     """Calculates transfer entropy between 2 time series using Gaussian estimator
 
     Args:
@@ -591,8 +588,9 @@ def te_gaussian(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, k: int = 1, k_
     Returns:
                                     (float): Gaussian TE estimation (s1->s2)
     """
+    
     n_epo = s1.shape[0] if is_epoched else 1
-    result = 0
+    te = np.zeros((n_epo, 4))
 
     teCalcClass = JPackage("infodynamics.measures.continuous.gaussian").TransferEntropyCalculatorGaussian
     teCalc = teCalcClass()
@@ -612,19 +610,19 @@ def te_gaussian(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, k: int = 1, k_
 
         teCalc.initialise()
         teCalc.setObservations(sig1, sig2)
-        result += teCalc.computeAverageLocalOfObservations()
+        
+        result = teCalc.computeAverageLocalOfObservations() * np.log(2)
 
         stat_sig = teCalc.computeSignificance(stat_sig_perm_num)
-        distr_mean += stat_sig.getMeanOfDistribution()
-        distr_std += stat_sig.getStdOfDistribution()
-        p_val += stat_sig.pValue
+        distr_mean = stat_sig.getMeanOfDistribution()
+        distr_std = stat_sig.getStdOfDistribution()
+        p_val = stat_sig.pValue
 
-    result /= (n_epo * np.log(2))
-    distr_mean /= n_epo
-    distr_std /= n_epo
-    p_val /= n_epo
+        te[epo_i] = [result, distr_mean, distr_std, p_val]
 
-    return np.array((result, distr_mean, distr_std, p_val))
+    average_result = np.mean(te[:, 0])
+
+    return average_result, te
 
 def te_symbolic(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, k: int = 1, stat_sig_perm_num: int = 100) -> np.ndarray:
     """Calculates Transfer Entropy between 2 Univariate Time Series using Symbolic Estimation (Staniek & Lehrnertz)
@@ -669,7 +667,7 @@ def te_symbolic(s1: np.ndarray, s2: np.ndarray, is_epoched: bool, k: int = 1, st
     return np.array((result, distr_mean, distr_std, p_val))
 
 
-def compute_te(eeg_1: np.ndarray, eeg_2: np.ndarray = None, is_epoched: bool = True, mode: str = "kernel", **kwargs) -> np.ndarray:
+def compute_te(eeg_1: np.ndarray, eeg_2: np.ndarray = None, mode: str = "kernel", **kwargs) -> Tuple[np.ndarray, np.ndarray]:
     """Main function to compute transfer entropy between all EEG channel combinations, whether intra- or inter-brain. 
        Incoming data can be epoched or already epoch-averaged. 
        Different estimators (mode) available:
@@ -680,9 +678,8 @@ def compute_te(eeg_1: np.ndarray, eeg_2: np.ndarray = None, is_epoched: bool = T
          -  Symbolic
          
     Args:
-        eeg_1                     (np.ndarray): Participant (1) EEG data 
+        eeg_1                     (np.ndarray): Participant (1) EEG data with shape: either (n_epo, n_chan, n_samples) or (n_chan, n_samples)
         eeg_2           (np.ndarray, optional): Participant 2 EEG data. Defaults to None.
-        is_epoched                      (bool): Whether the data is epoched. If True, data takes shape (n_epo, n_chan, n_samples); if False, data takes shape (n_chan, n_samples)
         mode                   (str, optional): Which estimator type to compute MI with. Defaults to "ksg".
 
     Returns:
@@ -690,11 +687,13 @@ def compute_te(eeg_1: np.ndarray, eeg_2: np.ndarray = None, is_epoched: bool = T
     """
 
     inter_brain = eeg_2 is not None
+    is_epoched = eeg_1.ndim == 3 or (eeg_1.ndim == 3 and eeg_2.ndim == 3) 
 
     signal1 = check_eeg_data(eeg_1, is_epoched)
     signal2 = check_eeg_data(eeg_2, is_epoched) if inter_brain else signal1
 
     n_chan = signal1.shape[1 if is_epoched else 0]
+    n_epo = signal1.shape[0] if is_epoched else 1
 
     te_estimation_methods = {
         "ksg": te_ksg,
@@ -710,21 +709,23 @@ def compute_te(eeg_1: np.ndarray, eeg_2: np.ndarray = None, is_epoched: bool = T
 
     te_matrix_xy = np.zeros((n_chan, n_chan))
     te_matrix_yx = np.zeros((n_chan, n_chan))
+    sigstats_xy = np.zeros((n_chan, n_chan, n_epo, 4))
+    sigstats_yx = np.zeros((n_chan, n_chan, n_epo, 4))
 
     for i in tqdm(range(n_chan)):
         for j in range(n_chan):
             if inter_brain or i != j: # avoid self-channel calculations for intra_brain condition
                 s1, s2 = (signal1[:, i, :], signal2[:, j, :]) if is_epoched else (signal1[i, :], signal2[j, :]) # whether to keep epochs
             
-                te_matrix_xy[i, j] = te_func(s1, s2, is_epoched, **kwargs)
+                te_matrix_xy[i, j], sigstats_xy[i,j] = te_func(s1, s2, is_epoched, **kwargs)
 
                 if inter_brain: # don't need to compute opposite matrix for intra-brain as we already loop through each channel combination including symmetric
-                    te_matrix_yx[i, j] = te_func(s2, s1, is_epoched, **kwargs)
-       
+                    te_matrix_yx[i, j], sigstats_yx[i,j] = te_func(s2, s1, is_epoched, **kwargs)
+    
     if inter_brain:
-        return te_matrix_xy, te_matrix_yx
+        return te_matrix_xy, te_matrix_yx, sigstats_xy, sigstats_yx
     else:
-        return te_matrix_xy
+        return te_matrix_xy, sigstats_xy
 
 
 
@@ -865,7 +866,7 @@ if __name__ == "__main__":
 
 ## VISUALISATION
 
-def plot_it(it_matrix: np.ndarray, inter_brain: bool, channel_names: List[str]):
+def plot_it(it_matrix: np.ndarray, sigstats: np.ndarray, inter_brain: bool, channel_names: List[str]):
     """Plots heatmap of mutual information or transfer entropy values for either intra-brain or inter-brain design.
 
     Args:
@@ -874,31 +875,83 @@ def plot_it(it_matrix: np.ndarray, inter_brain: bool, channel_names: List[str]):
         channel_names (List[str]): List of channel names of EEG signals. Either a single list for intra-brain or two lists for inter-brain. 
     """
 
+    p_threshold = 0.05
+
     if channel_names.ndim == 1 and not inter_brain:
         channel_names = [channel_names, channel_names]
 
+    n_epo = sigstats.shape[2]
+    unepoched = not(n_epo > 1)
+    title = 'Inter-Brain' if inter_brain else 'Intra-Brain'
 
-    plt.figure(figsize=(10, 8))
-    plt.matshow(it_matrix, fignum=1, cmap='viridis')  
-    plt.colorbar()
 
-    if inter_brain: 
-        plt.title('Inter-Brain', pad=20)
-        plt.xlabel('Participant 2 Channels (Target)')
-        plt.ylabel('Participant 1 Channels (Source)')
-    
-    else: 
-        plt.title('Intra-Brain', pad=20)
+    print("IT MATRIX SHAPE", it_matrix.shape)
+    print("SIGSTATS SHAPE:",sigstats.shape)
+    print("No. of EPOCHS:",n_epo)
+
+    ## check if sigstats is just a single value or a matrix (i.e., un-epoched or epochs maintained). If matrix, ask if to plot for every epoch or specific epochs.
+    if not unepoched: #i.e., if epoched
+        avg_across_epochs = False
+        print(f"{n_epo} epochs detected. Do you want to plot for all epochs or specific epochs?")
+        print("1. All epochs")
+        print("2. Specific epoch")
+        print("3. Average MI/TE across epochs")
+        choice = input("Enter choice: ")
+        if choice == "1":
+            print("Plotting for all epochs.")
+            epochs = range(n_epo)
+        elif choice == "2":
+            print(f"Choose from 1 to {sigstats.shape[2]}")
+            epo_choice = input("Enter epoch number(s): ")
+            selected_epochs = np.array([int(num.strip()) for num in epo_choice.replace(',', ' ').split()])
+            try:
+                epochs = [int(epo-1) for epo in selected_epochs]
+            except ValueError:
+                print("All epochs must be integer numbers. Please try again.")
+        elif choice == "3":
+            print("Plotting for average MI/TE across epochs. Note that p-values will not be shown.")
+            avg_across_epochs = True
+            epochs = [0]
+
+        else:
+            raise ValueError("Invalid choice. Please enter 1 or 2.")
+        
+    else:
+        print("Un-epoched data detected. Plotting for un-epoched data.")
+        avg_across_epochs = False
+        epochs = [0]
+
+    for epo_i in epochs:
+
+        
+        if avg_across_epochs or unepoched:
+            plt.matshow(it_matrix, cmap='BuPu')
+            plt.title(title, pad=20)
+            ## CANNOT SHOW P-VALUES FOR AVERAGED ACROSS EPOCHS
+        else:
+            plt.matshow(sigstats[:,:,epo_i,0], cmap='BuPu')
+            plt.title(f'{title}; Epoch {epo_i+1}', pad=20)
+            
+        if not avg_across_epochs:
+            for i in range(sigstats.shape[0]):
+                for j in range(sigstats.shape[1]):
+                    p_val = float(sigstats[i, j, epo_i, 3])
+                    if p_val < p_threshold and (not inter_brain and i != j):
+                        plt.text(j, i, f'p={p_val:.2f}', ha='center', va='center', color='white', fontsize=8, fontweight='bold')
+        
+        plt.colorbar()
         plt.xlabel('Target Channels')
         plt.ylabel('Source Channels')
+        plt.xticks(range(it_matrix.shape[0]), channel_names[1]) 
+        plt.yticks(range(it_matrix.shape[0]), channel_names[0])
+        plt.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
+        plt.tick_params(axis='y', which='both', right=False, left=False, labelleft=True)
+        
+        plt.show()
 
-    plt.xticks(range(it_matrix.shape[0]), channel_names[1], rotation=90) 
-    plt.yticks(range(it_matrix.shape[0]), channel_names[0])
-    plt.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
-    plt.tick_params(axis='y', which='both', right=False, left=False, labelleft=True)
-    plt.show()
+        highest = np.max(it_matrix)
+        channel_pair_with_highest = np.unravel_index(np.argmax(it_matrix), it_matrix.shape)
+        print(f"Strongest regions: (Source Channel {channel_names[0][channel_pair_with_highest[0]]} --> " +
+                                f" Target Channel {channel_names[1][channel_pair_with_highest[1]]}) = {highest}")
+        
 
-    highest = np.max(it_matrix)
-    channel_pair_with_highest = np.unravel_index(np.argmax(it_matrix), it_matrix.shape)
-    print(f"Strongest regions: (Source Channel {channel_names[0][channel_pair_with_highest[0]]} --> " +
-                             f" Target Channel {channel_names[1][channel_pair_with_highest[1]]}) = {highest}")
