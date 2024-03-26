@@ -104,7 +104,7 @@ eeg_data = np.stack([A, B, C, D, E, F], axis = 1) # EPOCHED 10, 5, 100 (epo, ch,
 #eeg_data = np.vstack([A, B, C, D, E, F]) # UNEPOCHED 5, 1000 (ch, sample)
 
 
-te, sigstats = compute_mi(eeg_data, mode = 'kernel')
+te, sigstats = compute_te(eeg_data, calc_sigstats=True, mode = 'kernel')
 plot_it(te, sigstats, False, np.array(['A', 'B', 'C', 'D', 'E', 'F']))
 
 

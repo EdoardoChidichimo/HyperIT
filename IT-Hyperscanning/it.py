@@ -24,6 +24,7 @@ def setup_JIDT(working_directory: str):
 	else:
 		exit("JVM has already started. Please exit by running shutdownJVM() in your Python console.")
 
+
 ## DATA-TYPE CHECKS
 def setup_JArray(a: np.ndarray) -> JArray:
     
@@ -735,16 +736,16 @@ def compute_te(eeg_1: np.ndarray, eeg_2: np.ndarray = None, calc_sigstats: bool 
                 s1, s2 = (signal1[:, i, :], signal2[:, j, :]) if is_epoched else (signal1[i, :], signal2[j, :]) # whether to keep epochs
             
                 try:
-                    te_matrix_xy[i, j], sigstats_xy[i, j] = te_func(s1, s2, is_epoched, **kwargs)
+                    te_matrix_xy[i, j], sigstats_xy[i, j] = te_func(s1, s2, calc_sigstats, is_epoched, **kwargs)
                 except TypeError:
-                    te_matrix_xy[i, j] = te_func(s1, s2, is_epoched, **kwargs)
+                    te_matrix_xy[i, j] = te_func(s1, s2, calc_sigstats, is_epoched, **kwargs)
                     sigstats_xy[i, j] = None 
 
                 if inter_brain: # don't need to compute opposite matrix for intra-brain as we already loop through each channel combination including symmetric
                     try:
-                        te_matrix_yx[i, j], sigstats_yx[i, j] = te_func(s2, s1, is_epoched, **kwargs)
+                        te_matrix_yx[i, j], sigstats_yx[i, j] = te_func(s2, s1, calc_sigstats, is_epoched, **kwargs)
                     except TypeError:
-                        te_matrix_yx[i, j] = te_func(s2, s1, is_epoched, **kwargs)
+                        te_matrix_yx[i, j] = te_func(s2, s1, calc_sigstats, is_epoched, **kwargs)
                         sigstats_yx[i, j] = None 
                     
     if inter_brain:
@@ -814,9 +815,14 @@ def compute_te(eeg_1: np.ndarray, eeg_2: np.ndarray = None, calc_sigstats: bool 
                 
 if __name__ == "__main__":
     setup_JIDT(os.getcwd())
-    x = np.random.rand(10, 32, 500)
-    y = np.random.rand(32, 500)
-    compute_complete_te(x, is_epoched=True, mode="ksg")
+
+
+def compute_PhiID_atoms():
+    ## Emailed Ceballos about code.
+    pass
+
+
+
 
 
 
