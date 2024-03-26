@@ -1,5 +1,6 @@
 /.DS_Store
 /infodynamics-dist-1.6.1
+IT-Hyperscanning/it_ineffecient.py
 IT-Hyperscanning/__pycache__/infotheory.cpython-311.pyc
 IT-Hyperscanning/__pycache__/it.cpython-311.pyc
 IT-Hyperscanning/cuda/.DS_Store
