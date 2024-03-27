@@ -7,23 +7,48 @@ import matplotlib.pyplot as plt
 import os
 
 from jpype import *
+from phyid.calculate import calc_PhiID
+from phyid.utils import PhiID_atoms_abbr
+
+
+
+def setup_JVM(working_directory: str) -> None:
+    if(not isJVMStarted()):
+        jarLocation = os.path.join(working_directory, "..", "..", "infodynamics.jar")
+        # Usually, just specifying the current working directory (cwd) would suffice; if not, use specific location, e.g., below
+        jarLocation = "/Users/edoardochidichimo/Desktop/MPhil_Code/IT-Hyperscanning/infodynamics.jar"
+
+        if (not(os.path.isfile(jarLocation))):
+            exit("infodynamics.jar not found (expected at " + os.path.abspath(jarLocation) + ") - are you running from demos/python?")
+
+        startJVM(getDefaultJVMPath(), "-ea", "-Djava.class.path=" + jarLocation)
+    
+def exit_JVM() -> None:
+    shutdownJVM()
+
 
 
 class HyperIT(ABC):
-    def __init__(self, data1: np.ndarray, data2: np.ndarray, channel_names: List[str]):
+    def __init__(self, data1: np.ndarray, data2: np.ndarray, channel_names: List[str], verbose: bool = False):
         
-        self.setup_JIDT(os.getcwd())
-        
+        setup_JVM(os.getcwd())
+
         self.data1: np.ndarray = data1
         self.data2: np.ndarray = data2
         self.channel_names: List[str] = channel_names
         self.inter_brain: bool = not np.array_equal(data1, data2)
         self.is_epoched: bool = data1.ndim == 3
         self.initialise_parameter = None
+        self.verbose = verbose
 
         self.check_data()
 
-        
+        if self.verbose:
+            if self.is_epoched:
+                print(f"Epoched data detected. Assuming each signal has shape ({self.n_epo} epochs, {self.n_chan} channels, {self.n_samples} time_points). Ready to conduct {'Inter-Brain' if self.inter_brain else 'Intra-Brain'} analysis.")
+            else:
+                print(f"Unepoched data detected. Assuming each signal has shape ({self.n_chan} channels, {self.n_samples} time_points). Ready to conduct {'Inter-Brain' if self.inter_brain else 'Intra-Brain'} analysis.")
+            
 
     def check_data(self):
 
@@ -51,21 +76,6 @@ class HyperIT(ABC):
         n_channels = self.data1.shape[1] if self.is_epoched else self.data1.shape[0]
         if any(len(names) != n_channels for names in self.channel_names[0]):
             raise ValueError("The number of channels in time-series data does not match the length of channel_names.")
-    
-    def setup_JIDT(self, working_directory: str):
-        if(not isJVMStarted()):
-            jarLocation = os.path.join(working_directory, "..", "..", "infodynamics.jar")
-            # Usually, just specifying the current working directory (cwd) would suffice; if not, use specific location, e.g., below
-            jarLocation = "/Users/edoardochidichimo/Desktop/MPhil_Code/IT-Hyperscanning/infodynamics.jar"
-
-            if (not(os.path.isfile(jarLocation))):
-                exit("infodynamics.jar not found (expected at " + os.path.abspath(jarLocation) + ") - are you running from demos/python?")
-
-            startJVM(getDefaultJVMPath(), "-ea", "-Djava.class.path=" + jarLocation)
-        
-        else:
-            shutdownJVM()
-            self.setup_JIDT(working_directory)
 
     @staticmethod
     def setup_JArray(a: np.ndarray) -> JArray:
@@ -76,6 +86,11 @@ class HyperIT(ABC):
             ja = JArray(JDouble, 1)(a.tolist())
         return ja
         
+    @staticmethod
+    def min_max_normalise(data: np.ndarray, new_min = 0, new_max = 1) -> np.ndarray:
+        return (data - np.min(data)) / (np.max(data) - np.min(data)) * (new_max - new_min) + new_min
+
+
     def mi_hist(self, s1: np.ndarray, s2: np.ndarray) -> float:
 
         @staticmethod
@@ -85,7 +100,7 @@ class HyperIT(ABC):
             fd_bins_X = np.ceil(np.ptp(X) / (2.0 * stats.iqr(X) * len(X)**(-1/3)))
             fd_bins_Y = np.ceil(np.ptp(Y) / (2.0 * stats.iqr(Y) * len(Y)**(-1/3)))
             fd_bins = int(np.ceil((fd_bins_X+fd_bins_Y)/2))
-            # print("Optimal frequency-distribution bin size for histogram estimator (à la Freedman-Diaconis Rule): ", fd_bins)
+            #print("Optimal frequency-distribution bin size for histogram estimator (à la Freedman-Diaconis Rule): ", fd_bins)
             return fd_bins
 
         pairwise = np.zeros((self.n_epo, 1))
@@ -183,67 +198,60 @@ class HyperIT(ABC):
         if self.estimator_type == 'histogram':
             self.estimator_name = 'Histogram/Binning Estimator'
             self.calc_sigstats = False # Temporary whilst I figure out how to get p-values for hist/bin estimator
-            print("Please not that p-values are not available for Histogram/Binning Estimator as this is not computed using JIDT. Work in progress...")
+            if self.verbose:
+                print("Please not that p-values are not available for Histogram/Binning Estimator as this is not computed using JIDT. Work in progress...")
 
         elif self.estimator_type == 'ksg1' or self.estimator_type == 'ksg':
             self.estimator_name = 'KSG Estimator (version 1)'
-            self.CalcClass = JPackage("infodynamics.measures.continuous.kraskov").MutualInfoCalculatorMultiVariateKraskov1
-            self.Calc = self.CalcClass()
+            self.Calc = JPackage("infodynamics.measures.continuous.kraskov").MutualInfoCalculatorMultiVariateKraskov1()
             self.Calc.setProperty("k", str(self.params.get('kraskov_param', 4)))
-            self.Calc.setProperty("NORMALISE", str(self.params.get('normalise', True)).lower()) 
 
         elif self.estimator_type == 'ksg2':
             self.estimator_name = 'KSG Estimator (version 2)'
-            self.CalcClass = JPackage("infodynamics.measures.continuous.kraskov").MutualInfoCalculatorMultiVariateKraskov2
-            self.Calc = self.CalcClass()
+            self.Calc = JPackage("infodynamics.measures.continuous.kraskov").MutualInfoCalculatorMultiVariateKraskov2()
             self.Calc.setProperty("k", str(self.params.get('kraskov_param', 4)))
-            self.Calc.setProperty("NORMALISE", str(self.params.get('normalise', True)).lower()) 
             
         elif self.estimator_type == 'kernel':
             self.estimator_name = 'Box Kernel Estimator'
-            self.CalcClass = JPackage("infodynamics.measures.continuous.kernel").MutualInfoCalculatorMultiVariateKernel
-            self.Calc = self.CalcClass()
-            self.Calc.setProperty("NORMALISE", str(self.params.get('normalise', True)))
+            self.Calc = JPackage("infodynamics.measures.continuous.kernel").MutualInfoCalculatorMultiVariateKernel()
             self.Calc.setProperty("KERNEL_WIDTH", str(self.params.get('kernel_width', 0.25)))
 
         elif self.estimator_type == 'gaussian':
             self.estimator_name = 'Gaussian Estimator'
-            self.CalcClass = JPackage("infodynamics.measures.continuous.gaussian").MutualInfoCalculatorMultiVariateGaussian
-            self.Calc = self.CalcClass()
+            self.Calc = JPackage("infodynamics.measures.continuous.gaussian").MutualInfoCalculatorMultiVariateGaussian()
 
         elif self.estimator_type == 'symbolic':
             self.estimator_name = 'Symbolic Estimator'
             self.calc_sigstats = False # Temporary whilst I figure out how to get p-values for symbolic estimator
-            print("Please not that p-values are not available for Symbolic Estimator as this is not computed using JIDT. Work in progress...")
+            if self.verbose:
+                print("Please not that p-values are not available for Symbolic Estimator as this is not computed using JIDT. Work in progress...")
 
         else:
             raise ValueError(f"Estimator type {self.estimator_type} not supported. Please choose from 'histogram', 'ksg1', 'ksg2', 'kernel', 'gaussian', 'symbolic'.")
+
+        if not self.estimator_type == 'histogram' and not self.estimator_type == 'symbolic':
+            self.Calc.setProperty("NORMALISE", str(self.params.get('normalise', True)))
 
     def which_te_estimator(self):
 
         if self.estimator_type == 'ksg' or self.estimator_type == 'ksg1' or self.estimator_type == 'ksg2':
             self.estimator_name = 'KSG Estimator'
-            self.CalcClass = JPackage("infodynamics.measures.continuous.kraskov").TransferEntropyCalculatorKraskov
-            self.Calc = self.CalcClass()
+            self.Calc = JPackage("infodynamics.measures.continuous.kraskov").TransferEntropyCalculatorKraskov()
             self.Calc.setProperty("k_HISTORY", str(self.params.get('k', 1)))
             self.Calc.setProperty("k_TAU", str(self.params.get('k_tau', 1)))
             self.Calc.setProperty("l_HISTORY", str(self.params.get('l', 1)))
             self.Calc.setProperty("l_TAU", str(self.params.get('l_tau', 1)))
             self.Calc.setProperty("DELAY", str(self.params.get('delay', 1)))
             self.Calc.setProperty("k", str(self.params.get('kraskov_param', 4)))
-            self.Calc.setProperty("NORMALISE", str(self.params.get('normalise', True)).lower())
             
         elif self.estimator_type == 'kernel':
             self.estimator_name = 'Box Kernel Estimator'
-            self.CalcClass = JPackage("infodynamics.measures.continuous.kernel").TransferEntropyCalculatorKernel
-            self.Calc = self.CalcClass()
+            self.Calc = JPackage("infodynamics.measures.continuous.kernel").TransferEntropyCalculatorKernel()
             self.initialise_parameter: Tuple = (self.params.get('k', 1), self.params.get('kernel_width', 0.5))
-            self.Calc.setProperty("NORMALISE", str(self.params.get('normalise', True)).lower()) 
 
         elif self.estimator_type == 'gaussian':
             self.estimator_name = 'Gaussian Estimator'
-            self.CalcClass = JPackage("infodynamics.measures.continuous.gaussian").TransferEntropyCalculatorGaussian
-            self.Calc = self.CalcClass()
+            self.Calc = JPackage("infodynamics.measures.continuous.gaussian").TransferEntropyCalculatorGaussian()
             self.Calc.setProperty("k_HISTORY", str(self.params.get('k', 1)))
             self.Calc.setProperty("k_TAU", str(self.params.get('k_tau', 1)))
             self.Calc.setProperty("l_HISTORY", str(self.params.get('l', 1)))
@@ -253,13 +261,14 @@ class HyperIT(ABC):
 
         elif self.estimator_type == 'symbolic':
             self.estimator_name = 'Symbolic Estimator'
-            self.CalcClass = JPackage("infodynamics.measures.continuous.symbolic").TransferEntropyCalculatorSymbolic
-            self.Calc = self.CalcClass()
+            self.Calc = JPackage("infodynamics.measures.continuous.symbolic").TransferEntropyCalculatorSymbolic()
             self.Calc.setProperty("k_HISTORY", str(self.params.get('k', 1)))
             self.initialise_parameter = (2)
 
         else:
             raise ValueError(f"Estimator type {self.estimator_type} not supported. Please choose from 'ksg', 'kernel', 'gaussian', or 'symbolic'.")
+
+        self.Calc.setProperty("NORMALISE", str(self.params.get('normalise', True)).lower()) 
 
 
     def estimate_it(self, s1: np.ndarray, s2: np.ndarray):
@@ -269,7 +278,7 @@ class HyperIT(ABC):
         for epo_i in range(self.n_epo):
             
             X, Y = (s1[epo_i, :], s2[epo_i, :]) if self.is_epoched else (s1, s2)
-            
+
             self.Calc.initialise(*self.initialise_parameter) if self.initialise_parameter else self.Calc.initialise()
             self.Calc.setObservations(self.setup_JArray(X), self.setup_JArray(Y))
 
@@ -308,8 +317,15 @@ class HyperIT(ABC):
                 print("Invalid choice. Defaulting to un-epoched data.")
 
         for epo_i in epochs:
+            
+            highest = np.max(it_matrix[:,:,epo_i,0])
+            channel_pair_with_highest = np.unravel_index(np.argmax(it_matrix[:,:,epo_i,0]), it_matrix[:,:,epo_i,0].shape)
+            if self.verbose:
+                print(f"Strongest regions: (Source Channel {self.channel_names[0][0][channel_pair_with_highest[0]]} --> " +
+                                         f" Target Channel {self.channel_names[1][0][channel_pair_with_highest[1]]}) = {highest}")
 
-            plt.matshow(it_matrix[:,:,epo_i,0], cmap='BuPu', vmin=0)
+            plt.figure(figsize=(12, 10))
+            plt.imshow(it_matrix[:,:,epo_i,0], cmap='BuPu', vmin=0, aspect='auto')
 
             if self.is_epoched and not choice == "3":
                 plt.title(f'{title}; Epoch {epo_i+1}', pad=20)
@@ -330,14 +346,8 @@ class HyperIT(ABC):
             plt.ylabel('Source Channels')
             plt.xticks(range(self.n_chan), self.channel_names[1][0], rotation=90) 
             plt.yticks(range(self.n_chan), self.channel_names[0][0])
-            plt.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
+            plt.tick_params(axis='x', which='both', bottom=False, top=False, labeltop=True)
             plt.tick_params(axis='y', which='both', right=False, left=False, labelleft=True)
-
-            highest = np.max(it_matrix[:,:,epo_i,0])
-            channel_pair_with_highest = np.unravel_index(np.argmax(it_matrix[:,:,epo_i,0]), it_matrix[:,:,epo_i,0].shape)
-            print(f"Strongest regions: (Source Channel {self.channel_names[0][0][channel_pair_with_highest[0]]} --> " +
-                                    f" Target Channel {self.channel_names[1][0][channel_pair_with_highest[1]]}) = {highest}")
-            
             plt.show()
     
 
@@ -433,28 +443,48 @@ class HyperIT(ABC):
 
 
 if __name__ == "__main__":
-    
-    np.random.seed(42)
-    n = 1000
 
-    A = np.zeros(n)
-    B = np.zeros(n)
-    C = np.zeros(n)
-    D = np.zeros(n)
-    E = np.zeros(n)
-    F = np.zeros(n)
-    A[0], B[0], C[0], D[0], E[0], F[0] = 0.1, 0.1, 0.1, 0.1, 0.1, 0.1
+    # np.random.seed(42)
+    # n = 1000
 
-    std_dev = 0.1
-    for t in range(1, n):
-        A[t] = np.sin(C[t-1] + E[t-1]) + np.random.normal(0, std_dev)
-        B[t] = 0.5 * A[t-1] + np.random.normal(0, std_dev)
-        C[t] = 0.3 * B[t-1] + np.exp(-D[t-1]) + np.random.normal(0, std_dev)
-        D[t] = D[t-1]**2 - 0.1 * D[t-1] + np.random.normal(0, std_dev)
-        E[t] = 0.7 * B[t-1] + np.cos(A[t-1]) + np.random.normal(0, std_dev)
-        F[t] = 3 * np.sin(F[t-1]) + np.random.normal(0, std_dev)
+    # A = np.zeros(n)
+    # B = np.zeros(n)
+    # C = np.zeros(n)
+    # D = np.zeros(n)
+    # E = np.zeros(n)
+    # F = np.zeros(n)
+    # A[0], B[0], C[0], D[0], E[0], F[0] = 0.1, 0.1, 0.1, 0.1, 0.1, 0.1
+
+    # std_dev = 0.1
+    # for t in range(1, n):
+    #     A[t] = np.sin(C[t-1] + E[t-1]) + np.random.normal(0, std_dev)
+    #     B[t] = 0.5 * A[t-1] + np.random.normal(0, std_dev)
+    #     C[t] = 0.3 * B[t-1] + np.exp(-D[t-1]) + np.random.normal(0, std_dev)
+    #     D[t] = D[t-1]**2 - 0.1 * D[t-1] + np.random.normal(0, std_dev)
+    #     E[t] = 0.7 * B[t-1] + np.cos(A[t-1]) + np.random.normal(0, std_dev)
+    #     F[t] = 3 * np.sin(F[t-1]) + np.random.normal(0, std_dev)
     
-        
+    
+    # atoms_res, calc_res = calc_PhiID(A, B, tau=1, kind="gaussian", redundancy="MMI")
+
+    # calc_L = np.array([atoms_res[_] for _ in PhiID_atoms_abbr])
+    # calc_A = np.mean(calc_L, axis=1)
+
+
+    # #print(calc_L.shape)
+    # print(calc_A)
+    # #print(calc_res.keys())
+    # print(atoms_res.keys())
+
+    # print(np.sum(calc_A)) # = calc_res.get("I_res").get("I_xy").mean()
+    #print(calc_res.get("I_res").keys()) # get("I_xytab"))
+
+    # x = source past
+    # y = target past
+    # a = source future
+    # b = target future
+
+
         
     # def epoch_it(data, n_epochs):
     #     if len(data) % n_epochs != 0:
@@ -477,12 +507,85 @@ if __name__ == "__main__":
     #data1 = np.vstack([A, B, C]) #  3, 1000 (ch, sample)
     #data = np.vstack([D, E, F])  #  3, 1000 (ch, sample)
 
+    
 
-    data = np.vstack([A, B, C, D, E, F])
-    channel_names = [['A', 'B', 'C', 'D', 'E', 'F'], ['A', 'B', 'C', 'D', 'E', 'F']]
+    # data = np.vstack([A, B, C, D, E, F])
+    # channel_names = [['A', 'B', 'C', 'D', 'E', 'F'], ['A', 'B', 'C', 'D', 'E', 'F']]
 
-    it = HyperIT(data, data, channel_names=channel_names)
-    it.compute_mi(estimator_type='gaussian', calc_sigstats=False, vis=True)
-    it.compute_te(estimator_type='gaussian', calc_sigstats=True, vis=True)
+    # it = HyperIT(data, data, channel_names=channel_names)
+    # it.compute_mi(estimator_type='gaussian', calc_sigstats=False, vis=True)
+    # it.compute_te(estimator_type='gaussian', calc_sigstats=True, vis=True)
     
     #te_matrix_xy, te_matrix_yx = it.compute_te()
+    # CORE
+    import io
+    from collections import OrderedDict
+    import requests
+
+    # DATA SCIENCE
+    import numpy as np
+    from scipy.stats import mode 
+
+    # HYPYP
+    from hypyp import prep 
+
+    # VISUALISATION
+    import matplotlib.pyplot as plt
+
+    # MNE
+    import mne
+
+    full_freq = { 'full_frq': [1, 48]}
+    freq_bands = OrderedDict(full_freq)
+
+    URL_TEMPLATE = "https://github.com/ppsp-team/HyPyP/blob/master/data/participant{}-epo.fif?raw=true"
+
+    def get_data(idx):
+        return io.BytesIO(requests.get(URL_TEMPLATE.format(idx)).content)
+
+    epo1 = mne.read_epochs(get_data(1), preload=True) 
+    epo2 = mne.read_epochs(get_data(2), preload=True)
+    mne.epochs.equalize_epoch_counts([epo1, epo2])
+
+    sampling_rate = epo1.info['sfreq']
+
+    icas = prep.ICA_fit([epo1, epo2], n_components=15, method='infomax', fit_params=dict(extended=True), random_state = 42)
+    cleaned_epochs_ICA = prep.ICA_choice_comp(icas, [epo1, epo2])
+    cleaned_epochs_AR, _ = prep.AR_local(cleaned_epochs_ICA, strategy="union", threshold=50.0, verbose=True)
+
+    preproc_S1, preproc_S2 = cleaned_epochs_AR
+    data_inter = np.array([preproc_S1, preproc_S2])
+
+    X = data_inter[0].transpose(1, 0, 2).reshape(data_inter[0].shape[1], -1)
+    Y = data_inter[1].transpose(1, 0, 2).reshape(data_inter[1].shape[1], -1)
+    channel_names = [[epo1.info['ch_names']], [epo2.info['ch_names']]]
+
+
+    fractions = np.arange(10, 110, 10)
+
+    for estimator in tqdm(['gaussian']):
+        
+        channel_pair_mi = {}
+
+        for fraction in fractions:
+
+            fraction_index = int(fraction * X.shape[1] / 100)
+            mi_matrix = HyperIT(X[:, :fraction_index], Y[:, :fraction_index], channel_names).compute_mi(estimator_type=estimator, calc_sigstats=False, vis=False)
+            
+            for i in range(mi_matrix.shape[0]):
+                for j in range(mi_matrix.shape[1]):
+                    channel_pair_mi.setdefault((i,j), []).append(mi_matrix[i, j, 0, 0])
+        
+
+        plt.figure(figsize=(20, 10))
+        for (i, j), mis in channel_pair_mi.items():
+            plt.plot(fractions, mis, alpha=0.2)
+        plt.xlabel("Fraction of data")
+        plt.ylabel("Mutual Information")
+        plt.ylim(0, np.max(list(channel_pair_mi.values())) * 1.1)
+        plt.title(f"Mutual Information, Estimator: {estimator.capitalize()}")
+        plt.show()
+
+
+
+
