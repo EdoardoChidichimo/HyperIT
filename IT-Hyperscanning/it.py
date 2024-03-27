@@ -10,41 +10,31 @@ from jpype import *
 
 
 class HyperIT(ABC):
-    def __init__(self, eeg1: np.ndarray, eeg2: np.ndarray, channel_names: List[str], calc_sigstats: bool, estimator_type: str, vis: bool, **kwargs):
+    def __init__(self, data1: np.ndarray, data2: np.ndarray, channel_names: List[str]):
         
         self.setup_JIDT(os.getcwd())
         
-        self.eeg1: np.ndarray = eeg1
-        self.eeg2: np.ndarray = eeg2
+        self.data1: np.ndarray = data1
+        self.data2: np.ndarray = data2
         self.channel_names: List[str] = channel_names
-        self.inter_brain: bool = not np.array_equal(eeg1, eeg2)
-        self.is_epoched: bool = eeg1.ndim == 3
-        self.params = kwargs
+        self.inter_brain: bool = not np.array_equal(data1, data2)
+        self.is_epoched: bool = data1.ndim == 3
+        self.initialise_parameter = None
 
-        self.check_eeg_data()
+        self.check_data()
 
-        if self.is_epoched:
-            self.n_epo, self.n_chan, self.n_samples = self.eeg1.shape
-        else:
-            self.n_epo = 1
-            self.n_chan, self.n_samples = self.eeg1.shape
         
-        self.vis: bool = vis
-        self.estimator_type: str = estimator_type
-        self.calc_sigstats: bool = calc_sigstats
-        self.stat_sig_perm_num = self.params.get('stat_sig_perm_num', 100)
-        self.p_threshold = self.params.get('p_threshold', 0.05)
 
-    def check_eeg_data(self):
+    def check_data(self):
 
-        if not all(isinstance(eeg, np.ndarray) for eeg in [self.eeg1, self.eeg2]):
-            raise ValueError("Data must be numpy arrays.")
+        if not all(isinstance(data, np.ndarray) for data in [self.data1, self.data2]):
+            raise ValueError("Time-series data must be numpy arrays.")
         
-        if self.eeg1.shape != self.eeg2.shape:
-            raise ValueError("Data must have the same shape for both participants.")
+        if self.data1.shape != self.data2.shape:
+            raise ValueError("Time-series data must have the same shape for both participants.")
     
-        if self.eeg1.ndim not in [2,3]:
-            raise ValueError(f"Unexpected number of dimensions in EEG data: {self.eeg1.ndim}. Expected 2 dimensions (channels, time_points) or 3 dimensions (epochs, channels, time_points); instead, received {self.eeg1.ndim}.")
+        if self.data1.ndim not in [2,3]:
+            raise ValueError(f"Unexpected number of dimensions in time-series data: {self.data1.ndim}. Expected 2 dimensions (channels, time_points) or 3 dimensions (epochs, channels, time_points).")
 
         if not isinstance(self.channel_names, (list, np.ndarray)) or isinstance(self.channel_names[0], str):
             raise ValueError("Channel names must be a list of strings or a list of lists of strings for inter-brain analysis.")
@@ -52,12 +42,17 @@ class HyperIT(ABC):
         if not self.inter_brain and isinstance(self.channel_names[0], list):
             self.channel_names = [self.channel_names] * 2
 
-        n_channels = self.eeg1.shape[1] if self.is_epoched else self.eeg1.shape[0]
+        if self.is_epoched:
+            self.n_epo, self.n_chan, self.n_samples = self.data1.shape
+        else:
+            self.n_epo = 1
+            self.n_chan, self.n_samples = self.data1.shape
+
+        n_channels = self.data1.shape[1] if self.is_epoched else self.data1.shape[0]
         if any(len(names) != n_channels for names in self.channel_names[0]):
-            raise ValueError("The number of channels in EEG data does not match the length of channel_names.")
+            raise ValueError("The number of channels in time-series data does not match the length of channel_names.")
     
-    @staticmethod
-    def setup_JIDT(working_directory: str):
+    def setup_JIDT(self, working_directory: str):
         if(not isJVMStarted()):
             jarLocation = os.path.join(working_directory, "..", "..", "infodynamics.jar")
             # Usually, just specifying the current working directory (cwd) would suffice; if not, use specific location, e.g., below
@@ -69,7 +64,8 @@ class HyperIT(ABC):
             startJVM(getDefaultJVMPath(), "-ea", "-Djava.class.path=" + jarLocation)
         
         else:
-            exit("JVM has already started. Please exit by running shutdownJVM() in your Python console.")
+            shutdownJVM()
+            self.setup_JIDT(working_directory)
 
     @staticmethod
     def setup_JArray(a: np.ndarray) -> JArray:
@@ -193,19 +189,21 @@ class HyperIT(ABC):
             self.estimator_name = 'KSG Estimator (version 1)'
             self.CalcClass = JPackage("infodynamics.measures.continuous.kraskov").MutualInfoCalculatorMultiVariateKraskov1
             self.Calc = self.CalcClass()
-            self.Calc.setProperty("k", str(self.params.get('kraskov_param', 1)))
+            self.Calc.setProperty("k", str(self.params.get('kraskov_param', 4)))
+            self.Calc.setProperty("NORMALISE", str(self.params.get('normalise', True)).lower()) 
 
         elif self.estimator_type == 'ksg2':
             self.estimator_name = 'KSG Estimator (version 2)'
             self.CalcClass = JPackage("infodynamics.measures.continuous.kraskov").MutualInfoCalculatorMultiVariateKraskov2
             self.Calc = self.CalcClass()
-            self.Calc.setProperty("k", str(self.params.get('kraskov_param', 1)))
+            self.Calc.setProperty("k", str(self.params.get('kraskov_param', 4)))
+            self.Calc.setProperty("NORMALISE", str(self.params.get('normalise', True)).lower()) 
             
         elif self.estimator_type == 'kernel':
             self.estimator_name = 'Box Kernel Estimator'
             self.CalcClass = JPackage("infodynamics.measures.continuous.kernel").MutualInfoCalculatorMultiVariateKernel
             self.Calc = self.CalcClass()
-            self.Calc.setProperty("NORMALISE", "true") 
+            self.Calc.setProperty("NORMALISE", str(self.params.get('normalise', True)))
             self.Calc.setProperty("KERNEL_WIDTH", str(self.params.get('kernel_width', 0.25)))
 
         elif self.estimator_type == 'gaussian':
@@ -232,14 +230,15 @@ class HyperIT(ABC):
             self.Calc.setProperty("l_HISTORY", str(self.params.get('l', 1)))
             self.Calc.setProperty("l_TAU", str(self.params.get('l_tau', 1)))
             self.Calc.setProperty("DELAY", str(self.params.get('delay', 1)))
-            self.Calc.setProperty("k", str(self.params.get('kraskov_param', 1)))
+            self.Calc.setProperty("k", str(self.params.get('kraskov_param', 4)))
+            self.Calc.setProperty("NORMALISE", str(self.params.get('normalise', True)).lower())
             
         elif self.estimator_type == 'kernel':
             self.estimator_name = 'Box Kernel Estimator'
             self.CalcClass = JPackage("infodynamics.measures.continuous.kernel").TransferEntropyCalculatorKernel
             self.Calc = self.CalcClass()
-            self.Calc.setProperty("NORMALISE", "true") 
             self.initialise_parameter: Tuple = (self.params.get('k', 1), self.params.get('kernel_width', 0.5))
+            self.Calc.setProperty("NORMALISE", str(self.params.get('normalise', True)).lower()) 
 
         elif self.estimator_type == 'gaussian':
             self.estimator_name = 'Gaussian Estimator'
@@ -271,7 +270,7 @@ class HyperIT(ABC):
             
             X, Y = (s1[epo_i, :], s2[epo_i, :]) if self.is_epoched else (s1, s2)
             
-            self.Calc.initialise()
+            self.Calc.initialise(*self.initialise_parameter) if self.initialise_parameter else self.Calc.initialise()
             self.Calc.setObservations(self.setup_JArray(X), self.setup_JArray(Y))
 
             result = self.Calc.computeAverageLocalOfObservations() * np.log(2)
@@ -342,9 +341,18 @@ class HyperIT(ABC):
             plt.show()
     
 
-    def compute_mi(self):
+    def compute_mi(self, estimator_type: str = 'kernel', calc_sigstats: bool = False, vis: bool = True, **kwargs):
         
         self.measure = 'Mutual Information'
+        self.estimator_type: str = estimator_type.lower()
+        self.calc_sigstats: bool = calc_sigstats
+        self.vis: bool = vis
+        self.params = kwargs
+
+        self.stat_sig_perm_num = self.params.get('stat_sig_perm_num', 100)
+        self.p_threshold = self.params.get('p_threshold', 0.05)
+        
+        self.estimator = self.which_mi_estimator()
 
         if self.estimator_type == 'histogram' or self.estimator_type == 'symbolic':
             self.mi_matrix = np.zeros((self.n_chan, self.n_chan, self.n_epo, 1)) # TEMPORARY, until I figure out how to get p-values for hist/bin and symbolic MI estimators
@@ -352,13 +360,12 @@ class HyperIT(ABC):
         else:
             self.mi_matrix = np.zeros((self.n_chan, self.n_chan, self.n_epo, 4))
         
-        self.estimator = self.which_mi_estimator()
 
         for i in tqdm(range(self.n_chan)):
             for j in range(self.n_chan):
 
                 if self.inter_brain or i != j:
-                    s1, s2 = (self.eeg1[:, i, :], self.eeg2[:, j, :]) if self.is_epoched else (self.eeg1[i, :], self.eeg2[j, :])
+                    s1, s2 = (self.data1[:, i, :], self.data2[:, j, :]) if self.is_epoched else (self.data1[i, :], self.data2[j, :])
                     
                     if self.estimator_type == 'histogram':
                         self.mi_matrix[i, j] = self.mi_hist(s1, s2)
@@ -377,9 +384,17 @@ class HyperIT(ABC):
 
         return mi
     
-    def compute_te(self):
+    def compute_te(self, estimator_type: str = 'kernel', calc_sigstats: bool = False, vis: bool = True, **kwargs):
 
         self.measure = 'Transfer Entropy'
+        self.estimator_type: str = estimator_type.lower()
+        self.calc_sigstats: bool = calc_sigstats
+        self.vis: bool = vis
+        self.params = kwargs
+        
+        self.stat_sig_perm_num = self.params.get('stat_sig_perm_num', 100)
+        self.p_threshold = self.params.get('p_threshold', 0.05)
+
         self.estimator = self.which_te_estimator()
 
         self.te_matrix_xy = np.zeros((self.n_chan, self.n_chan, self.n_epo, 4))
@@ -390,7 +405,7 @@ class HyperIT(ABC):
                 
                 if self.inter_brain or i != j: # avoid self-channel calculations for intra_brain condition
                     
-                    s1, s2 = (self.eeg1[:, i, :], self.eeg2[:, j, :]) if self.is_epoched else (self.eeg1[i, :], self.eeg2[j, :]) # whether to keep epochs
+                    s1, s2 = (self.data1[:, i, :], self.data2[:, j, :]) if self.is_epoched else (self.data1[i, :], self.data2[j, :]) # whether to keep epochs
                     self.te_matrix_xy[i, j] = self.estimate_it(s1, s2)
                     
                     if self.inter_brain: # don't need to compute opposite matrix for intra-brain as we already loop through each channel combination including symmetric
@@ -455,20 +470,19 @@ if __name__ == "__main__":
     # F = epoch_it(F, 10)
 
     ### FOR EPOCHED DATA
-    # eeg_data1 = np.stack([A, B, C], axis = 1) #  10, 3, 100 (epo, ch, sample)
-    # eeg_data2 = np.stack([D, E, F], axis = 1) #  10, 3, 100 (epo, ch, sample)
+    # data1 = np.stack([A, B, C], axis = 1) #  10, 3, 100 (epo, ch, sample)
+    # data2 = np.stack([D, E, F], axis = 1) #  10, 3, 100 (epo, ch, sample)
 
     ### FOR UNEPOCHED DATA
-    #eeg_data1 = np.vstack([A, B, C]) #  3, 1000 (ch, sample)
-    #eeg_data = np.vstack([D, E, F])  #  3, 1000 (ch, sample)
+    #data1 = np.vstack([A, B, C]) #  3, 1000 (ch, sample)
+    #data = np.vstack([D, E, F])  #  3, 1000 (ch, sample)
 
 
-    eeg_data = np.vstack([A, B, C, D, E, F])
-    print(eeg_data.shape)
+    data = np.vstack([A, B, C, D, E, F])
     channel_names = [['A', 'B', 'C', 'D', 'E', 'F'], ['A', 'B', 'C', 'D', 'E', 'F']]
 
-    it = HyperIT(eeg_data, eeg_data, channel_names=channel_names, calc_sigstats=False, estimator_type='symbolic', vis=True)
-    it.compute_mi()
-    #it.compute_te()
+    it = HyperIT(data, data, channel_names=channel_names)
+    it.compute_mi(estimator_type='gaussian', calc_sigstats=False, vis=True)
+    it.compute_te(estimator_type='gaussian', calc_sigstats=True, vis=True)
     
     #te_matrix_xy, te_matrix_yx = it.compute_te()
