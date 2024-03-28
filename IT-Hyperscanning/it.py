@@ -29,9 +29,33 @@ def exit_JVM() -> None:
 
 
 class HyperIT(ABC):
+    """ HyperIT: A Comprehensive Framewowrk for Conducting Hyperscanning Information Theoretic (HyperIT) Analyses.
+
+        HyperIT is equipped to compute multivariate Mutual Information (MI), Transfer Entropy (TE), and Integrated Information Decomposition (ΦID).
+        Supports both intra-brain and inter-brain analyses, epoched and unepoched time-series signals.  
+        Designed to be flexible and user-friendly, allowing for multiple estimator choices and parameter customisations (using JIDT).
+        Provides statistical significance testing using permutation/boostrapping approach for most estimators.
+        Allows visualisations of MI/TE matrices and information atoms/lattices.
+
+    Args:
+        ABC (_type_): Abstract Base Class for HyperIT.
+
+    Note: This class requires numpy, matplotlib, jpype (and the infodynamics.jar), and phyid as dependencies.
+    """
     def __init__(self, data1: np.ndarray, data2: np.ndarray, channel_names: List[str], verbose: bool = False):
-        
-        setup_JVM(os.getcwd())
+        """ Creates HyperIT object containing time-series data and channel names for analysis. 
+            Automatic data checks for consistency and dimensionality, identifying whether analysis is to be intra- or inter-brain.
+
+            Determines whether epochality of data.
+                - If data is 3 dimensional, data is assumed to be epoched with shape    (epochs, channels, time_points).
+                - If data is 2 dimensional, data is assumed to be unepoched with shape          (channels, time_points).
+
+        Args:
+            data1               (np.ndarray): Time-series data for participant 1.
+            data2               (np.ndarray): Time-series data for participant 1.
+            channel_names        (List[str]): A list of strings representing the channel names for each participant. [[channel_names_p1], [channel_names_p2]] or [[channel_names_p1]] for intra-brain.
+            verbose         (bool, optional): Whether constructor and analyses should output details and progress. Defaults to False.
+        """
 
         self.data1: np.ndarray = data1
         self.data2: np.ndarray = data2
@@ -51,6 +75,14 @@ class HyperIT(ABC):
             
 
     def check_data(self):
+        """ Checks the consistency and dimensionality of the time-series data and channel names. Sets the number of epochs, channels, and time points as object variables.
+
+        Ensures:
+            - Data are numpy arrays.
+            - Data shapes are consistent.
+            - Data dimensions are either 2 or 3 dimensional.
+            - Channel names are in correct format and match number of channels in data.
+        """
 
         if not all(isinstance(data, np.ndarray) for data in [self.data1, self.data2]):
             raise ValueError("Time-series data must be numpy arrays.")
@@ -79,28 +111,34 @@ class HyperIT(ABC):
 
     @staticmethod
     def setup_JArray(a: np.ndarray) -> JArray:
+        """ Converts a numpy array to a Java array for use in JIDT."""
+
         a = (a).astype(np.float64) 
         try:
             ja = JArray(JDouble, 1)(a)
         except Exception: 
             ja = JArray(JDouble, 1)(a.tolist())
         return ja
-        
-    @staticmethod
-    def min_max_normalise(data: np.ndarray, new_min = 0, new_max = 1) -> np.ndarray:
-        return (data - np.min(data)) / (np.max(data) - np.min(data)) * (new_max - new_min) + new_min
 
 
     def mi_hist(self, s1: np.ndarray, s2: np.ndarray) -> float:
+        """Calculates Mutual Information using Histogram/Binning Estimator for time-series signals.
+
+        Args:
+            s1 (np.ndarray): Time-series signal of 1 dimension
+            s2 (np.ndarray): Time-series signal of 1 dimension
+
+        Returns:
+            float: Estimated mutual information
+        """
 
         @staticmethod
         def calc_fd_bins(X: np.ndarray, Y: np.ndarray) -> int:
+            """Calculates the optimal frequency-distribution bin size for histogram estimator using Freedman-Diaconis Rule."""
 
-            # Freedman-Diaconis Rule for frequency-distribution bin size
             fd_bins_X = np.ceil(np.ptp(X) / (2.0 * stats.iqr(X) * len(X)**(-1/3)))
             fd_bins_Y = np.ceil(np.ptp(Y) / (2.0 * stats.iqr(Y) * len(Y)**(-1/3)))
             fd_bins = int(np.ceil((fd_bins_X+fd_bins_Y)/2))
-            #print("Optimal frequency-distribution bin size for histogram estimator (à la Freedman-Diaconis Rule): ", fd_bins)
             return fd_bins
 
         pairwise = np.zeros((self.n_epo, 1))
@@ -128,26 +166,20 @@ class HyperIT(ABC):
         return pairwise
 
     def mi_symb(self, s1: np.ndarray, s2: np.ndarray, l: int = 1, m: int = 3) -> float:
+        """Calculates Mutual Information using Symbolic Estimator for time-series signals."""
 
-        hashmult = np.power(m, np.arange(m))
+        symbol_weights = np.power(m, np.arange(m))
         pairwise = np.zeros((self.n_epo, 1))
 
-        @staticmethod
         def symb_symbolise(X: np.ndarray, l: int, m: int) -> np.ndarray:
             Y = np.empty((m, len(X) - (m - 1) * l))
             for i in range(m):
                 Y[i] = X[i * l:i * l + Y.shape[1]]
             return Y.T
 
-        @staticmethod   
-        def symb_incr_counts(key,d) -> None:
-            d[key] = d.get(key, 0) + 1
-
-        @staticmethod
-        def symb_normalise(d) -> None:
-            s=sum(d.values())        
-            for key in d:
-                d[key] /= s
+        def symb_normalise_counts(d) -> None:
+            total = sum(d.values())        
+            return {key: value / total for key, value in d.items()}
         
         for epo_i in range(self.n_epo):
 
@@ -156,39 +188,29 @@ class HyperIT(ABC):
             X = symb_symbolise(X, l, m).argsort(kind='quicksort')
             Y = symb_symbolise(Y, l, m).argsort(kind='quicksort')
 
-            hashval_X = (np.multiply(X, hashmult)).sum(1) # multiply each symbol [1,0,3] by hashmult [1,3,9] => [1,0,27] and give a final array of the sum of each code ([.., .., 28, .. ])
-            hashval_Y = (np.multiply(Y, hashmult)).sum(1)
+            # multiply each symbol [1,0,3] by symbol_weights [1,3,9] => [1,0,27] and give a final array of the sum of each code ([.., .., 28, .. ])
+            symbol_hash_X = (np.multiply(X, symbol_weights)).sum(1) 
+            symbol_hash_Y = (np.multiply(Y, symbol_weights)).sum(1)
+    
+
+            p_xy, p_x, p_y = map(symb_normalise_counts, [dict(), dict(), dict()])
             
-            x_sym_to_perm = hashval_X
-            y_sym_to_perm = hashval_Y
-            
-            p_xy = {}
-            p_x = {}
-            p_y = {}
-            
-            for i in range(len(x_sym_to_perm)-1):
-                xy = str(x_sym_to_perm[i]) + "," + str(y_sym_to_perm[i])
-                x = str(x_sym_to_perm[i])
-                y = str(y_sym_to_perm[i])
-                symb_incr_counts(xy,p_xy)
-                symb_incr_counts(x,p_x)
-                symb_incr_counts(y,p_y)
-                
-            symb_normalise(p_xy)
-            symb_normalise(p_x)
-            symb_normalise(p_y)
-            
-            p_xy = np.array(list(p_xy.values()))
-            p_x = np.array(list(p_x.values()))
-            p_y = np.array(list(p_y.values()))
+            for i in range(len(symbol_hash_X)-1):
+
+                xy = f"{symbol_hash_X[i]},{symbol_hash_Y[i]}"
+                x,y = str(symbol_hash_X[i]), str(symbol_hash_Y[i])
+
+                for dict_, key in zip([p_xy, p_x, p_y], [xy, x, y]):
+                    dict_[key] = dict_.get(key, 0) + 1
+
+            # Normalise counts directly into probabilities
+            p_xy, p_x, p_y = [np.array(list(symb_normalise_counts(d).values())) for d in [p_xy, p_x, p_y]]
             
             entropy_X = -np.sum(p_x * np.log2(p_x + np.finfo(float).eps)) 
             entropy_Y = -np.sum(p_y * np.log2(p_y + np.finfo(float).eps))
             entropy_XY = -np.sum(p_xy * np.log2(p_xy + np.finfo(float).eps))
 
-            result = entropy_X + entropy_Y - entropy_XY
-
-            pairwise[epo_i] = result
+            pairwise[epo_i] = entropy_X + entropy_Y - entropy_XY
 
         return pairwise
 
@@ -351,7 +373,7 @@ class HyperIT(ABC):
             plt.show()
     
 
-    def compute_mi(self, estimator_type: str = 'kernel', calc_sigstats: bool = False, vis: bool = True, **kwargs):
+    def compute_mi(self, estimator_type: str = 'kernel', calc_sigstats: bool = False, vis: bool = False, **kwargs):
         
         self.measure = 'Mutual Information'
         self.estimator_type: str = estimator_type.lower()
@@ -394,7 +416,7 @@ class HyperIT(ABC):
 
         return mi
     
-    def compute_te(self, estimator_type: str = 'kernel', calc_sigstats: bool = False, vis: bool = True, **kwargs):
+    def compute_te(self, estimator_type: str = 'kernel', calc_sigstats: bool = False, vis: bool = False, **kwargs):
 
         self.measure = 'Transfer Entropy'
         self.estimator_type: str = estimator_type.lower()
@@ -444,27 +466,7 @@ class HyperIT(ABC):
 
 if __name__ == "__main__":
 
-    # np.random.seed(42)
-    # n = 1000
 
-    # A = np.zeros(n)
-    # B = np.zeros(n)
-    # C = np.zeros(n)
-    # D = np.zeros(n)
-    # E = np.zeros(n)
-    # F = np.zeros(n)
-    # A[0], B[0], C[0], D[0], E[0], F[0] = 0.1, 0.1, 0.1, 0.1, 0.1, 0.1
-
-    # std_dev = 0.1
-    # for t in range(1, n):
-    #     A[t] = np.sin(C[t-1] + E[t-1]) + np.random.normal(0, std_dev)
-    #     B[t] = 0.5 * A[t-1] + np.random.normal(0, std_dev)
-    #     C[t] = 0.3 * B[t-1] + np.exp(-D[t-1]) + np.random.normal(0, std_dev)
-    #     D[t] = D[t-1]**2 - 0.1 * D[t-1] + np.random.normal(0, std_dev)
-    #     E[t] = 0.7 * B[t-1] + np.cos(A[t-1]) + np.random.normal(0, std_dev)
-    #     F[t] = 3 * np.sin(F[t-1]) + np.random.normal(0, std_dev)
-    
-    
     # atoms_res, calc_res = calc_PhiID(A, B, tau=1, kind="gaussian", redundancy="MMI")
 
     # calc_L = np.array([atoms_res[_] for _ in PhiID_atoms_abbr])
@@ -485,6 +487,25 @@ if __name__ == "__main__":
     # b = target future
 
 
+    np.random.seed(42)
+    n = 1000
+
+    A = np.zeros(n)
+    B = np.zeros(n)
+    C = np.zeros(n)
+    D = np.zeros(n)
+    E = np.zeros(n)
+    F = np.zeros(n)
+    A[0], B[0], C[0], D[0], E[0], F[0] = 0.1, 0.1, 0.1, 0.1, 0.1, 0.1
+
+    std_dev = 0.1
+    for t in range(1, n):
+        A[t] = np.sin(C[t-1] + E[t-1]) + np.random.normal(0, std_dev)
+        B[t] = 0.5 * A[t-1] + np.random.normal(0, std_dev)
+        C[t] = 0.3 * B[t-1] + np.exp(-D[t-1]) + np.random.normal(0, std_dev)
+        D[t] = D[t-1]**2 - 0.1 * D[t-1] + np.random.normal(0, std_dev)
+        E[t] = 0.7 * B[t-1] + np.cos(A[t-1]) + np.random.normal(0, std_dev)
+        F[t] = 3 * np.sin(F[t-1]) + np.random.normal(0, std_dev)
         
     # def epoch_it(data, n_epochs):
     #     if len(data) % n_epochs != 0:
@@ -509,83 +530,12 @@ if __name__ == "__main__":
 
     
 
-    # data = np.vstack([A, B, C, D, E, F])
-    # channel_names = [['A', 'B', 'C', 'D', 'E', 'F'], ['A', 'B', 'C', 'D', 'E', 'F']]
+    data = np.vstack([A, B, C, D, E, F])
+    channel_names = [['A', 'B', 'C', 'D', 'E', 'F'], ['A', 'B', 'C', 'D', 'E', 'F']]
 
-    # it = HyperIT(data, data, channel_names=channel_names)
-    # it.compute_mi(estimator_type='gaussian', calc_sigstats=False, vis=True)
+    it = HyperIT(data, data, channel_names=channel_names)
+    it.compute_mi(estimator_type='symbolic', calc_sigstats=False, vis=True)
     # it.compute_te(estimator_type='gaussian', calc_sigstats=True, vis=True)
     
     #te_matrix_xy, te_matrix_yx = it.compute_te()
-    # CORE
-    import io
-    from collections import OrderedDict
-    import requests
-
-    # DATA SCIENCE
-    import numpy as np
-    from scipy.stats import mode 
-
-    # HYPYP
-    from hypyp import prep 
-
-    # VISUALISATION
-    import matplotlib.pyplot as plt
-
-    # MNE
-    import mne
-
-    full_freq = { 'full_frq': [1, 48]}
-    freq_bands = OrderedDict(full_freq)
-
-    URL_TEMPLATE = "https://github.com/ppsp-team/HyPyP/blob/master/data/participant{}-epo.fif?raw=true"
-
-    def get_data(idx):
-        return io.BytesIO(requests.get(URL_TEMPLATE.format(idx)).content)
-
-    epo1 = mne.read_epochs(get_data(1), preload=True) 
-    epo2 = mne.read_epochs(get_data(2), preload=True)
-    mne.epochs.equalize_epoch_counts([epo1, epo2])
-
-    sampling_rate = epo1.info['sfreq']
-
-    icas = prep.ICA_fit([epo1, epo2], n_components=15, method='infomax', fit_params=dict(extended=True), random_state = 42)
-    cleaned_epochs_ICA = prep.ICA_choice_comp(icas, [epo1, epo2])
-    cleaned_epochs_AR, _ = prep.AR_local(cleaned_epochs_ICA, strategy="union", threshold=50.0, verbose=True)
-
-    preproc_S1, preproc_S2 = cleaned_epochs_AR
-    data_inter = np.array([preproc_S1, preproc_S2])
-
-    X = data_inter[0].transpose(1, 0, 2).reshape(data_inter[0].shape[1], -1)
-    Y = data_inter[1].transpose(1, 0, 2).reshape(data_inter[1].shape[1], -1)
-    channel_names = [[epo1.info['ch_names']], [epo2.info['ch_names']]]
-
-
-    fractions = np.arange(10, 110, 10)
-
-    for estimator in tqdm(['gaussian']):
-        
-        channel_pair_mi = {}
-
-        for fraction in fractions:
-
-            fraction_index = int(fraction * X.shape[1] / 100)
-            mi_matrix = HyperIT(X[:, :fraction_index], Y[:, :fraction_index], channel_names).compute_mi(estimator_type=estimator, calc_sigstats=False, vis=False)
-            
-            for i in range(mi_matrix.shape[0]):
-                for j in range(mi_matrix.shape[1]):
-                    channel_pair_mi.setdefault((i,j), []).append(mi_matrix[i, j, 0, 0])
-        
-
-        plt.figure(figsize=(20, 10))
-        for (i, j), mis in channel_pair_mi.items():
-            plt.plot(fractions, mis, alpha=0.2)
-        plt.xlabel("Fraction of data")
-        plt.ylabel("Mutual Information")
-        plt.ylim(0, np.max(list(channel_pair_mi.values())) * 1.1)
-        plt.title(f"Mutual Information, Estimator: {estimator.capitalize()}")
-        plt.show()
-
-
-
-
+    pass
