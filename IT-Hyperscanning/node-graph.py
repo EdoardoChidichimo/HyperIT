@@ -53,34 +53,6 @@ for t in range(1, n):
 #     'E': E
 # }
 
-# df = pd.DataFrame(data)
-
-# # Function to perform Granger Causality test and return the p-value
-# def granger_test(data, variables, maxlag=2):
-#     p_values = pd.DataFrame(np.zeros((len(variables), len(variables))), columns=variables, index=variables)
-#     for c in variables:
-#         for r in variables:
-#             if c != r:
-#                 test_result = grangercausalitytests(data[[r, c]], maxlag=maxlag, verbose=False)
-#                 p_values.loc[r, c] = min(test_result[lag][0]['ssr_chi2test'][1] for lag in test_result)
-#             else:
-#                 p_values.loc[r, c] = 0
-#     return p_values
-
-# # Perform Granger Causality test
-# variables = df.columns
-# p_values_matrix = granger_test(df, variables)
-# print(p_values_matrix)
-
-# # Plotting the heatmap with p-values
-# plt.figure(figsize=(10, 8))
-# sns.heatmap(p_values_matrix, annot=True, fmt=".2f", cmap='coolwarm', cbar=True, xticklabels=variables, yticklabels=variables)
-# plt.title("Granger Causality p-values")
-# plt.xlabel("Causing Variable")
-# plt.ylabel("Affected Variable")
-# plt.show()
-
-
 
 def epoch_it(data, n_epochs):
     if len(data) % n_epochs != 0:
