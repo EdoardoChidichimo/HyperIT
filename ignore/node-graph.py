@@ -70,7 +70,8 @@ F = epoch_it(F, 10)
 
 
     
-setup_JIDT(os.getcwd())
+
+# setup_JIDT(os.getcwd())
 
 eeg_data = np.stack([A, B, C, D, E, F], axis = 1) # EPOCHED 10, 5, 100 (epo, ch, sample)
 #eeg_data = np.vstack([A, B, C, D, E, F]) # UNEPOCHED 5, 1000 (ch, sample)

@@ -527,6 +527,7 @@ def ent_g(X: np.array, biascorrect=True):
     # convert to bits
     return HX / ln2
     
+    
 def mi_gc(data: np.array, biascorrect=True):
     
     """ Gaussian-Copula Mutual Information between two continuous variables.
