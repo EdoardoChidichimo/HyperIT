@@ -1,6 +1,7 @@
 import numpy as np
 from abc import ABC, abstractmethod
 from scipy import stats
+from PIL import Image, ImageDraw
 from typing import Tuple, List
 from tqdm import tqdm
 import matplotlib.pyplot as plt
@@ -12,19 +13,6 @@ from phyid.utils import PhiID_atoms_abbr
 
 
 
-def setup_JVM(working_directory: str) -> None:
-    if(not isJVMStarted()):
-        jarLocation = os.path.join(working_directory, "..", "..", "infodynamics.jar")
-        # Usually, just specifying the current working directory (cwd) would suffice; if not, use specific location, e.g., below
-        jarLocation = "/Users/edoardochidichimo/Desktop/MPhil_Code/IT-Hyperscanning/infodynamics.jar"
-
-        if (not(os.path.isfile(jarLocation))):
-            exit("infodynamics.jar not found (expected at " + os.path.abspath(jarLocation) + ") - are you running from demos/python?")
-
-        startJVM(getDefaultJVMPath(), "-ea", "-Djava.class.path=" + jarLocation)
-    
-def exit_JVM() -> None:
-    shutdownJVM()
 
 
 
@@ -40,7 +28,7 @@ class HyperIT(ABC):
     Args:
         ABC (_type_): Abstract Base Class for HyperIT.
 
-    Note: This class requires numpy, matplotlib, jpype (and the infodynamics.jar), and phyid as dependencies.
+    Note: This class requires numpy, matplotlib, PIL, jpype (with the infodynamics.jar file), and phyid as dependencies.
     """
     def __init__(self, data1: np.ndarray, data2: np.ndarray, channel_names: List[str], verbose: bool = False):
         """ Creates HyperIT object containing time-series data and channel names for analysis. 
@@ -57,6 +45,8 @@ class HyperIT(ABC):
             verbose         (bool, optional): Whether constructor and analyses should output details and progress. Defaults to False.
         """
 
+        self._setup_JVM(os.getcwd()) # NEED TO CHANGE TO FILE LOCATION
+
         self.data1: np.ndarray = data1
         self.data2: np.ndarray = data2
         self.channel_names: List[str] = channel_names
@@ -65,16 +55,64 @@ class HyperIT(ABC):
         self.initialise_parameter = None
         self.verbose = verbose
 
-        self.check_data()
+        self.__check_data()
 
         if self.verbose:
+            print("HyperIT object created successfully.")
             if self.is_epoched:
                 print(f"Epoched data detected. Assuming each signal has shape ({self.n_epo} epochs, {self.n_chan} channels, {self.n_samples} time_points). Ready to conduct {'Inter-Brain' if self.inter_brain else 'Intra-Brain'} analysis.")
             else:
                 print(f"Unepoched data detected. Assuming each signal has shape ({self.n_chan} channels, {self.n_samples} time_points). Ready to conduct {'Inter-Brain' if self.inter_brain else 'Intra-Brain'} analysis.")
-            
 
-    def check_data(self):
+
+    def __del__(self):
+        """ Destructor for HyperIT object. Ensures JVM is shutdown upon deletion of object. """
+        try:
+            shutdownJVM()
+            if self.verbose:
+                print("JVM has been shutdown.")
+        except Exception as e:
+            if self.verbose:
+                print(f"Error shutting down JVM: {e}")
+
+    def __repr__(self) -> str:
+        """ String representation of HyperIT object. """
+        analysis_type = 'Hyperscanning' if self.inter_brain else 'Intra-Brain'
+        channel_info = f"{self.channel_names[0][0]}"  # Assuming self.channel_names[0] is a list of channel names for the first data set
+        
+        # Adding second channel name if inter_brain analysis is being conducted
+        if self.inter_brain:
+            channel_info += f" and {self.channel_names[0][1]}"
+
+        return (f"HyperIT Object: \n"
+                f"{analysis_type} Analysis with {self.n_epo} epochs, {self.n_chan} channels, "
+                f"and {self.n_samples} time points. \n"
+                f"Channel names passed: \n"
+                f"{channel_info}.")
+
+    def __len__(self) -> int:
+        """ Returns the number of epochs in the HyperIT object. """
+        return self.n_epo
+    
+    def __str__(self) -> str:
+        """ String representation of HyperIT object. """
+        return self.__repr__()
+    
+
+    @staticmethod        
+    def _setup_JVM(working_directory: str) -> None:
+        if(not isJVMStarted()):
+            jarLocation = os.path.join(working_directory, "..", "..", "infodynamics.jar")
+            # Usually, just specifying the current working directory (cwd) would suffice; if not, use specific location, e.g., below
+            jarLocation = "/Users/edoardochidichimo/Desktop/MPhil_Code/IT-Hyperscanning/infodynamics.jar"
+
+            if (not(os.path.isfile(jarLocation))):
+                exit("infodynamics.jar not found (expected at " + os.path.abspath(jarLocation) + ") - are you running from demos/python?")
+
+            startJVM(getDefaultJVMPath(), "-ea", "-Djava.class.path=" + jarLocation)
+
+
+    def __check_data(self) -> None:
         """ Checks the consistency and dimensionality of the time-series data and channel names. Sets the number of epochs, channels, and time points as object variables.
 
         Ensures:
@@ -110,7 +148,7 @@ class HyperIT(ABC):
             raise ValueError("The number of channels in time-series data does not match the length of channel_names.")
 
     @staticmethod
-    def setup_JArray(a: np.ndarray) -> JArray:
+    def __setup_JArray(a: np.ndarray) -> JArray:
         """ Converts a numpy array to a Java array for use in JIDT."""
 
         a = (a).astype(np.float64) 
@@ -121,16 +159,8 @@ class HyperIT(ABC):
         return ja
 
 
-    def mi_hist(self, s1: np.ndarray, s2: np.ndarray) -> float:
-        """Calculates Mutual Information using Histogram/Binning Estimator for time-series signals.
-
-        Args:
-            s1 (np.ndarray): Time-series signal of 1 dimension
-            s2 (np.ndarray): Time-series signal of 1 dimension
-
-        Returns:
-            float: Estimated mutual information
-        """
+    def _mi_hist(self, s1: np.ndarray, s2: np.ndarray) -> float:
+        """Calculates Mutual Information using Histogram/Binning Estimator for time-series signals."""
 
         @staticmethod
         def calc_fd_bins(X: np.ndarray, Y: np.ndarray) -> int:
@@ -165,7 +195,7 @@ class HyperIT(ABC):
 
         return pairwise
 
-    def mi_symb(self, s1: np.ndarray, s2: np.ndarray, l: int = 1, m: int = 3) -> float:
+    def _mi_symb(self, s1: np.ndarray, s2: np.ndarray, l: int = 1, m: int = 3) -> float:
         """Calculates Mutual Information using Symbolic Estimator for time-series signals."""
 
         symbol_weights = np.power(m, np.arange(m))
@@ -215,7 +245,8 @@ class HyperIT(ABC):
         return pairwise
 
 
-    def which_mi_estimator(self):
+    def __which_mi_estimator(self) -> None:
+        """Determines the Mutual Information estimator to be used based on user input. Many estimators are deployed using JIDT."""
 
         if self.estimator_type == 'histogram':
             self.estimator_name = 'Histogram/Binning Estimator'
@@ -254,7 +285,9 @@ class HyperIT(ABC):
         if not self.estimator_type == 'histogram' and not self.estimator_type == 'symbolic':
             self.Calc.setProperty("NORMALISE", str(self.params.get('normalise', True)))
 
-    def which_te_estimator(self):
+    def __which_te_estimator(self) -> None:
+        """Determines the Transfer Entropy estimator to be used based on user input. Many estimators are deployed using JIDT."""
+
 
         if self.estimator_type == 'ksg' or self.estimator_type == 'ksg1' or self.estimator_type == 'ksg2':
             self.estimator_name = 'KSG Estimator'
@@ -292,9 +325,9 @@ class HyperIT(ABC):
 
         self.Calc.setProperty("NORMALISE", str(self.params.get('normalise', True)).lower()) 
 
+    def __estimate_it(self, s1: np.ndarray, s2: np.ndarray) -> np.ndarray:
+        """ Estimates Mutual Information or Transfer Entropy for a pair of time-series signals using JIDT estimators. """
 
-    def estimate_it(self, s1: np.ndarray, s2: np.ndarray):
-        
         pairwise = np.zeros((self.n_epo, 4)) # stores MI/TE result, mean, std, p-value
 
         for epo_i in range(self.n_epo):
@@ -302,7 +335,7 @@ class HyperIT(ABC):
             X, Y = (s1[epo_i, :], s2[epo_i, :]) if self.is_epoched else (s1, s2)
 
             self.Calc.initialise(*self.initialise_parameter) if self.initialise_parameter else self.Calc.initialise()
-            self.Calc.setObservations(self.setup_JArray(X), self.setup_JArray(Y))
+            self.Calc.setObservations(self.__setup_JArray(X), self.__setup_JArray(Y))
 
             result = self.Calc.computeAverageLocalOfObservations() * np.log(2)
 
@@ -314,7 +347,17 @@ class HyperIT(ABC):
             
         return pairwise
     
-    def plot_it(self, it_matrix: np.ndarray):
+
+
+    def _plot_it(self, it_matrix: np.ndarray) -> None:
+        """Plots the Mutual Information or Transfer Entropy matrix for visualisation. 
+        Axes labelled with source and target channel names. 
+        Choice to plot for all epochs, specific epoch(s), or average across epochs.
+
+        Args:
+            it_matrix (np.ndarray): The Mutual Information or Transfer Entropy matrix to be plotted with shape (n_chan, n_chan, n_epo, 4), 
+            where the last dimension represents the statistical signficance testing results: (local result, distribution mean, distribution standard deviation, p-value).
+        """
 
         title = f'{self.measure} | {self.estimator_name} \n {"Inter-Brain" if self.inter_brain else "Intra-Brain"}'
         epochs = [0] # default to un-epoched or epoch-average case
@@ -371,9 +414,56 @@ class HyperIT(ABC):
             plt.tick_params(axis='x', which='both', bottom=False, top=False, labeltop=True)
             plt.tick_params(axis='y', which='both', right=False, left=False, labelleft=True)
             plt.show()
-    
 
-    def compute_mi(self, estimator_type: str = 'kernel', calc_sigstats: bool = False, vis: bool = False, **kwargs):
+    @staticmethod
+    def _plot_atoms(phi_dict: dict, channel_indices: list):
+
+        ch_X, ch_Y = channel_indices
+        value_dict = phi_dict[ch_X][ch_Y]
+
+        image = Image.open('visualisations/atoms_lattice_values.png')
+        draw = ImageDraw.Draw(image) 
+
+        text_positions = {
+            'rtr': (485, 1007), 
+            'rtx': (160, 780),
+            'rty': (363, 780), 
+            'rts': (37, 512), 
+            'xtr': (610, 779), 
+            'xtx': (237, 510), 
+            'xty': (487, 585), 
+            'xts': (160, 243), 
+            'ytr': (800, 780), 
+            'ytx': (485, 427), 
+            'yty': (725, 505), 
+            'yts': (363, 243), 
+            'str': (930, 505), 
+            'stx': (605, 243), 
+            'sty': (807, 243), 
+            'sts': (485, 41)   
+        }
+
+        for text, pos in text_positions.items():
+            value = value_dict.get(text, '')
+            plot_text = f"{round(float(value), 3):.3f}"
+            draw.text(pos, plot_text, fill="black", font_size=25)
+
+        image.show()
+
+
+    def compute_mi(self, estimator_type: str = 'kernel', calc_sigstats: bool = False, vis: bool = False, **kwargs) -> np.ndarray:
+        """Function to compute Mutual Information between data (time-series signals) instantiated in the HyperIT object.
+
+        Args:
+            estimator_type       (str, optional): Which Mutual Information estimator to use. Defaults to 'kernel'.
+            calc_sigstats       (bool, optional): Whether to conduct statistical signficance testing. Defaults to False.
+            vis                 (bool, optional): Whether to visualise (via _plot_it()). Defaults to False.
+
+        Returns:
+                                    (np.ndarray): A matrix of Mutual Information values with shape (n_chan, n_chan, n_epo, 4),
+                                                  where the last dimension represents the statistical signficance testing results: (local result, distribution mean, distribution standard deviation, p-value). 
+                                                  If calc_sigstats is False, only the local results will be returned in this last dimension.
+        """
         
         self.measure = 'Mutual Information'
         self.estimator_type: str = estimator_type.lower()
@@ -384,7 +474,7 @@ class HyperIT(ABC):
         self.stat_sig_perm_num = self.params.get('stat_sig_perm_num', 100)
         self.p_threshold = self.params.get('p_threshold', 0.05)
         
-        self.estimator = self.which_mi_estimator()
+        self.estimator = self.__which_mi_estimator()
 
         if self.estimator_type == 'histogram' or self.estimator_type == 'symbolic':
             self.mi_matrix = np.zeros((self.n_chan, self.n_chan, self.n_epo, 1)) # TEMPORARY, until I figure out how to get p-values for hist/bin and symbolic MI estimators
@@ -400,11 +490,11 @@ class HyperIT(ABC):
                     s1, s2 = (self.data1[:, i, :], self.data2[:, j, :]) if self.is_epoched else (self.data1[i, :], self.data2[j, :])
                     
                     if self.estimator_type == 'histogram':
-                        self.mi_matrix[i, j] = self.mi_hist(s1, s2)
+                        self.mi_matrix[i, j] = self._mi_hist(s1, s2)
                     elif self.estimator_type == 'symbolic':
-                        self.mi_matrix[i, j] = self.mi_symb(s1, s2)
+                        self.mi_matrix[i, j] = self._mi_symb(s1, s2)
                     else:
-                        self.mi_matrix[i, j] = self.estimate_it(s1, s2)
+                        self.mi_matrix[i, j] = self.__estimate_it(s1, s2)
 
                     if not self.inter_brain:
                         self.mi_matrix[j, i] = self.mi_matrix[i, j]
@@ -412,12 +502,25 @@ class HyperIT(ABC):
         mi = np.array((self.mi_matrix))
 
         if self.vis:
-            self.plot_it(mi)
+            self._plot_it(mi)
 
         return mi
     
-    def compute_te(self, estimator_type: str = 'kernel', calc_sigstats: bool = False, vis: bool = False, **kwargs):
+    def compute_te(self, estimator_type: str = 'kernel', calc_sigstats: bool = False, vis: bool = False, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
+        """Function to compute Transfer Entropy between data (time-series signals) instantiated in the HyperIT object. 
+            data1 is first taken to be the source and data2 the target (X->Y). This function automatically computes the opposite matrix for Y -> X.
 
+        Args:
+            estimator_type       (str, optional): Which Mutual Information estimator to use. Defaults to 'kernel'.
+            calc_sigstats       (bool, optional): Whether to conduct statistical signficance testing. Defaults to False.
+            vis                 (bool, optional): Whether to visualise (via _plot_it()). Defaults to False.
+
+        Returns:
+                   Tuple(np.ndarray, np.ndarray): Two matrices of Transfer Entropy values (X->Y and Y->X), each with shape (n_chan, n_chan, n_epo, 4),
+                                                  where the last dimension represents the statistical signficance testing results: (local result, distribution mean, distribution standard deviation, p-value). 
+                                                  If calc_sigstats is False, only the local results will be returned in this last dimension.
+        """
+        
         self.measure = 'Transfer Entropy'
         self.estimator_type: str = estimator_type.lower()
         self.calc_sigstats: bool = calc_sigstats
@@ -427,7 +530,7 @@ class HyperIT(ABC):
         self.stat_sig_perm_num = self.params.get('stat_sig_perm_num', 100)
         self.p_threshold = self.params.get('p_threshold', 0.05)
 
-        self.estimator = self.which_te_estimator()
+        self.estimator = self.__which_te_estimator()
 
         self.te_matrix_xy = np.zeros((self.n_chan, self.n_chan, self.n_epo, 4))
         self.te_matrix_yx = np.zeros((self.n_chan, self.n_chan, self.n_epo, 4))
@@ -438,54 +541,72 @@ class HyperIT(ABC):
                 if self.inter_brain or i != j: # avoid self-channel calculations for intra_brain condition
                     
                     s1, s2 = (self.data1[:, i, :], self.data2[:, j, :]) if self.is_epoched else (self.data1[i, :], self.data2[j, :]) # whether to keep epochs
-                    self.te_matrix_xy[i, j] = self.estimate_it(s1, s2)
+                    self.te_matrix_xy[i, j] = self.__estimate_it(s1, s2)
                     
                     if self.inter_brain: # don't need to compute opposite matrix for intra-brain as we already loop through each channel combination including symmetric
             
-                        self.te_matrix_yx[i, j] = self.estimate_it(s2, s1)
+                        self.te_matrix_yx[i, j] = self.__estimate_it(s2, s1)
                     
         te_xy = np.array((self.te_matrix_xy))
         te_yx = np.array((self.te_matrix_yx))
         
         if self.vis:
             print("Plotting Transfer Entropy for X -> Y...")
-            self.plot_it(te_xy)
+            self._plot_it(te_xy)
             if self.inter_brain:
                 print("Plotting Transfer Entropy for Y -> X...")
-                self.plot_it(te_yx)
+                self._plot_it(te_yx)
                 
         return te_xy, te_yx
 
+    def compute_atoms(self, tau: int = 1, kind: str = "gaussian", redundancy: str = "MMI", vis: bool = False, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
+        """Function to compute Integrated Information Decomposition (ΦID) between data (time-series signals) instantiated in the HyperIT object.
+            Option to visualise the lattice values for a specific channel pair (be sure to specify via plot_channels kwarg).
 
+        Args:
+            tau             (int, optional): The time-lag parameter for the ΦID calculation. Defaults to 1.
+            kind            (str, optional): The estimator to be used for the ΦID calculation. Defaults to "gaussian".
+            redundancy      (str, optional): The redundancy measure to be used for the ΦID calculation. Defaults to "MMI".
+            vis            (bool, optional): Whether to visualise (via _plot_atoms()). Defaults to False.
 
+        Returns:
+              Tuple(np.ndarray, np.ndarray): Two matrices of Integrated Information Decomposition dictionaries (representing all atoms, both X->Y and Y->X), each with shape (n_chan, n_chan),
+        """
+        
+        self.measure = 'Integrated Information Decomposition'
+        self.tau = tau
+        self.kind = kind
+        self.redundancy = redundancy
 
+        phi_dict_xy = [[{} for _ in range(self.n_chan)] for _ in range(self.n_chan)]
+        phi_dict_yx = [[{} for _ in range(self.n_chan)] for _ in range(self.n_chan)]
 
+        for i in tqdm(range(self.n_chan)):
+            for j in range(self.n_chan):
+                
+                if self.inter_brain or i != j:
+                    s1, s2 = (self.data1[:, i, :], self.data2[:, j, :]) if self.is_epoched else (self.data1[i, :], self.data2[j, :])
+                    
+                    atoms_results, _ = calc_PhiID(s1, s2, tau=self.tau, kind=self.kind, redundancy=self.redundancy)
+                    calc_atoms = np.mean(np.array([atoms_results[_] for _ in PhiID_atoms_abbr]), axis=1)
+                    phi_dict_xy[i][j] = {key: value for key, value in zip(atoms_results.keys(), calc_atoms)}
+
+                    if self.inter_brain:
+                        atoms_results, _ = calc_PhiID(s2, s1, tau=self.tau, kind=self.kind, redundancy=self.redundancy)
+                        calc_atoms = np.mean(np.array([atoms_results[_] for _ in PhiID_atoms_abbr]), axis=1)
+                        phi_dict_yx[i][j] = {key: value for key, value in zip(atoms_results.keys(), calc_atoms)}   
+
+        if vis:
+            plot_channels = kwargs.get('plot_channels', [0, 0])
+            print(plot_channels)
+            self._plot_atoms(phi_dict_xy, plot_channels)
+
+        return phi_dict_xy, phi_dict_yx
 
 
 
 
 if __name__ == "__main__":
-
-
-    # atoms_res, calc_res = calc_PhiID(A, B, tau=1, kind="gaussian", redundancy="MMI")
-
-    # calc_L = np.array([atoms_res[_] for _ in PhiID_atoms_abbr])
-    # calc_A = np.mean(calc_L, axis=1)
-
-
-    # #print(calc_L.shape)
-    # print(calc_A)
-    # #print(calc_res.keys())
-    # print(atoms_res.keys())
-
-    # print(np.sum(calc_A)) # = calc_res.get("I_res").get("I_xy").mean()
-    #print(calc_res.get("I_res").keys()) # get("I_xytab"))
-
-    # x = source past
-    # y = target past
-    # a = source future
-    # b = target future
-
 
     np.random.seed(42)
     n = 1000
@@ -534,8 +655,12 @@ if __name__ == "__main__":
     channel_names = [['A', 'B', 'C', 'D', 'E', 'F'], ['A', 'B', 'C', 'D', 'E', 'F']]
 
     it = HyperIT(data, data, channel_names=channel_names)
-    it.compute_mi(estimator_type='symbolic', calc_sigstats=False, vis=True)
+
+
+    plot_channels = [0,0]
+    phi_dict_xy, phi_dict_yx = it.compute_atoms(vis=True, plot_channels=plot_channels)
+
+    # it.compute_mi(estimator_type='symbolic', calc_sigstats=False, vis=True)
     # it.compute_te(estimator_type='gaussian', calc_sigstats=True, vis=True)
     
     #te_matrix_xy, te_matrix_yx = it.compute_te()
-    pass
