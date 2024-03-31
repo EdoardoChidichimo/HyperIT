@@ -432,9 +432,7 @@ IT-Hyperscanning/java/unittests/infodynamics/utils/MatrixUtilsTest.java
 IT-Hyperscanning/java/unittests/infodynamics/utils/RandomGeneratorTest.java
 IT-Hyperscanning/java/unittests/infodynamics/utils/UnivariateNearestNeighbourTest.java
 IT-Hyperscanning/clean_ecg_sample.npy
-IT-Hyperscanning/functions.py
 IT-Hyperscanning/.DS_Store
 ignore/it_inefficient.py
-ignore/node-graph.py
 ignore/node-graph.py
 IT-Hyperscanning/functions.py
