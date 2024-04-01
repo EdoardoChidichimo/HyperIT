@@ -32,6 +32,6 @@ https://github.com/Imperial-MIND-lab/integrated-info-decomp/tree/main
 ## ACKNOWLEDGEMENTS
 This code depends on JIDT by Lizier and colleagues, accessible [here](https://github.com/jlizier/jidt), and published here: 
 
-Joseph T. Lizier, "JIDT: An information-theoretic toolkit for studying the dynamics of complex systems", Frontiers in Robotics and AI 1:11, 2014; doi:[10.3389/frobt.2014.00011]([url](http://dx.doi.org/10.3389/frobt.2014.00011)) (pre-print: arXiv:[1408.3270]([url](http://arxiv.org/abs/1408.3270)))
+Joseph T. Lizier, "JIDT: An information-theoretic toolkit for studying the dynamics of complex systems", Frontiers in Robotics and AI 1:11, 2014; doi:[10.3389/frobt.2014.00011](http://dx.doi.org/10.3389/frobt.2014.00011) (pre-print: arXiv:[1408.3270](http://arxiv.org/abs/1408.3270)
 
 
