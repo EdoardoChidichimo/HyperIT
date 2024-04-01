@@ -1,5 +1,5 @@
 import numpy as np
-from it import *
+from HyperIT.visualisations.it import *
 
 
 np.random.seed(42)
