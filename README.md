@@ -20,6 +20,7 @@ mi = it.compute_mi(estimator_type, calc_sigstats, vis)
 te_xy, te_yx = it.compute_te(estimator_type, calc_sigstats, vis)
 atoms = it.compute_atoms(tau, redundancy, vis, plot_channels)
 ```
+For specific estimator types and general functionality, see Documentation.
 
 ## Dependencies
 ```
