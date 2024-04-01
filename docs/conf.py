@@ -13,33 +13,33 @@
 
 import os
 import sys
-from unittest.mock import MagicMock
+# from unittest.mock import MagicMock
 
 sys.path.insert(0, os.path.abspath('../HyperIT/'))
 
-def setup_JVM():
-    from jpype import startJVM, getDefaultJVMPath, isJVMStarted, shutdownJVM
-    if not isJVMStarted():
-        startJVM(getDefaultJVMPath(), "-ea", "-Djava.class.path=/path/to/your/infodynamics.jar")
+# def setup_JVM():
+#     from jpype import startJVM, getDefaultJVMPath, isJVMStarted, shutdownJVM
+#     if not isJVMStarted():
+#         startJVM(getDefaultJVMPath(), "-ea", "-Djava.class.path=/path/to/your/infodynamics.jar")
 
-# Ensure the JVM is started before any autodoc processes begin
-setup_JVM()
+# # Ensure the JVM is started before any autodoc processes begin
+# setup_JVM()
 
 
-class Mock(MagicMock):
-    @classmethod
-    def __getattr__(cls, name):
-        return MagicMock()
+# class Mock(MagicMock):
+#     @classmethod
+#     def __getattr__(cls, name):
+#         return MagicMock()
 
-MOCK_MODULES = ['jpype', 'jpype.startJVM', 'jpype.getDefaultJVMPath', 'get_jvm_path']
-sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+# MOCK_MODULES = ['jpype', 'jpype.startJVM', 'jpype.getDefaultJVMPath', 'get_jvm_path']
+# sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
-def skip_jpype_members(app, what, name, obj, skip, options):
-    # Example condition to skip JPype-related members
-    # Adjust the condition based on your specific needs
-    if name.startswith('J') or type(obj).__module__ == 'jpype':
-        return True  # Skip this member
-    return None  # Let Sphinx decide for other members
+# def skip_jpype_members(app, what, name, obj, skip, options):
+#     # Example condition to skip JPype-related members
+#     # Adjust the condition based on your specific needs
+#     if name.startswith('J') or type(obj).__module__ == 'jpype':
+#         return True  # Skip this member
+#     return None  # Let Sphinx decide for other members
 
 
 # -- Project information -----------------------------------------------------
