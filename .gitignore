@@ -1,8 +1,6 @@
 /.DS_Store
 /infodynamics-dist-1.6.1
-HyperIT/cuda/
-HyperIT/java/
-HyperIT/__pycache__/
+cuda/
+java/
+__pycache__/
 .DS_Store
-__pycache__/infotheory.cpython-311.pyc
-__pycache__/it.cpython-311.pyc
