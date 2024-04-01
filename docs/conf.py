@@ -90,5 +90,5 @@ html_theme_options = {
 html_static_path = ['_static']
 
 
-def setup(app):
-    app.connect('autodoc-skip-member', skip_jpype_members)
+# def setup(app):
+#     app.connect('autodoc-skip-member', skip_jpype_members)
