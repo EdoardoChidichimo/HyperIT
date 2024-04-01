@@ -18,5 +18,11 @@ atoms = it.compute_atoms(tau, redundancy, vis, plot_channels)
 ```
 
 ## DEPENDENCIES
-
+```
+numpy
+matplotlib
+PIL
+jpype
+phyid
+```
 
