@@ -28,7 +28,7 @@ class HyperIT(ABC):
     Note: This class requires numpy, matplotlib, PIL, jpype (with the infodynamics.jar file), and phyid as dependencies.
     """
 
-    def __init__(self, data1: np.ndarray, data2: np.ndarray, channel_names: List[str], verbose: bool = False):
+    def __init__(self, data1: np.ndarray, data2: np.ndarray, channel_names: List[str], verbose: bool = False, working_directory: str = None):
         """ Creates HyperIT object containing time-series data and channel names for analysis. 
             Automatic data checks for consistency and dimensionality, identifying whether analysis is to be intra- or inter-brain.
 
@@ -37,12 +37,13 @@ class HyperIT(ABC):
                 - If data is 2 dimensional, data is assumed to be unepoched with shape          (channels, time_points).
 
         Args:
-            data1               (np.ndarray): Time-series data for participant 1.
-            data2               (np.ndarray): Time-series data for participant 1.
-            channel_names        (List[str]): A list of strings representing the channel names for each participant. [[channel_names_p1], [channel_names_p2]] or [[channel_names_p1]] for intra-brain.
-            verbose         (bool, optional): Whether constructor and analyses should output details and progress. Defaults to False.
+            data1                   (np.ndarray): Time-series data for participant 1.
+            data2                   (np.ndarray): Time-series data for participant 1.
+            channel_names            (List[str]): A list of strings representing the channel names for each participant. [[channel_names_p1], [channel_names_p2]] or [[channel_names_p1]] for intra-brain.
+            verbose             (bool, optional): Whether constructor and analyses should output details and progress. Defaults to False.
+            working_directory    (str, optional): The directory where the infodynamics.jar file is located. Defaults to None (later defaults to os.getcwd()).
         """
-        self._setup_JVM()
+        self._setup_JVM(working_directory)
 
         self.data1: np.ndarray = data1
         self.data2: np.ndarray = data2
