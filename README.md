@@ -34,8 +34,11 @@ jpype
 phyid
 ```
 See: 
+
 https://jpype.readthedocs.io/en/latest/ 
+
 https://github.com/Imperial-MIND-lab/integrated-info-decomp/tree/main
+
 
 ## Acknowledgements
 For MI and TE calculations, HyperIT depends on **JIDT** by Lizier and colleagues, accessible [here](https://github.com/jlizier/jidt), and published here: 
