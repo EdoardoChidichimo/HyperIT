@@ -13,6 +13,8 @@
 
 import os
 import sys
+from unittest.mock import MagicMock
+
 sys.path.insert(0, os.path.abspath('../HyperIT/'))
 
 def setup_JVM():
@@ -22,6 +24,15 @@ def setup_JVM():
 
 # Ensure the JVM is started before any autodoc processes begin
 setup_JVM()
+
+
+class Mock(MagicMock):
+    @classmethod
+    def __getattr__(cls, name):
+        return MagicMock()
+
+MOCK_MODULES = ['jpype', 'jpype.startJVM', 'jpype.getDefaultJVMPath', 'get_jvm_path']
+sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 def skip_jpype_members(app, what, name, obj, skip, options):
     # Example condition to skip JPype-related members
