@@ -4,4 +4,4 @@ sphinx_rtd_theme
 numpy
 scipy
 matplotlib
-phyid
+git+https://github.com/Imperial-MIND-lab/integrated-info-decomp.git
