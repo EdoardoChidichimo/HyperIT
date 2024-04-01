@@ -1,6 +1,6 @@
 # HyperIT
 
-Hyperscanning Analyses using Information Theoretic Measures!
+_Hyperscanning Analyses using Information Theoretic Measures!_
 
 HyperIT is equipped to compute pairwise, multivariate **Mutual Information** (MI), **Transfer Entropy** (TE), and **Integrated Information Decomposition** (ΦID) for continuous time-series data. Compatible for both intra-brain and inter-brain analyses and for both epoched and unepoched data. Multiple estimator choices and parameter customisations (via JIDT) are available, including KSG, Kernel, Gaussian, Symbolic, and Histogram/Binning. Integrated statistical significance testing using permutation/boostrapping approach for most estimators. Visualisations of MI/TE matrices and information atoms/lattices also provided.
 
