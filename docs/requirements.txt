@@ -4,5 +4,4 @@ sphinx_rtd_theme
 numpy
 scipy
 matplotlib
-os
 phyid
