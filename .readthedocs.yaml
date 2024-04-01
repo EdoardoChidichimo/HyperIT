@@ -23,7 +23,7 @@ sphinx:
 python:
   version: 3.12
   install:
-      - requirements: path/to/your/requirements.txt
+      - requirements: docs/requirements.txt
 
 # Optionally build your docs in additional formats such as PDF and ePub
 # formats:
