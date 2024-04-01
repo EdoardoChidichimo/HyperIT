@@ -11,21 +11,21 @@ from jpype import *
 from phyid.calculate import calc_PhiID
 from phyid.utils import PhiID_atoms_abbr
 
-
 class HyperIT(ABC):
-    """ HyperIT: A Comprehensive Framewowrk for Conducting Hyperscanning Information Theoretic (HyperIT) Analyses.
+    """ HyperIT: Hyperscanning Analyses using Information Theoretic Measures.
 
-        HyperIT is equipped to compute multivariate Mutual Information (MI), Transfer Entropy (TE), and Integrated Information Decomposition (ΦID).
-        Supports both intra-brain and inter-brain analyses, epoched and unepoched time-series signals.  
-        Designed to be flexible and user-friendly, allowing for multiple estimator choices and parameter customisations (using JIDT).
-        Provides statistical significance testing using permutation/boostrapping approach for most estimators.
-        Allows visualisations of MI/TE matrices and information atoms/lattices.
+        HyperIT is equipped to compute pairwise and multivariate Mutual Information (MI), Transfer Entropy (TE), and Integrated Information Decomposition (ΦID).
+        Both intra-brain and inter-brain analyses, for both epoched and unepoched time-series signals.  
+        Multiple estimator choices and parameter customisations (using JIDT), including KSG, Kernel, Gaussian, Symbolic, and Histogram/Binning.
+        Statistical significance testing using permutation/boostrapping approach for most estimators.
+        Visualisations of MI/TE matrices and information atoms/lattices.
 
     Args:
         ABC (_type_): Abstract Base Class for HyperIT.
 
     Note: This class requires numpy, matplotlib, PIL, jpype (with the infodynamics.jar file), and phyid as dependencies.
     """
+    
     def __init__(self, data1: np.ndarray, data2: np.ndarray, channel_names: List[str], verbose: bool = False):
         """ Creates HyperIT object containing time-series data and channel names for analysis. 
             Automatic data checks for consistency and dimensionality, identifying whether analysis is to be intra- or inter-brain.
@@ -95,6 +95,7 @@ class HyperIT(ABC):
         return self.__repr__()
     
 
+
     @staticmethod        
     def _setup_JVM(working_directory: str) -> None:
         if(not isJVMStarted()):
@@ -143,6 +144,7 @@ class HyperIT(ABC):
         if any(len(names) != n_channels for names in self.channel_names[0]):
             raise ValueError("The number of channels in time-series data does not match the length of channel_names.")
 
+
     @staticmethod
     def __setup_JArray(a: np.ndarray) -> JArray:
         """ Converts a numpy array to a Java array for use in JIDT."""
@@ -153,6 +155,7 @@ class HyperIT(ABC):
         except Exception: 
             ja = JArray(JDouble, 1)(a.tolist())
         return ja
+
 
 
     def _mi_hist(self, s1: np.ndarray, s2: np.ndarray) -> float:
@@ -190,6 +193,7 @@ class HyperIT(ABC):
             pairwise[epo_i] = result
 
         return pairwise
+
 
     def _mi_symb(self, s1: np.ndarray, s2: np.ndarray, l: int = 1, m: int = 3) -> float:
         """Calculates Mutual Information using Symbolic Estimator for time-series signals."""
@@ -241,6 +245,7 @@ class HyperIT(ABC):
         return pairwise
 
 
+
     def __which_mi_estimator(self) -> None:
         """Determines the Mutual Information estimator to be used based on user input. Many estimators are deployed using JIDT."""
 
@@ -281,9 +286,9 @@ class HyperIT(ABC):
         if not self.estimator_type == 'histogram' and not self.estimator_type == 'symbolic':
             self.Calc.setProperty("NORMALISE", str(self.params.get('normalise', True)))
 
+
     def __which_te_estimator(self) -> None:
         """Determines the Transfer Entropy estimator to be used based on user input. Many estimators are deployed using JIDT."""
-
 
         if self.estimator_type == 'ksg' or self.estimator_type == 'ksg1' or self.estimator_type == 'ksg2':
             self.estimator_name = 'KSG Estimator'
@@ -320,6 +325,8 @@ class HyperIT(ABC):
             raise ValueError(f"Estimator type {self.estimator_type} not supported. Please choose from 'ksg', 'kernel', 'gaussian', or 'symbolic'.")
 
         self.Calc.setProperty("NORMALISE", str(self.params.get('normalise', True)).lower()) 
+
+
 
     def __estimate_it(self, s1: np.ndarray, s2: np.ndarray) -> np.ndarray:
         """ Estimates Mutual Information or Transfer Entropy for a pair of time-series signals using JIDT estimators. """
@@ -560,9 +567,9 @@ class HyperIT(ABC):
             Option to visualise the lattice values for a specific channel pair (be sure to specify via plot_channels kwarg).
 
         Args:
-            tau             (int, optional): The time-lag parameter for the ΦID calculation. Defaults to 1.
-            kind            (str, optional): The estimator to be used for the ΦID calculation. Defaults to "gaussian".
-            redundancy      (str, optional): The redundancy measure to be used for the ΦID calculation. Defaults to "MMI".
+            tau             (int, optional): Time-lag parameter. Defaults to 1.
+            kind            (str, optional): Estimator type. Defaults to "gaussian".
+            redundancy      (str, optional): Redundancy function to use. Defaults to "MMI" (minimum mutual information).
             vis            (bool, optional): Whether to visualise (via _plot_atoms()). Defaults to False.
 
         Returns:
