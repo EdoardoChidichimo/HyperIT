@@ -3,5 +3,6 @@ sphinx>=2.0, <7.0.0
 sphinx_rtd_theme
 numpy
 scipy
+tqdm
 matplotlib
 git+https://github.com/Imperial-MIND-lab/integrated-info-decomp.git
