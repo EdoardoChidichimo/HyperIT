@@ -30,8 +30,11 @@ https://jpype.readthedocs.io/en/latest/
 https://github.com/Imperial-MIND-lab/integrated-info-decomp/tree/main
 
 ## ACKNOWLEDGEMENTS
-This code depends on JIDT by Lizier and colleagues, accessible [here](https://github.com/jlizier/jidt), and published here: 
+For MI and TE calculations, HyperIT depends on **JIDT** by Lizier and colleagues, accessible [here](https://github.com/jlizier/jidt), and published here: 
 
 Lizier, J. T. (2014). "JIDT: An information-theoretic toolkit for studying the dynamics of complex systems", _Frontiers in Robotics and AI 1_(11). doi:[10.3389/frobt.2014.00011](http://dx.doi.org/10.3389/frobt.2014.00011) (pre-print: arXiv:[1408.3270](http://arxiv.org/abs/1408.3270))
 
+For $\Phi\text{ID}$ atoms, HyperIT depends on **phyid** by the Imperial Mind Lab, with thanks to Pedro Mediano and Eric Ceballos Dominguez for providing the code.
+
+Mediano, P. A. M., Rosas, F. E., Luppi, A. I., Carhart-Harris, R. L., Bor, D., Seth, A. K., & Barrett, A. B. (2021). Towards an extended taxonomy of information dynamics via Integrated Information Decomposition. https://doi.org/10.48550/ARXIV.2109.13186
 
