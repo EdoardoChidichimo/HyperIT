@@ -3,9 +3,6 @@ sphinx>=2.0, <7.0.0
 sphinx_rtd_theme
 numpy
 scipy
-PIL
-typing
-tqdm
 matplotlib
 os
 phyid
