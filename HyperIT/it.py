@@ -11,8 +11,6 @@ from jpype import *
 from phyid.calculate import calc_PhiID
 from phyid.utils import PhiID_atoms_abbr
 
-
-
 class HyperIT(ABC):
     """ HyperIT: Hyperscanning Analyses using Information Theoretic Measures.
 
