@@ -5,25 +5,29 @@ _Hyperscanning Analyses using Information Theoretic Measures!_
 [![Documentation Status](https://readthedocs.org/projects/hyperit/badge/?version=latest)](https://hyperit.readthedocs.io/en/latest/?badge=latest)
 
 
-HyperIT is equipped to compute pairwise, multivariate **Mutual Information** (MI), **Transfer Entropy** (TE), and **Integrated Information Decomposition** (ΦID) for continuous time-series data. Compatible for both intra-brain and inter-brain analyses and for both epoched and unepoched data. Multiple estimator choices and parameter customisations (via JIDT) are available, including KSG, Kernel, Gaussian, Symbolic, and Histogram/Binning. Integrated statistical significance testing using permutation/boostrapping approach for most estimators. Visualisations of MI/TE matrices and information atoms/lattices also provided.
+The HyperIT Class is a framework that calculates **Mutual Information** (MI), **Transfer Entropy** (TE), and **Integrated Information Decomposition** ($\Phi\text{ID}$) for **both hyperscanning and intra-brain analyses**. HyperIT computes these information-theoretic measures between different channels at **different spatial scales of organisation** (micro, meso, and macro), handling continuous time-series data (epoched or otherwise) — **compatible with EEG, MEG, and fNIRS data**. Offers parameter customisation and estimator selection (Histogram/Binning, KSG, Box Kernel, Gaussian, and Symbolic) via JIDT. Most estimators are equipped with statistical significance testing (SST) based on permutation/bootstrapping approaches, too. Visualisations of MI/TE matrices and information atoms/lattices also provided. 
 
-In all, HyperIT is designed to allow researchers to analyse various complex systems deploying information-theoretic measures, particularly focusing on neural time-series data in the context of hyperscanning. 
+
+HyperIT is designed to allow researchers to analyse various complex systems at different scales of organisation deploying information-theoretic measures, particularly focusing on neural time-series data in the context of hyperscanning. 
 
 ## Usage
 
-HyperIT uses a Class/OOP framework, allowing you to make multiple instances HyperIT objects (each with different data). MI, TE, and ΦID atoms can be computed by calling the following functions:
+HyperIT uses a Class/OOP framework, allowing multiple instances of HyperIT objects (instantiated with different data). MI, TE, and ΦID atoms can be computed by calling the following functions:
 
 ```python
 from it import HyperIT
 
 
-it = HyperIT(data1, data2, channels)
+it = HyperIT(data1, data2, channel_names)
+
+# ROIs can be specified, too 
+it.roi(roi_list)
 
 mi = it.compute_mi(estimator_type, calc_sigstats, vis)
 te_xy, te_yx = it.compute_te(estimator_type, calc_sigstats, vis)
 atoms = it.compute_atoms(tau, redundancy, vis, plot_channels)
 ```
-For specific estimator types and general functionality, see Documentation.
+For specific estimator types and general functionality, see Documentation and Tutorial.
 
 ## Dependencies
 ```
