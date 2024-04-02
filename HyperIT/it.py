@@ -892,18 +892,11 @@ if __name__ == '__main__':
 
     hyperit = HyperIT(data1, data2, channel_names, verbose=True)
 
-    try:
-        hyperit.roi = [[['Fp1', 'Fp2', 'F7', 'F8', 'F3', 'F4', 'Fz', 'FT9', 'FT10', 'FC5', 'FC1', 'FC2', 'FC6'],
-                        ['T7', 'C3', 'Cz', 'C4', 'T8', 'TP9', 'CP5', 'CP1', 'CP2', 'CP6', 'TP10', 'P7', 'P3']], 
-                        [['TP9', 'CP5', 'CP1', 'CP2', 'CP6', 'TP10', 'P7', 'P3', 'Pz', 'P4', 'P8', 'O1', 'O2'],
-                         ['T7', 'C3', 'Cz', 'C4', 'T8', 'TP9', 'CP5', 'CP1', 'CP2', 'CP6', 'TP10', 'P7', 'P3']]]
-        print("ROI set successfully:", hyperit.roi)
-        
-        # soi = 13
-        # n_groups = 2
-
-    except ValueError as e:
-        print("Error setting ROI:", e)
+    hyperit.roi = [[['Fp1', 'Fp2', 'F7', 'F8', 'F3', 'F4', 'Fz', 'FT9', 'FT10', 'FC5', 'FC1', 'FC2', 'FC6'],
+                    ['T7', 'C3', 'Cz', 'C4', 'T8', 'TP9', 'CP5', 'CP1', 'CP2', 'CP6', 'TP10', 'P7', 'P3']], 
+                    [['TP9', 'CP5', 'CP1', 'CP2', 'CP6', 'TP10', 'P7', 'P3', 'Pz', 'P4', 'P8', 'O1', 'O2'],
+                    ['T7', 'C3', 'Cz', 'C4', 'T8', 'TP9', 'CP5', 'CP1', 'CP2', 'CP6', 'TP10', 'P7', 'P3']]]
+    
 
     mi = hyperit.compute_mi(estimator_type='kernel', calc_sigstats=True, vis=True)
 
