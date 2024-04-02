@@ -35,7 +35,6 @@ For specific estimator types and general functionality, see Documentation and Tu
 ```
 numpy
 matplotlib
-PIL
 jpype
 phyid
 ```
