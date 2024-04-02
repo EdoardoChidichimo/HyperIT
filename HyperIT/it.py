@@ -104,8 +104,6 @@ class HyperIT(ABC):
         return self.__repr__()
     
 
-
-
     @property
     def roi(self) -> List[List[Union[str, int]]]:
         """Regions of interest for both data of the HyperIT object (defining spatial scale of organisation). To set this, call .roi(roi_list). 
