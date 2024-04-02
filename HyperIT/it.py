@@ -108,7 +108,16 @@ class HyperIT(ABC):
 
     @property
     def roi(self) -> List[List[Union[str, int]]]:
-        """Regions of interest for both data of the HyperIT object (defining spatial scale of organisation). To set this, call .roi(roi_list). See tutorial for more details."""
+        """Regions of interest for both data of the HyperIT object (defining spatial scale of organisation). To set this, call .roi(roi_list). 
+        
+        HyperIT is defaulted to **micro-scale** analysis (individual channels) but specific channels can be specified for pointwise comparison: roi_list = [['Fp1', 'Fp2'], ['F3', 'F4']], for example. 
+        For meso-scale analysis (clusters of channels), equally-sized and equally-numbered clusters must be defined for both sets of data in the following way: roi_list = [[[PP1_cluster_1], ..., [PP1_cluster_n]], [[PP2_cluster_1], ..., [PP2_cluster_n]]]. 
+        Finally, for macro-scale analysis (all channels per person), the specification can be set as ```roi_list = [[PP1_all_channels][PP2_all_channels]]``` (note that PP1_all_channels and PP2_all_channels should be list themselves).
+        Importantly, as long as the ```channel_names``` are instantiated properly in the initiation of the HyperIT object, the ROI can even be given as a lists of channel indices (integers). 
+        In any case, to set these scales of organisations, simply amend the ```roi``` property of the HyperIT object used.
+        Call roi.reset_roi() to reset the ROI to all channels.
+        
+        """
         return self._roi
 
     @roi.setter
@@ -763,7 +772,7 @@ class HyperIT(ABC):
             - symbolic:         k (1)
 
         Args:
-            estimator_type       (str, optional): Which Mutual Information estimator to use. Defaults to 'kernel'.
+            estimator_type       (str, optional): Which transfer entropy estimator to use. Defaults to 'kernel'.
             calc_sigstats       (bool, optional): Whether to conduct statistical signficance testing. Defaults to False.
             vis                 (bool, optional): Whether to visualise (via __plot_it()). Defaults to False.
 
