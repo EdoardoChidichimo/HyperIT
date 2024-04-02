@@ -753,7 +753,7 @@ class HyperIT(ABC):
     
     def compute_te(self, estimator_type: str = 'kernel', calc_sigstats: bool = False, vis: bool = False, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
         """Function to compute transfer entropy between data (time-series signals) instantiated in the HyperIT object. 
-            data1 is first taken to be the source and data2 the target (X->Y). This function automatically computes the opposite matrix for Y -> X.
+            data1 is taken to be the source and data2 the target (X -> Y). This function automatically computes the opposite matrix, too (Y -> X).
 
         PARAMETER OPTIONS FOR TRANSFER ENTROPY ESTIMATORS (defaults in parentheses):
         Estimator types:        kwargs:
