@@ -4,3 +4,5 @@ cuda/
 java/
 __pycache__/
 .DS_Store
+.readthedocs.yaml
+docs/
