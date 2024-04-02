@@ -4,5 +4,4 @@ cuda/
 java/
 __pycache__/
 .DS_Store
-docs/
 HyperIT/testing.ipynb
