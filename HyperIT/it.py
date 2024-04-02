@@ -65,9 +65,9 @@ class HyperIT(ABC):
         if self.verbose:
             print("HyperIT object created successfully.")
             if self._is_epoched:
-                print(f"{'Inter-Brain' if self._inter_brain else 'Intra-Brain'} analysis and epoched data detected. \nAssuming each signal has shape ({self.n_epo} epochs, {self.n_chan} channels, {self.n_samples} time points).")
+                print(f"{'Inter-Brain' if self._inter_brain else 'Intra-Brain'} analysis and epoched data detected. \nAssuming data passed have shape ({self.n_epo} epochs, {self.n_chan} channels, {self.n_samples} time points).")
             else:
-                print(f"{'Inter-Brain' if self._inter_brain else 'Intra-Brain'} analysis and unepoched data detected. \nAssuming each signal has shape ({self.n_chan} channels, {self.n_samples} time points).")
+                print(f"{'Inter-Brain' if self._inter_brain else 'Intra-Brain'} analysis and unepoched data detected. \nAssuming data passed have shape ({self.n_chan} channels, {self.n_samples} time points).")
 
 
     def __del__(self):
@@ -108,7 +108,7 @@ class HyperIT(ABC):
 
     @property
     def roi(self) -> List[List[Union[str, int]]]:
-        """Returns the region of interest for both data of the HyperIT object."""
+        """Regions of interest for both data of the HyperIT object (defining spatial scale of organisation). To set this, call .roi(roi_list). See tutorial for more details."""
         return self._roi
 
     @roi.setter
@@ -125,18 +125,16 @@ class HyperIT(ABC):
         self._roi_specified = True
 
         ## DETERMINE SCALE OF ORGANISATION
-        # 0: Global organisation (all channels)
-        # 1: Micro organisation (each channel)
-        # n: Meso- or n-scale organisation (n channels per roi group)
+        # 1: Micro organisation (specified channels, pairwise comparison)           e.g., roi_list = [['Fp1', 'Fp2'], ['F3', 'F4']]
 
-        # Check if roi is structured for pointwise channel comparison
-        # e.g., roi_list = [['Fp1', 'Fp2'], ['F3', 'F4']]
+        # n: Meso- or n-scale organisation (n specified channels per ROI group)     e.g., roi_list = [[  ['Fp1', 'Fp2'], ['CP1', 'CP2']   ],   n CHANNELS IN EACH GROUP FOR PARTICIPANT 1
+                                                                                                    # [    ['F3', 'F4'], ['F7', 'F8']     ]]   n CHANNELS IN EACH GROUP FOR PARTICIPANT 2
+
+        # Check if roi_list is structured for pointwise channel comparison
         if all(isinstance(sublist, list) and not any(isinstance(item, list) for item in sublist) for sublist in roi_list):
             self._scale_of_organisation = 1 
 
-        # Check if roi is structured for grouped channel comparison
-        # e.g., roi_list = [[  ['Fp1', 'Fp2'],['CP1','CP2']  ],     n CHANNELS IN EACH GROUP FOR PARTICIPANT 1
-        #                   [    ['F3', 'F4'],['F7', 'F8']   ]]     n CHANNELS IN EACH GROUP FOR PARTICIPANT 2
+        # Check if roi_list is structured for grouped channel comparison
         elif all(isinstance(sublist, list) and all(isinstance(item, list) for item in sublist) for sublist in roi_list):
             # Ensure uniformity in the number of groups across both halves
             num_groups_x = len(roi_list[0])
@@ -617,13 +615,20 @@ class HyperIT(ABC):
             plt.tick_params(axis='y', which='both', right=False, left=False, labelleft=True)
             plt.show()
 
-
     @staticmethod
     def __plot_atoms(phi_dict: dict):
-        """Plots the values of the atoms in the lattice for a given pair of channels/groups."""
+        """Plots the values of the atoms in the lattice for a given pair of channels/ROI groups."""
+    
+        if not phi_dict or not phi_dict[0]:
+            print("The phi_dict is empty or not properly structured.")
+            return
+
+        x_range = len(phi_dict)
+        y_range = len(phi_dict[0])
+        prompt_message = f"Choose two numbers from this range: [0-{x_range - 1}] for X and [0-{y_range - 1}] for Y (or type 'done' to stop): "
 
         while True:
-            user_input = input("Enter two source and target channel/group indices, separated by comma (or type 'done' to stop): ").split(',')
+            user_input = input(prompt_message).split(',')
             
             if len(user_input) == 1 and user_input[0].lower() == 'done':
                 break
@@ -672,10 +677,17 @@ class HyperIT(ABC):
                 print("Invalid channel/group indices.")
 
 
-
-
     def compute_mi(self, estimator_type: str = 'kernel', calc_sigstats: bool = False, vis: bool = False, **kwargs) -> np.ndarray:
         """Function to compute mutual information between data (time-series signals) instantiated in the HyperIT object.
+
+        PARAMETER OPTIONS FOR MUTUAL INFORMATION ESTIMATORS (defaults in parentheses):
+        Estimator types:        kwargs:
+            - histogram:        (No SST available yet)
+            - ksg1:             kraskov_param (4), normalise (True)
+            - ksg2:             kraskov_param (4), normalise (True)
+            - kernel:           kernel_width (0.25), normalise (True)
+            - gaussian:         normalise (True)
+            - symbolic:         (No SST available yet)
 
         Args:
             estimator_type       (str, optional): Which mutual information estimator to use. Defaults to 'kernel'.
@@ -742,6 +754,13 @@ class HyperIT(ABC):
     def compute_te(self, estimator_type: str = 'kernel', calc_sigstats: bool = False, vis: bool = False, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
         """Function to compute transfer entropy between data (time-series signals) instantiated in the HyperIT object. 
             data1 is first taken to be the source and data2 the target (X->Y). This function automatically computes the opposite matrix for Y -> X.
+
+        PARAMETER OPTIONS FOR TRANSFER ENTROPY ESTIMATORS (defaults in parentheses):
+        Estimator types:        kwargs:
+            - ksg:              k, k_tau, l, l_tau, delay, kraskov_param (all 1), normalise (True)
+            - kernel:           kernel_width (0.5), normalise (True)
+            - gaussian:         k, k_tau, l, l_tau, delay (all 1), bias_correction (False), normalise (True)
+            - symbolic:         k (1)
 
         Args:
             estimator_type       (str, optional): Which Mutual Information estimator to use. Defaults to 'kernel'.
@@ -836,7 +855,6 @@ class HyperIT(ABC):
                     elif self._scale_of_organisation > 1:
                         
                         if self._is_epoched:
-                            print("To compute atoms for grouped channels, please ensure that the data is not epoched. Flattening data now...")
                             
                             temp_s1, temp_s2 = self._data1[:, self._roi[0][i], :], self._data2[:, self._roi[1][j], :]
                             epoch_num = self._data1.shape[0]
@@ -846,8 +864,6 @@ class HyperIT(ABC):
                             
                         else:
                             s1, s2 = (self._data1[self._roi[0][i], :]).T, (self._data2[self._roi[1][j], :]).T
-
-                    print(s1.shape, s2.shape)
 
                     atoms_results, _ = calc_PhiID(s1, s2, tau=tau, kind='gaussian', redundancy=redundancy)
                     calc_atoms = np.mean(np.array([atoms_results[_] for _ in PhiID_atoms_abbr]), axis=1)
