@@ -1,6 +1,6 @@
 # HyperIT
 
-_Hyperscanning Analyses using Information Theoretic Measures!_
+_Hyperscanning Analyses using Information-Theoretic Measures!_
 
 [![Documentation Status](https://readthedocs.org/projects/hyperit/badge/?version=latest)](https://hyperit.readthedocs.io/en/latest/?badge=latest)
 
