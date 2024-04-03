@@ -5,11 +5,12 @@ from PIL import Image, ImageDraw
 from typing import Tuple, List, Union
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-import os
 
-from jpype import isJVMStarted, getDefaultJVMPath, startJVM, JArray, JDouble, shutdownJVM, JPackage
+from jpype import JPackage, shutdownJVM
 from phyid.calculate import calc_PhiID
 from phyid.utils import PhiID_atoms_abbr
+
+from utils import setup_JVM, setup_JArray, convert_names_to_indices, convert_indices_to_names
 
 class HyperIT(ABC):
     """ HyperIT: Hyperscanning Analyses using Information Theoretic Measures.
@@ -41,7 +42,7 @@ class HyperIT(ABC):
             verbose             (bool, optional): Whether constructor and analyses should output details and progress. Defaults to False.
             working_directory    (str, optional): The directory where the infodynamics.jar file is located. Defaults to None (later defaults to os.getcwd()).
         """
-        self.__setup_JVM(working_directory)
+        setup_JVM(working_directory)
         self._channel_names = channel_names #  [[p1][p2]] or [[p1]] for intra-brain
         self._channel_indices1 = []
         self._channel_indices2 = []
@@ -104,6 +105,46 @@ class HyperIT(ABC):
         return self.__repr__()
     
 
+    def __check_data(self) -> None:
+        """ Checks the consistency and dimensionality of the time-series data and channel names. Sets the number of epochs, channels, and time points as object variables.
+
+        Ensures:
+            - Data are numpy arrays.
+            - Data shapes are consistent.
+            - Data dimensions are either 2 or 3 dimensional.
+            - Channel names are in correct format and match number of channels in data.
+        """
+
+        if not all(isinstance(data, np.ndarray) for data in [self._data1, self._data2]):
+            raise ValueError("Time-series data must be numpy arrays.")
+        
+        if self._data1.shape != self._data2.shape:
+            raise ValueError("Time-series data must have the same shape for both participants.")
+    
+        if self._data1.ndim not in [2,3]:
+            raise ValueError(f"Unexpected number of dimensions in time-series data: {self._data1.ndim}. Expected 2 dimensions (channels, time_points) or 3 dimensions (epochs, channels, time_points).")
+
+        if not isinstance(self._channel_names, (list, np.ndarray)) or isinstance(self._channel_names[0], str):
+            raise ValueError("Channel names must be a list of strings or a list of lists of strings for inter-brain analysis.")
+    
+        if not self._inter_brain and isinstance(self._channel_names[0], list):
+            self._channel_names = [self._channel_names] * 2
+
+        if self._is_epoched:
+            self.n_epo, self.n_chan, self.n_samples = self._data1.shape
+        else:
+            self.n_epo = 1
+            self.n_chan, self.n_samples = self._data1.shape
+
+        n_channels = self._data1.shape[1] if self._is_epoched else self._data1.shape[0]
+
+        if any(len(names) != n_channels for names in self._channel_names):
+            raise ValueError("The number of channels in time-series data does not match the length of channel_names.")
+        
+        self._channel_indices1 = np.arange(len(self._channel_names[0]))
+        self._channel_indices2 = np.arange(len(self._channel_names[1])) if len(self._channel_names) > 1 else self._channel_indices2.copy()
+        
+        
     @property
     def roi(self) -> List[List[Union[str, int, list]]]:
         """Regions of interest for both data of the HyperIT object (defining spatial scale of organisation). To set this, call .roi(roi_list). 
@@ -167,8 +208,8 @@ class HyperIT(ABC):
 
         roi1, roi2 = roi_list
         
-        self._channel_indices1 = self.__convert_names_to_indices(roi1, 0) # same array as roi1 just with indices instead of EEG channel names
-        self._channel_indices2 = self.__convert_names_to_indices(roi2, 1)
+        self._channel_indices1 = convert_names_to_indices(self._channel_names, roi1, 0) # same array as roi1 just with indices instead of EEG channel names
+        self._channel_indices2 = convert_names_to_indices(self._channel_names, roi2, 1)
 
         # POINTWISE CHANNEL COMPARISON
         if self._scale_of_organisation == 1:
@@ -185,9 +226,6 @@ class HyperIT(ABC):
 
         self._roi = [self._channel_indices1, self._channel_indices2]
         
-
-
-
     def reset_roi(self) -> None:
         """Resets the region of interest for both data of the HyperIT object to all channels."""
         self._roi_specified = False
@@ -199,137 +237,6 @@ class HyperIT(ABC):
         self.n_chan = len(self._channel_indices1)
         print("Region of interest has been reset to all channels.")
 
-
-
-    def __convert_names_to_indices(self, roi_part, participant):
-        """Converts ROI channel names or groups of names into indices based on the channel list.
-
-        Args:
-            roi_part: A single ROI, list of ROIs, or list of lists of ROIs to convert.
-            participant: The index of the participant (0 or 1) to match with the correct channel names list.
-
-        Returns:
-            A list of indices, or list of lists of indices, corresponding to the channel names.
-        """
-        channel_names = self._channel_names[participant]
-
-        # Handle sub-sublists (grouped channel comparison)
-        if all(isinstance(item, list) for item in roi_part):
-            # roi_part is a list of lists
-            return [[channel_names.index(name) if isinstance(name, str) else name for name in group] for group in roi_part]
-        
-        # Handle simple list (pointwise channel comparison)
-        elif isinstance(roi_part, list):
-            return [channel_names.index(name) if isinstance(name, str) else name for name in roi_part]
-
-        # Handle single channel name or index
-        elif isinstance(roi_part, str):
-            return [channel_names.index(roi_part)]
-
-        else:
-            return roi_part  # In case roi_part is already in the desired format (indices)
-        
-    def __convert_indices_to_names(self, roi_part, participant):
-        """Converts ROI channel indices or groups of indices into names based on the channel list.
-
-        Args:
-            roi_part: A single index, list of indices, or list of lists of indices to convert.
-            participant: The index of the participant (0 or 1) to match with the correct channel names list.
-
-        Returns:
-            A list of names, or list of lists of names, corresponding to the channel indices.
-        """
-        channel_names = self._channel_names[participant]
-        
-        if isinstance(roi_part, np.ndarray):
-            roi_part = roi_part.tolist()
-
-        # Handle sub-sublists (grouped channel comparison)
-        if all(isinstance(item, list) for item in roi_part):
-            return [[channel_names[index] if isinstance(index, int) else index for index in group] for group in roi_part]
-
-        # Handle simple list (pointwise channel comparison)
-        elif isinstance(roi_part, list):
-            return [channel_names[index] if isinstance(index, int) else index for index in roi_part]
-
-        # Handle single channel index
-        elif isinstance(roi_part, int):
-            return channel_names[roi_part]
-
-        else:
-            return roi_part  # In case roi_part is already in the desired format (names)
-
-
-
-    @staticmethod
-    def __setup_JVM(working_directory: str = None) -> None:
-        if(not isJVMStarted()):
-            
-            if working_directory is None:
-                working_directory = os.getcwd()
-
-            jarLocation = os.path.join(working_directory, "infodynamics.jar")
-
-            if not os.path.isfile(jarLocation):
-                    raise FileNotFoundError(f"infodynamics.jar not found (expected at {os.path.abspath(jarLocation)}).")
-
-            startJVM(getDefaultJVMPath(), "-ea", "-Djava.class.path=" + jarLocation)
-
-
-    def __check_data(self) -> None:
-        """ Checks the consistency and dimensionality of the time-series data and channel names. Sets the number of epochs, channels, and time points as object variables.
-
-        Ensures:
-            - Data are numpy arrays.
-            - Data shapes are consistent.
-            - Data dimensions are either 2 or 3 dimensional.
-            - Channel names are in correct format and match number of channels in data.
-        """
-
-        if not all(isinstance(data, np.ndarray) for data in [self._data1, self._data2]):
-            raise ValueError("Time-series data must be numpy arrays.")
-        
-        if self._data1.shape != self._data2.shape:
-            raise ValueError("Time-series data must have the same shape for both participants.")
-    
-        if self._data1.ndim not in [2,3]:
-            raise ValueError(f"Unexpected number of dimensions in time-series data: {self._data1.ndim}. Expected 2 dimensions (channels, time_points) or 3 dimensions (epochs, channels, time_points).")
-
-        if not isinstance(self._channel_names, (list, np.ndarray)) or isinstance(self._channel_names[0], str):
-            raise ValueError("Channel names must be a list of strings or a list of lists of strings for inter-brain analysis.")
-    
-        if not self._inter_brain and isinstance(self._channel_names[0], list):
-            self._channel_names = [self._channel_names] * 2
-
-        if self._is_epoched:
-            self.n_epo, self.n_chan, self.n_samples = self._data1.shape
-        else:
-            self.n_epo = 1
-            self.n_chan, self.n_samples = self._data1.shape
-
-        n_channels = self._data1.shape[1] if self._is_epoched else self._data1.shape[0]
-
-        if any(len(names) != n_channels for names in self._channel_names):
-            raise ValueError("The number of channels in time-series data does not match the length of channel_names.")
-        
-        self._channel_indices1 = np.arange(len(self._channel_names[0]))
-        self._channel_indices2 = np.arange(len(self._channel_names[1])) if len(self._channel_names) > 1 else self._channel_indices2.copy()
-        
-        
-
-
-    @staticmethod
-    def __setup_JArray(a: np.ndarray) -> JArray:
-        """ Converts a numpy array to a Java array for use in JIDT."""
-
-        a = (a).astype(np.float64) 
-
-        try:
-            ja = JArray(JDouble, a.ndim)(a)
-        except Exception: 
-            ja = JArray(JDouble, a.ndim)(a.tolist())
-
-        return ja
 
 
     def __mi_hist(self, s1: np.ndarray, s2: np.ndarray) -> float:
@@ -365,21 +272,22 @@ class HyperIT(ABC):
             x, y = (s1[epo_i, :], s2[epo_i, :]) if self._is_epoched else (s1, s2)
             mi = hist_calc_mi(x, y)
 
-            permuted_mi_values = []
+            if self.calc_sigstats:
+                permuted_mi_values = []
 
-            for _ in range(self.stat_sig_perm_num):
-                np.random.shuffle(y)
-                permuted_mi = hist_calc_mi(x, y)
-                permuted_mi_values.append(permuted_mi)
+                for _ in range(self.stat_sig_perm_num):
+                    np.random.shuffle(y)
+                    permuted_mi = hist_calc_mi(x, y)
+                    permuted_mi_values.append(permuted_mi)
 
-            mean_permuted_mi = np.mean(permuted_mi_values)
-            std_permuted_mi = np.std(permuted_mi_values)
-
-            p_value = np.sum(permuted_mi_values >= mi) / self.stat_sig_perm_num
-            estimations[epo_i] = [mi, mean_permuted_mi, std_permuted_mi, p_value]
+                mean_permuted_mi = np.mean(permuted_mi_values)
+                std_permuted_mi = np.std(permuted_mi_values)
+                p_value = np.sum(permuted_mi_values >= mi) / self.stat_sig_perm_num
+                estimations[epo_i] = [mi, mean_permuted_mi, std_permuted_mi, p_value]
+            else:
+                estimations[epo_i, 0] = mi
 
         return estimations
-
 
     def __mi_symb(self, s1: np.ndarray, s2: np.ndarray, l: int = 1, k: int = 3) -> float:
         """Calculates Mutual Information using Symbolic Estimator for time-series signals.
@@ -436,18 +344,20 @@ class HyperIT(ABC):
             x, y = (s1[epo_i, :], s2[epo_i, :]) if self._is_epoched else (s1, s2)
             mi = symb_calc_mi(x, y, l, k)
 
-            permuted_mi_values = []
-            for _ in range(self.stat_sig_perm_num):
-                np.random.shuffle(y)
+            if self.calc_sigstats:
+                permuted_mi_values = []
 
-                permuted_mi = symb_calc_mi(x, y, l, k)
-                permuted_mi_values.append(permuted_mi)
+                for _ in range(self.stat_sig_perm_num):
+                    np.random.shuffle(y)
+                    permuted_mi = symb_calc_mi(x, y, l, k)
+                    permuted_mi_values.append(permuted_mi)
 
-            mean_permuted_mi = np.mean(permuted_mi_values)
-            std_permuted_mi = np.std(permuted_mi_values)
-
-            p_value = np.sum(permuted_mi_values >= mi) / self.stat_sig_perm_num
-            estimations[epo_i] = [mi, mean_permuted_mi, std_permuted_mi, p_value]
+                mean_permuted_mi = np.mean(permuted_mi_values)
+                std_permuted_mi = np.std(permuted_mi_values)
+                p_value = np.sum(permuted_mi_values >= mi) / self.stat_sig_perm_num
+                estimations[epo_i] = [mi, mean_permuted_mi, std_permuted_mi, p_value]
+            else:
+                estimations[epo_i, 0] = mi
 
         return estimations
 
@@ -459,7 +369,6 @@ class HyperIT(ABC):
         if self.estimator_type.lower() == 'histogram':
             self.estimator_name = 'Histogram/Binning Estimator'
             
-
         elif self.estimator_type.lower() == 'ksg1' or self.estimator_type.lower() == 'ksg':
             self.estimator_name = 'KSG Estimator (version 1)'
             self.Calc = JPackage("infodynamics.measures.continuous.kraskov").MutualInfoCalculatorMultiVariateKraskov1()
@@ -481,10 +390,7 @@ class HyperIT(ABC):
 
         elif self.estimator_type.lower() == 'symbolic':
             self.estimator_name = 'Symbolic Estimator'
-            self.calc_sigstats = False # Temporary whilst I figure out how to get p-values for symbolic estimator
-            if self.verbose:
-                print("Please note that p-values are not available for Symbolic Estimator as this is not computed using JIDT. Work in progress...")
-
+            
         else:
             raise ValueError(f"Estimator type {self.estimator_type} not supported. Please choose from 'histogram', 'ksg1', 'ksg2', 'kernel', 'gaussian', 'symbolic'.")
 
@@ -532,7 +438,6 @@ class HyperIT(ABC):
         self.Calc.setProperty("NORMALISE", str(self.params.get('normalise', True)).lower()) 
 
 
-
     def __estimate_it(self, s1: np.ndarray, s2: np.ndarray) -> np.ndarray:
         """ Estimates Mutual Information or Transfer Entropy for a pair of time-series signals using JIDT estimators. """
 
@@ -548,7 +453,7 @@ class HyperIT(ABC):
 
             # initialise parameter describes the dimensions of the data
             self.Calc.initialise(*self._initialise_parameter) if self._initialise_parameter else self.Calc.initialise()
-            self.Calc.setObservations(self.__setup_JArray(X), self.__setup_JArray(Y))
+            self.Calc.setObservations(setup_JArray(X), setup_JArray(Y))
             result = self.Calc.computeAverageLocalOfObservations() * np.log(2)
 
             if self.calc_sigstats:
@@ -559,159 +464,6 @@ class HyperIT(ABC):
             
         return estimations
     
-
-
-    def __plot_it(self, it_matrix: np.ndarray) -> None:
-        """Plots the Mutual Information or Transfer Entropy matrix for visualisation. 
-        Axes labelled with source and target channel names. 
-        Choice to plot for all epochs, specific epoch(s), or average across epochs.
-
-        Args:
-            it_matrix (np.ndarray): The Mutual Information or Transfer Entropy matrix to be plotted with shape (n_chan, n_chan, n_epo, 4), 
-            where the last dimension represents the statistical signficance testing results: (local result, distribution mean, distribution standard deviation, p-value).
-        """
-
-        title = f'{self.measure} | {self.estimator_name} \n {"Inter-Brain" if self._inter_brain else "Intra-Brain"}'
-        epochs = [0] # default to un-epoched or epoch-average case
-        choice = None
-        
-        if self._scale_of_organisation > 1:
-            source_channel_names = self.__convert_indices_to_names(self._channel_indices1, 0) if self._scale_of_organisation == 1 else self.__convert_indices_to_names(self._roi[0], 0)
-            target_channel_names = self.__convert_indices_to_names(self._channel_indices2, 1) if self._scale_of_organisation == 1 else self.__convert_indices_to_names(self._roi[1], 1)
-
-            print("Plotting for grouped channels.")
-
-            print("Source Groups:")
-            for i in range(self._soi_groups):
-                print(f"{i+1}: {source_channel_names[i]}")
-
-            print("\n\nTarget Groups:")
-            for i in range(self._soi_groups):
-                print(f"{i+1}: {target_channel_names[i]}")
-
-
-        if self._is_epoched: 
-            choice = input(f"{self.n_epo} epochs detected. Plot for \n1. All epochs \n2. Specific epoch \n3. Average MI/TE across epochs \nEnter choice: ")
-            if choice == "1":
-                print("Plotting for all epochs.")
-                epochs = range(self.n_epo)
-            elif choice == "2":
-                epo_choice = input(f"Enter epoch number(s) [1 to {self.n_epo}] separated by comma only: ")
-                try:
-                    epochs = [int(epo)-1 for epo in epo_choice.split(',')]
-                except ValueError:
-                    print("Invalid input. Defaulting to plotting all epochs.")
-                    epochs = range(self.n_epo)
-            elif choice == "3":
-                print("Plotting for average MI/TE across epochs. Note that p-values will not be shown.")
-                
-            else:
-                print("Invalid choice. Defaulting to un-epoched data.")
-
-
-        for epo_i in epochs:
-            
-            highest = np.max(it_matrix[:,:,epo_i,0])
-            channel_pair_with_highest = np.unravel_index(np.argmax(it_matrix[:,:,epo_i,0]), it_matrix[:,:,epo_i,0].shape)
-            if self.verbose:
-                if self._scale_of_organisation == 1:
-                    print(f"Strongest regions: (Source Channel {self.__convert_indices_to_names(self._channel_indices1, 0)[channel_pair_with_highest[0]]} --> " +
-                                         f" Target Channel {self.__convert_indices_to_names(self._channel_indices2, 1)[channel_pair_with_highest[1]]}) = {highest}")
-                else:
-                    print(f"Strongest regions: (Source Group {source_channel_names[i]} --> Target Group {target_channel_names[i]}) = {highest}")
-
-            plt.figure(figsize=(12, 10))
-            plt.imshow(it_matrix[:,:,epo_i,0], cmap='BuPu', vmin=0, aspect='auto')
-
-            if self._is_epoched and not choice == "3":
-                plt.title(f'{title}; Epoch {epo_i+1}', pad=20)
-            else:
-                plt.title(title, pad=20)
-                
-            if self.calc_sigstats and not choice == "3":
-                for i in range(it_matrix.shape[0]):
-                    for j in range(it_matrix.shape[1]):
-                        p_val = float(it_matrix[i, j, epo_i, 3])
-                        if p_val < self.p_threshold and (not self._inter_brain and i != j):
-                            normalized_value = (it_matrix[i, j, epo_i, 0] - np.min(it_matrix[:,:,epo_i,0])) / (np.max(it_matrix[:,:,epo_i,0]) - np.min(it_matrix[:,:,epo_i,0]))
-                            text_colour = 'white' if normalized_value > 0.5 else 'black'
-                            plt.text(j, i, f'p={p_val:.2f}', ha='center', va='center', color=text_colour, fontsize=8, fontweight='bold')
-
-            plt.colorbar()
-            plt.xlabel('Target Channels')
-            plt.ylabel('Source Channels')
-
-            if self._scale_of_organisation == 1:
-                plt.xticks(range(self.n_chan), self.__convert_indices_to_names(self._channel_indices2, 1), rotation=90) 
-                plt.yticks(range(self.n_chan), self.__convert_indices_to_names(self._channel_indices1, 0))
-            else:
-                plt.xticks(range(self._soi_groups), [f'Group {i+1}' for i in range(self._soi_groups)], rotation=90)
-                plt.yticks(range(self._soi_groups), [f'Group {i+1}' for i in range(self._soi_groups)])
-
-            plt.tick_params(axis='x', which='both', bottom=True, top=False, labeltop=True)
-            plt.tick_params(axis='y', which='both', right=False, left=False, labelleft=True)
-            plt.show()
-
-    @staticmethod
-    def __plot_atoms(phi_dict: dict):
-        """Plots the values of the atoms in the lattice for a given pair of channels/ROI groups."""
-    
-        if not phi_dict or not phi_dict[0]:
-            print("The phi_dict is empty or not properly structured.")
-            return
-
-        x_range = len(phi_dict)
-        y_range = len(phi_dict[0])
-        prompt_message = f"Choose two numbers from this range: [0-{x_range - 1}] for X and [0-{y_range - 1}] for Y (or type 'done' to stop): "
-
-        while True:
-            user_input = input(prompt_message).split(',')
-            
-            if len(user_input) == 1 and user_input[0].lower() == 'done':
-                break
-
-            if len(user_input) != 2 or not all(part.strip().isdigit() for part in user_input):
-                print("Invalid input. Please enter exactly two numbers separated by a comma.")
-                continue
-
-            ch_X, ch_Y = (int(part.strip()) for part in user_input)
-
-            try:
-                value_dict = phi_dict[ch_X][ch_Y]
-                if value_dict is None:
-                    raise KeyError
-
-                image = Image.open('visualisations/atoms_lattice_values.png')
-                draw = ImageDraw.Draw(image) 
-
-                text_positions = {
-                    'rtr': (485, 1007), 
-                    'rtx': (160, 780),
-                    'rty': (363, 780), 
-                    'rts': (37, 512), 
-                    'xtr': (610, 779), 
-                    'xtx': (237, 510), 
-                    'xty': (487, 585), 
-                    'xts': (160, 243), 
-                    'ytr': (800, 780), 
-                    'ytx': (485, 427), 
-                    'yty': (725, 505), 
-                    'yts': (363, 243), 
-                    'str': (930, 505), 
-                    'stx': (605, 243), 
-                    'sty': (807, 243), 
-                    'sts': (485, 41)   
-                }
-
-                for text, pos in text_positions.items():
-                    value = value_dict.get(text, '0')
-                    plot_text = f"{round(float(value), 3):.3f}"
-                    draw.text(pos, plot_text, fill="black", font_size=25)
-
-                image.show()
-            
-            except KeyError:
-                print("Invalid channel/group indices.")
 
 
     def compute_mi(self, estimator_type: str = 'kernel', calc_sigstats: bool = False, vis: bool = False, **kwargs) -> np.ndarray:
@@ -790,7 +542,7 @@ class HyperIT(ABC):
             - ksg:              k, k_tau, l, l_tau, delay, kraskov_param (all 1), normalise (True)
             - kernel:           kernel_width (0.5), normalise (True)
             - gaussian:         k, k_tau, l, l_tau, delay (all 1), bias_correction (False), normalise (True)
-            - symbolic:         k (1)
+            - symbolic:         k (1), normalise (True)
 
         Args:
             estimator_type       (str, optional): Which transfer entropy estimator to use. Defaults to 'kernel'.
@@ -910,6 +662,160 @@ class HyperIT(ABC):
 
         return phi_dict_xy, phi_dict_yx
     
+
+
+
+    def __plot_it(self, it_matrix: np.ndarray) -> None:
+        """Plots the Mutual Information or Transfer Entropy matrix for visualisation. 
+        Axes labelled with source and target channel names. 
+        Choice to plot for all epochs, specific epoch(s), or average across epochs.
+
+        Args:
+            it_matrix (np.ndarray): The Mutual Information or Transfer Entropy matrix to be plotted with shape (n_chan, n_chan, n_epo, 4), 
+            where the last dimension represents the statistical signficance testing results: (local result, distribution mean, distribution standard deviation, p-value).
+        """
+
+        title = f'{self.measure} | {self.estimator_name} \n {"Inter-Brain" if self._inter_brain else "Intra-Brain"}'
+        epochs = [0] # default to un-epoched or epoch-average case
+        choice = None
+        
+        if self._scale_of_organisation > 1:
+            source_channel_names = convert_indices_to_names(self._channel_names, self._channel_indices1, 0) if self._scale_of_organisation == 1 else convert_indices_to_names(self._channel_names, self._roi[0], 0)
+            target_channel_names = convert_indices_to_names(self._channel_names, self._channel_indices2, 1) if self._scale_of_organisation == 1 else convert_indices_to_names(self._channel_names, self._roi[1], 1)
+
+            print("Plotting for grouped channels.")
+
+            print("Source Groups:")
+            for i in range(self._soi_groups):
+                print(f"{i+1}: {source_channel_names[i]}")
+
+            print("\n\nTarget Groups:")
+            for i in range(self._soi_groups):
+                print(f"{i+1}: {target_channel_names[i]}")
+
+
+        if self._is_epoched: 
+            choice = input(f"{self.n_epo} epochs detected. Plot for \n1. All epochs \n2. Specific epoch \n3. Average MI/TE across epochs \nEnter choice: ")
+            if choice == "1":
+                print("Plotting for all epochs.")
+                epochs = range(self.n_epo)
+            elif choice == "2":
+                epo_choice = input(f"Enter epoch number(s) [1 to {self.n_epo}] separated by comma only: ")
+                try:
+                    epochs = [int(epo)-1 for epo in epo_choice.split(',')]
+                except ValueError:
+                    print("Invalid input. Defaulting to plotting all epochs.")
+                    epochs = range(self.n_epo)
+            elif choice == "3":
+                print("Plotting for average MI/TE across epochs. Note that p-values will not be shown.")
+                
+            else:
+                print("Invalid choice. Defaulting to un-epoched data.")
+
+
+        for epo_i in epochs:
+            
+            highest = np.max(it_matrix[:,:,epo_i,0])
+            channel_pair_with_highest = np.unravel_index(np.argmax(it_matrix[:,:,epo_i,0]), it_matrix[:,:,epo_i,0].shape)
+            if self.verbose:
+                if self._scale_of_organisation == 1:
+                    print(f"Strongest regions: (Source Channel {convert_indices_to_names(self._channel_names, self._channel_indices1, 0)[channel_pair_with_highest[0]]} --> " +
+                                         f" Target Channel {convert_indices_to_names(self._channel_names, self._channel_indices2, 1)[channel_pair_with_highest[1]]}) = {highest}")
+                else:
+                    print(f"Strongest regions: (Source Group {source_channel_names[i]} --> Target Group {target_channel_names[i]}) = {highest}")
+
+            plt.figure(figsize=(12, 10))
+            plt.imshow(it_matrix[:,:,epo_i,0], cmap='BuPu', vmin=0, aspect='auto')
+
+            if self._is_epoched and not choice == "3":
+                plt.title(f'{title}; Epoch {epo_i+1}', pad=20)
+            else:
+                plt.title(title, pad=20)
+                
+            if self.calc_sigstats and not choice == "3":
+                for i in range(it_matrix.shape[0]):
+                    for j in range(it_matrix.shape[1]):
+                        p_val = float(it_matrix[i, j, epo_i, 3])
+                        if p_val < self.p_threshold and (not self._inter_brain and i != j):
+                            normalized_value = (it_matrix[i, j, epo_i, 0] - np.min(it_matrix[:,:,epo_i,0])) / (np.max(it_matrix[:,:,epo_i,0]) - np.min(it_matrix[:,:,epo_i,0]))
+                            text_colour = 'white' if normalized_value > 0.5 else 'black'
+                            plt.text(j, i, f'p={p_val:.2f}', ha='center', va='center', color=text_colour, fontsize=8, fontweight='bold')
+
+            plt.colorbar()
+            plt.xlabel('Target')
+            plt.ylabel('Source')
+
+            if self._scale_of_organisation == 1:
+                plt.xticks(range(self.n_chan), convert_indices_to_names(self._channel_names, self._channel_indices2, 1), rotation=90) 
+                plt.yticks(range(self.n_chan), convert_indices_to_names(self._channel_names, self._channel_indices1, 0))
+            else:
+                plt.xticks(range(self._soi_groups), [f'Group {i+1}' for i in range(self._soi_groups)], rotation=90)
+                plt.yticks(range(self._soi_groups), [f'Group {i+1}' for i in range(self._soi_groups)])
+
+            plt.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False, labeltop=True)
+            plt.tick_params(axis='y', which='both', right=False, left=True, labelleft=True)
+            plt.show()
+
+    @staticmethod
+    def __plot_atoms(phi_dict: dict):
+        """Plots the values of the atoms in the lattice for a given pair of channels/ROI groups."""
+    
+        if not phi_dict or not phi_dict[0]:
+            print("The phi_dict is empty or not properly structured.")
+            return
+
+        x_range = len(phi_dict)
+        y_range = len(phi_dict[0])
+        prompt_message = f"Choose two numbers from this range: [0-{x_range - 1}] for X and [0-{y_range - 1}] for Y (or type 'done' to stop): "
+
+        while True:
+            user_input = input(prompt_message).split(',')
+            
+            if len(user_input) == 1 and user_input[0].lower() == 'done':
+                break
+
+            if len(user_input) != 2 or not all(part.strip().isdigit() for part in user_input):
+                print("Invalid input. Please enter exactly two numbers separated by a comma.")
+                continue
+
+            ch_X, ch_Y = (int(part.strip()) for part in user_input)
+
+            try:
+                value_dict = phi_dict[ch_X][ch_Y]
+                if value_dict is None:
+                    raise KeyError
+
+                image = Image.open('visualisations/atoms_lattice_values.png')
+                draw = ImageDraw.Draw(image) 
+
+                text_positions = {
+                    'rtr': (485, 1007), 
+                    'rtx': (160, 780),
+                    'rty': (363, 780), 
+                    'rts': (37, 512), 
+                    'xtr': (610, 779), 
+                    'xtx': (237, 510), 
+                    'xty': (487, 585), 
+                    'xts': (160, 243), 
+                    'ytr': (800, 780), 
+                    'ytx': (485, 427), 
+                    'yty': (725, 505), 
+                    'yts': (363, 243), 
+                    'str': (930, 505), 
+                    'stx': (605, 243), 
+                    'sty': (807, 243), 
+                    'sts': (485, 41)   
+                }
+
+                for text, pos in text_positions.items():
+                    value = value_dict.get(text, '0')
+                    plot_text = f"{round(float(value), 3):.3f}"
+                    draw.text(pos, plot_text, fill="black", font_size=25)
+
+                image.show()
+            
+            except KeyError:
+                print("Invalid channel/group indices.")
 
 
 
