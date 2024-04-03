@@ -17,7 +17,7 @@ class HyperIT(ABC):
         HyperIT is equipped to compute pairwise, multivariate Mutual Information (MI), Transfer Entropy (TE), and Integrated Information Decomposition (ΦID) for continuous time-series data. 
         Compatible for both intra-brain and inter-brain analyses and for both epoched and unepoched data. 
         Multiple estimator choices and parameter customisations (via JIDT) are available, including KSG, Kernel, Gaussian, Symbolic, and Histogram/Binning. 
-        Integrated statistical significance testing using permutation/boostrapping approach for most estimators. 
+        Integrated statistical significance testing using permutation/boostrapping approach. 
         Visualisations of MI/TE matrices and information atoms/lattices also provided.
 
     Args:
@@ -105,25 +105,25 @@ class HyperIT(ABC):
     
 
     @property
-    def roi(self) -> List[List[Union[str, int]]]:
+    def roi(self) -> List[List[Union[str, int, list]]]:
         """Regions of interest for both data of the HyperIT object (defining spatial scale of organisation). To set this, call .roi(roi_list). 
         
-        HyperIT is defaulted to **micro-scale** analysis (individual channels) but specific channels can be specified for pointwise comparison: roi_list = [['Fp1', 'Fp2'], ['F3', 'F4']], for example. 
-        For meso-scale analysis (clusters of channels), equally-sized and equally-numbered clusters must be defined for both sets of data in the following way: roi_list = [[[PP1_cluster_1], ..., [PP1_cluster_n]], [[PP2_cluster_1], ..., [PP2_cluster_n]]]. 
-        Finally, for macro-scale analysis (all channels per person), the specification can be set as ```roi_list = [[PP1_all_channels][PP2_all_channels]]``` (note that PP1_all_channels and PP2_all_channels should be list themselves).
-        Importantly, as long as the ```channel_names``` are instantiated properly in the initiation of the HyperIT object, the ROI can even be given as a lists of channel indices (integers). 
-        In any case, to set these scales of organisations, simply amend the ```roi``` property of the HyperIT object used.
-        Call roi.reset_roi() to reset the ROI to all channels.
+        HyperIT is defaulted to **micro-scale** analysis (individual channels) but specific channels can be specified for pointwise comparison: ``roi_list = [['Fp1', 'Fp2'], ['F3', 'F4']]``, for example. 
+        For **meso-scale** analysis (clusters of channels), equally-sized and equally-numbered clusters must be defined for both sets of data in the following way: ``roi_list = [[[PP1_cluster_1], ..., [PP1_cluster_n]], [[PP2_cluster_1], ..., [PP2_cluster_n]]]``. 
+        Finally, for **macro-scale** analysis (all channels per person), the specification can be set as ``roi_list = [[PP1_all_channels][PP2_all_channels]]`` (note that PP1_all_channels and PP2_all_channels should be list themselves).
+        Importantly, as long as the ``channel_names`` are instantiated properly in the initiation of the HyperIT object, the ROI can even be given as a lists of channel indices (integers). 
+        In any case, to set these scales of organisations, simply amend the ``roi`` property of the HyperIT object used.
+        Call ``roi.reset_roi()`` to reset the ROI to all channels.
         
         """
         return self._roi
 
     @roi.setter
-    def roi(self, roi_list) -> None:
+    def roi(self, roi_list: List[List[Union[str, int, list]]]) -> None:
         """Sets the region of interest for both data of the HyperIT object.
 
         Args:
-            value: A list of lists, where each sublist is a region of interest containing either strings of EEG channel names or integer indices.
+            roi_list: A list of lists, where each sublist is a ROI containing either strings of EEG channel names or integer indices or multiple ROIs formed as another list.
         
         Raises:
             ValueError: If the value is not a list of lists, if elements of the sublists are not of type str or int, or if sublists do not have the same length.
@@ -332,11 +332,9 @@ class HyperIT(ABC):
         return ja
 
 
-
     def __mi_hist(self, s1: np.ndarray, s2: np.ndarray) -> float:
         """Calculates Mutual Information using Histogram/Binning Estimator for time-series signals."""
 
-        @staticmethod
         def calc_fd_bins(X: np.ndarray, Y: np.ndarray) -> int:
             """Calculates the optimal frequency-distribution bin size for histogram estimator using Freedman-Diaconis Rule."""
 
@@ -344,13 +342,8 @@ class HyperIT(ABC):
             fd_bins_Y = np.ceil(np.ptp(Y) / (2.0 * stats.iqr(Y) * len(Y)**(-1/3)))
             fd_bins = int(np.ceil((fd_bins_X+fd_bins_Y)/2))
             return fd_bins
-
-        pairwise = np.zeros((self.n_epo, 1))
-
-        for epo_i in range(self.n_epo):
-
-            X, Y = (s1[epo_i, :], s2[epo_i, :]) if self._is_epoched else (s1, s2)
-
+        
+        def hist_calc_mi(X, Y):
             j_hist, _, _ = np.histogram2d(X, Y, bins=calc_fd_bins(X, Y))
             pxy = j_hist / np.sum(j_hist)  # Joint probability distribution
 
@@ -363,22 +356,42 @@ class HyperIT(ABC):
             Hy = -np.sum(py * np.log2(py + np.finfo(float).eps))
             Hxy = -np.sum(pxy * np.log2(pxy + np.finfo(float).eps))
 
-            result = Hx + Hy - Hxy
+            return Hx + Hy - Hxy
 
-            pairwise[epo_i] = result
+        estimations = np.zeros((self.n_epo, 4)) # stores MI result, mean, std, p-value per epoch
 
-        return pairwise
+        for epo_i in range(self.n_epo):
+
+            x, y = (s1[epo_i, :], s2[epo_i, :]) if self._is_epoched else (s1, s2)
+            mi = hist_calc_mi(x, y)
+
+            permuted_mi_values = []
+
+            for _ in range(self.stat_sig_perm_num):
+                np.random.shuffle(y)
+                permuted_mi = hist_calc_mi(x, y)
+                permuted_mi_values.append(permuted_mi)
+
+            mean_permuted_mi = np.mean(permuted_mi_values)
+            std_permuted_mi = np.std(permuted_mi_values)
+
+            p_value = np.sum(permuted_mi_values >= mi) / self.stat_sig_perm_num
+            estimations[epo_i] = [mi, mean_permuted_mi, std_permuted_mi, p_value]
+
+        return estimations
 
 
-    def __mi_symb(self, s1: np.ndarray, s2: np.ndarray, l: int = 1, m: int = 3) -> float:
-        """Calculates Mutual Information using Symbolic Estimator for time-series signals."""
+    def __mi_symb(self, s1: np.ndarray, s2: np.ndarray, l: int = 1, k: int = 3) -> float:
+        """Calculates Mutual Information using Symbolic Estimator for time-series signals.
+            l: time delay or lag (i.e., how many time points to skip)
+            k: embedding dimension (i.e., how many time points to consider in each symbol)
+        """
 
-        symbol_weights = np.power(m, np.arange(m))
-        pairwise = np.zeros((self.n_epo, 1))
+        symbol_weights = np.power(k, np.arange(k))
 
-        def symb_symbolise(X: np.ndarray, l: int, m: int) -> np.ndarray:
-            Y = np.empty((m, len(X) - (m - 1) * l))
-            for i in range(m):
+        def symb_symbolise(X: np.ndarray, l: int, k: int) -> np.ndarray:
+            Y = np.empty((k, len(X) - (k - 1) * l))
+            for i in range(k):
                 Y[i] = X[i * l:i * l + Y.shape[1]]
             return Y.T
 
@@ -386,12 +399,9 @@ class HyperIT(ABC):
             total = sum(d.values())        
             return {key: value / total for key, value in d.items()}
         
-        for epo_i in range(self.n_epo):
-
-            X, Y = (s1[epo_i, :], s2[epo_i, :]) if self._is_epoched else (s1, s2)
-
-            X = symb_symbolise(X, l, m).argsort(kind='quicksort')
-            Y = symb_symbolise(Y, l, m).argsort(kind='quicksort')
+        def symb_calc_mi(X, Y, l, k):
+            X = symb_symbolise(X, l, k).argsort(kind='quicksort')
+            Y = symb_symbolise(Y, l, k).argsort(kind='quicksort')
 
             # multiply each symbol [1,0,3] by symbol_weights [1,3,9] => [1,0,27] and give a final array of the sum of each code ([.., .., 28, .. ])
             symbol_hash_X = (np.multiply(X, symbol_weights)).sum(1) 
@@ -415,41 +425,61 @@ class HyperIT(ABC):
             entropy_Y = -np.sum(p_y * np.log2(p_y + np.finfo(float).eps))
             entropy_XY = -np.sum(p_xy * np.log2(p_xy + np.finfo(float).eps))
 
-            pairwise[epo_i] = entropy_X + entropy_Y - entropy_XY
+            return entropy_X + entropy_Y - entropy_XY
 
-        return pairwise
+
+
+        estimations = np.zeros((self.n_epo, 4)) # stores MI result, mean, std, p-value per epoch
+        
+        for epo_i in range(self.n_epo):
+
+            x, y = (s1[epo_i, :], s2[epo_i, :]) if self._is_epoched else (s1, s2)
+            mi = symb_calc_mi(x, y, l, k)
+
+            permuted_mi_values = []
+            for _ in range(self.stat_sig_perm_num):
+                np.random.shuffle(y)
+
+                permuted_mi = symb_calc_mi(x, y, l, k)
+                permuted_mi_values.append(permuted_mi)
+
+            mean_permuted_mi = np.mean(permuted_mi_values)
+            std_permuted_mi = np.std(permuted_mi_values)
+
+            p_value = np.sum(permuted_mi_values >= mi) / self.stat_sig_perm_num
+            estimations[epo_i] = [mi, mean_permuted_mi, std_permuted_mi, p_value]
+
+        return estimations
 
 
 
     def __which_mi_estimator(self) -> None:
         """Determines the Mutual Information estimator to be used based on user input. Many estimators are deployed using JIDT."""
 
-        if self.estimator_type == 'histogram':
+        if self.estimator_type.lower() == 'histogram':
             self.estimator_name = 'Histogram/Binning Estimator'
-            self.calc_sigstats = False # Temporary whilst I figure out how to get p-values for hist/bin estimator
-            if self.verbose:
-                print("Please note that p-values are not available for Histogram/Binning Estimator as this is not computed using JIDT. Work in progress...")
+            
 
-        elif self.estimator_type == 'ksg1' or self.estimator_type == 'ksg':
+        elif self.estimator_type.lower() == 'ksg1' or self.estimator_type.lower() == 'ksg':
             self.estimator_name = 'KSG Estimator (version 1)'
             self.Calc = JPackage("infodynamics.measures.continuous.kraskov").MutualInfoCalculatorMultiVariateKraskov1()
             self.Calc.setProperty("k", str(self.params.get('kraskov_param', 4)))
 
-        elif self.estimator_type == 'ksg2':
+        elif self.estimator_type.lower() == 'ksg2':
             self.estimator_name = 'KSG Estimator (version 2)'
             self.Calc = JPackage("infodynamics.measures.continuous.kraskov").MutualInfoCalculatorMultiVariateKraskov2()
             self.Calc.setProperty("k", str(self.params.get('kraskov_param', 4)))
             
-        elif self.estimator_type == 'kernel':
+        elif self.estimator_type.lower() == 'kernel':
             self.estimator_name = 'Box Kernel Estimator'
             self.Calc = JPackage("infodynamics.measures.continuous.kernel").MutualInfoCalculatorMultiVariateKernel()
             self.Calc.setProperty("KERNEL_WIDTH", str(self.params.get('kernel_width', 0.25)))
 
-        elif self.estimator_type == 'gaussian':
+        elif self.estimator_type.lower() == 'gaussian':
             self.estimator_name = 'Gaussian Estimator'
             self.Calc = JPackage("infodynamics.measures.continuous.gaussian").MutualInfoCalculatorMultiVariateGaussian()
 
-        elif self.estimator_type == 'symbolic':
+        elif self.estimator_type.lower() == 'symbolic':
             self.estimator_name = 'Symbolic Estimator'
             self.calc_sigstats = False # Temporary whilst I figure out how to get p-values for symbolic estimator
             if self.verbose:
@@ -598,7 +628,7 @@ class HyperIT(ABC):
             else:
                 plt.title(title, pad=20)
                 
-            if self.calc_sigstats and not choice == "3" and not self.estimator_type == 'histogram' and not self.estimator_type == 'symbolic': # Again, temporary.
+            if self.calc_sigstats and not choice == "3":
                 for i in range(it_matrix.shape[0]):
                     for j in range(it_matrix.shape[1]):
                         p_val = float(it_matrix[i, j, epo_i, 3])
@@ -689,12 +719,12 @@ class HyperIT(ABC):
 
         PARAMETER OPTIONS FOR MUTUAL INFORMATION ESTIMATORS (defaults in parentheses):
         Estimator types:        kwargs:
-            - histogram:        (No SST available yet)
+            - histogram:        None
             - ksg1:             kraskov_param (4), normalise (True)
             - ksg2:             kraskov_param (4), normalise (True)
             - kernel:           kernel_width (0.25), normalise (True)
             - gaussian:         normalise (True)
-            - symbolic:         (No SST available yet)
+            - symbolic:         l (1), m (3)
 
         Args:
             estimator_type       (str, optional): Which mutual information estimator to use. Defaults to 'kernel'.
@@ -718,14 +748,7 @@ class HyperIT(ABC):
         
         self.estimator = self.__which_mi_estimator()
 
-        if self.estimator_type == 'histogram' or self.estimator_type == 'symbolic':
-            self.mi_matrix = np.zeros((self.n_chan, self.n_chan, self.n_epo, 1)) # TEMPORARY, until I figure out how to get p-values for hist/bin and symbolic MI estimators
-        
-        else:
-            self.mi_matrix = np.zeros((self.n_chan, self.n_chan, self.n_epo, 4)) if self._scale_of_organisation == 1 else np.zeros((self._soi_groups, self._soi_groups, self.n_epo, 4))
-
-        
-
+        self.mi_matrix = np.zeros((self.n_chan, self.n_chan, self.n_epo, 4)) if self._scale_of_organisation == 1 else np.zeros((self._soi_groups, self._soi_groups, self.n_epo, 4))
 
         loop_range = self.n_chan if self._scale_of_organisation == 1 else self._soi_groups
 
