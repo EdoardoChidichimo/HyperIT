@@ -27,7 +27,7 @@ class HyperIT(ABC):
     Note: This class requires numpy, matplotlib, PIL, jpype (with the infodynamics.jar file), and phyid as dependencies.
     """
 
-    def __init__(self, data1: np.ndarray, data2: np.ndarray, channel_names: List[str], verbose: bool = False, working_directory: str = None):
+    def __init__(self, data1: np.ndarray, data2: np.ndarray, channel_names: List[str], standardise_data: bool = True, verbose: bool = False, working_directory: str = None):
         """ Creates HyperIT object containing time-series data and channel names for analysis. 
             Automatic data checks for consistency and dimensionality, identifying whether analysis is to be intra- or inter-brain.
 
@@ -39,6 +39,7 @@ class HyperIT(ABC):
             data1                   (np.ndarray): Time-series data for participant 1.
             data2                   (np.ndarray): Time-series data for participant 1.
             channel_names            (List[str]): A list of strings representing the channel names for each participant. [[channel_names_p1], [channel_names_p2]] or [[channel_names_p1]] for intra-brain.
+            standardise_data    (bool, optional): Whether to standardise the data before analysis. Defaults to True.
             verbose             (bool, optional): Whether constructor and analyses should output details and progress. Defaults to False.
             working_directory    (str, optional): The directory where the infodynamics.jar file is located. Defaults to None (later defaults to os.getcwd()).
         """
@@ -49,6 +50,7 @@ class HyperIT(ABC):
 
         self._all_data = [data1, data2]
         self._data1, self._data2 = self._all_data
+        self._standardise_data = standardise_data
 
         # NOTE: _data1, _data2, _channel_indices1, _channel_indices2 will be used for calculations (as these can be amended during ROI setting)
 
@@ -62,6 +64,12 @@ class HyperIT(ABC):
         self.verbose: bool = verbose
 
         self.__check_data()
+
+        ## SHOULD WE STANDARDISE INCOMING DATA BEFORE ANALYSIS?
+        if self._standardise_data:
+            self._data1 = (self._data1 - np.mean(self._data1, axis=-1, keepdims=True)) / np.std(self._data1, axis=-1, keepdims=True)
+            self._data2 = (self._data2 - np.mean(self._data2, axis=-1, keepdims=True)) / np.std(self._data2, axis=-1, keepdims=True)
+            self._all_data = [self._data1, self._data2]
 
         if self.verbose:
             print("HyperIT object created successfully.")
@@ -373,20 +381,25 @@ class HyperIT(ABC):
             self.estimator_name = 'KSG Estimator (version 1)'
             self.Calc = JPackage("infodynamics.measures.continuous.kraskov").MutualInfoCalculatorMultiVariateKraskov1()
             self.Calc.setProperty("k", str(self.params.get('kraskov_param', 4)))
+            self.entCalc = JPackage("infodynamics.measures.continuous.kozachenko").EntropyCalculatorMultiVariateKozachenko() if self.mi_normalise != 'none' else None
 
         elif self.estimator_type.lower() == 'ksg2':
             self.estimator_name = 'KSG Estimator (version 2)'
             self.Calc = JPackage("infodynamics.measures.continuous.kraskov").MutualInfoCalculatorMultiVariateKraskov2()
             self.Calc.setProperty("k", str(self.params.get('kraskov_param', 4)))
+            self.entCalc = JPackage("infodynamics.measures.continuous.kozachenko").EntropyCalculatorMultiVariateKozachenko() if self.mi_normalise != 'none' else None
             
         elif self.estimator_type.lower() == 'kernel':
             self.estimator_name = 'Box Kernel Estimator'
             self.Calc = JPackage("infodynamics.measures.continuous.kernel").MutualInfoCalculatorMultiVariateKernel()
             self.Calc.setProperty("KERNEL_WIDTH", str(self.params.get('kernel_width', 0.25)))
+            self.entCalc = JPackage("infodynamics.measures.continuous.kernel").EntropyCalculatorKernel() if self.mi_normalise != 'none' else None
+            self.entCalc.setProperty("KERNEL_WIDTH", str(self.params.get('kernel_width', 0.25))) if self.mi_normalise != 'none' else None
 
         elif self.estimator_type.lower() == 'gaussian':
             self.estimator_name = 'Gaussian Estimator'
             self.Calc = JPackage("infodynamics.measures.continuous.gaussian").MutualInfoCalculatorMultiVariateGaussian()
+            self.entCalc = JPackage("infodynamics.measures.continuous.gaussian").EntropyCalculatorGaussian() if self.mi_normalise != 'none' else None
 
         elif self.estimator_type.lower() == 'symbolic':
             self.estimator_name = 'Symbolic Estimator'
@@ -396,6 +409,7 @@ class HyperIT(ABC):
 
         if not self.estimator_type == 'histogram' and not self.estimator_type == 'symbolic':
             self.Calc.setProperty("NORMALISE", str(self.params.get('normalise', True)))
+            self.entCalc.setProperty("NORMALISE", str(self.params.get('normalise', True))) if self.entCalc != 'none' else None
 
 
     def __which_te_estimator(self) -> None:
@@ -438,6 +452,17 @@ class HyperIT(ABC):
         self.Calc.setProperty("NORMALISE", str(self.params.get('normalise', True)).lower()) 
 
 
+    def __normalise_mi(self, mi: float, Hx: float, Hy: float) -> np.ndarray:
+        if self.mi_normalise == 'max':
+            return mi / max(Hx, Hy)
+        elif self.mi_normalise == 'min':
+            return mi / min(Hx, Hy)
+        elif self.mi_normalise == 'symunc':
+            return (2*mi)/(Hx + Hy)
+        else:
+            raise ValueError(f"Normalisation method {self.mi_normalise} not supported. Please choose from 'max', 'min', or 'symunc'.")
+
+
     def __estimate_it(self, s1: np.ndarray, s2: np.ndarray) -> np.ndarray:
         """ Estimates Mutual Information or Transfer Entropy for a pair of time-series signals using JIDT estimators. """
 
@@ -451,10 +476,22 @@ class HyperIT(ABC):
             if self._scale_of_organisation > 1:
                 X, Y = X.T, Y.T # transpose to shape (samples, group_channels)
 
-            # initialise parameter describes the dimensions of the data
+            # Initialise parameter describes the dimensions of the data
             self.Calc.initialise(*self._initialise_parameter) if self._initialise_parameter else self.Calc.initialise()
             self.Calc.setObservations(setup_JArray(X), setup_JArray(Y))
             result = self.Calc.computeAverageLocalOfObservations() * np.log(2)
+
+            if self.mi_normalise != 'none':
+                self.entCalc.initialise()
+
+                self.entCalc.setObservations(setup_JArray(X))
+                Hx = self.entCalc.computeAverageLocalOfObservations() * np.log(2)
+
+                self.entCalc.setObservations(setup_JArray(Y))
+                Hy = self.entCalc.computeAverageLocalOfObservations() * np.log(2)
+
+                result = self.__normalise_mi(result, Hx, Hy)
+
 
             if self.calc_sigstats:
                 stat_sig = self.Calc.computeSignificance(self.stat_sig_perm_num)
@@ -466,7 +503,7 @@ class HyperIT(ABC):
     
 
 
-    def compute_mi(self, estimator_type: str = 'kernel', calc_sigstats: bool = False, vis: bool = False, **kwargs) -> np.ndarray:
+    def compute_mi(self, estimator_type: str = 'kernel', mi_normalise: str = 'max', calc_sigstats: bool = False, vis: bool = False, **kwargs) -> np.ndarray:
         """Function to compute mutual information between data (time-series signals) instantiated in the HyperIT object.
 
         PARAMETER OPTIONS FOR MUTUAL INFORMATION ESTIMATORS (defaults in parentheses):
@@ -480,6 +517,7 @@ class HyperIT(ABC):
 
         Args:
             estimator_type       (str, optional): Which mutual information estimator to use. Defaults to 'kernel'.
+            mi_normalise         (str, optional): Whether to normalise the mutual information values and which type. Defaults to 'max'.
             calc_sigstats       (bool, optional): Whether to conduct statistical signficance testing. Defaults to False.
             vis                 (bool, optional): Whether to visualise (via __plot_it()). Defaults to False.
 
@@ -497,6 +535,7 @@ class HyperIT(ABC):
 
         self.stat_sig_perm_num = self.params.get('stat_sig_perm_num', 100)
         self.p_threshold = self.params.get('p_threshold', 0.05)
+        self.mi_normalise = mi_normalise.lower()
         
         self.estimator = self.__which_mi_estimator()
 
