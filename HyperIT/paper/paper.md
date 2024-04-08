@@ -17,6 +17,8 @@ affiliations:
    index: 1
 date: 8 April 2024
 bibliography: paper.bib
+header-includes:
+  - \DeclareMathOperator*{\SumInt}{%\mathchoice%{\ooalign{$\displaystyle\sum$\cr\hidewidth$\displaystyle\int$\hidewidth\cr}}{\ooalign{\raisebox{.14\height}{\scalebox{.7}{$\textstyle\sum$}}\cr\hidewidth$\textstyle\int$\hidewidth\cr}}{\ooalign{\raisebox{.2\height}{\scalebox{.6}{$\scriptstyle\sum$}}\cr$\scriptstyle\int$\cr}}{\ooalign{\raisebox{.2\height}{\scalebox{.6}{$\scriptstyle\sum$}}\cr$\scriptstyle\int$\cr}}}
 ---
 
 # Summary
@@ -39,13 +41,7 @@ Of relevance for neuroscientific endeavours, information theory provides measure
 
 Mutual information ($I(X;Y)$) is a positively-biased, symmetric measure indicating how much (Shannon) information is shared between two random variables $X$ and $Y$ (Equation \autoref{eq:mi}). One may also interpret MI as quantifying the “distance” between the joint probability distribution ($p_{XY}$) and the product of marginal probability distributions ($p_X \otimes P_Y$), such that $I(X;Y)=0$ \textit{iff} $P_{XY} = P_{X} \otimes P_{Y}$. This is also understood as a special instance of the Kullback-Leibler divergence measure.
 
-\DeclareMathOperator*{\SumInt}{%
-\mathchoice%
-  {\ooalign{$\displaystyle\sum$\cr\hidewidth$\displaystyle\int$\hidewidth\cr}}
-  {\ooalign{\raisebox{.14\height}{\scalebox{.7}{$\textstyle\sum$}}\cr\hidewidth$\textstyle\int$\hidewidth\cr}}
-  {\ooalign{\raisebox{.2\height}{\scalebox{.6}{$\scriptstyle\sum$}}\cr$\scriptstyle\int$\cr}}
-  {\ooalign{\raisebox{.2\height}{\scalebox{.6}{$\scriptstyle\sum$}}\cr$\scriptstyle\int$\cr}}
-}
+
 
 \begin{equation} \label{eq:mi}
     I(X;Y) = \SumInt_{\mathcal{X}}\SumInt_{\mathcal{Y}}p_{XY}(x,y)\log_2\frac{p_{XY}(x,y)}{p_X(x)p_Y(y)} 
