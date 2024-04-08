@@ -31,7 +31,7 @@ header-includes:
 
 # Summary
 
-`HyperIT` is an open-source, class-based Python toolbox designed for an information-theoretic social neuroscience. Specifically designed for hyperscanning paradigms (simultaneous neuroimaging and neurophysiological recordings of social interactions), `HyperIT` is equipped to compute Shannon information theory measures including mutual information, transfer entropy, and integrated information decomposition for continuous time-series signals at different scales of organisation. The toolbox allows customisation of parameters for up to five different empirical estimators (including histogram, box kernel, kNN, Gaussian, and symbolic methods), statistical significance testing, and matrix visualisations. `HyperIT` integrates, depends upon, and provides an interface for the Java Information Dynamics Toolkit [@lizier_jidt_2014] and `phyid` library [@luppi_synergistic_2022; @mediano_towards_2021].
+`HyperIT` is an open-source, class-based Python toolbox designed for an information-theoretic social neuroscience. Specifically designed for hyperscanning paradigms (simultaneous neuroimaging and neurophysiological recordings of social interactions), `HyperIT` is equipped to compute Shannon information theory measures including mutual information, transfer entropy, and integrated information decomposition for continuous time-series signals (fMRI, EEG, MEG, fNIRS, etc.) at different scales of organisation. The toolbox allows customisation of parameters for up to five different empirical estimators (including histogram, box kernel, kNN, Gaussian, and symbolic methods), statistical significance testing, and matrix visualisations. `HyperIT` integrates, depends upon, and provides an interface for the Java Information Dynamics Toolkit [@lizier_jidt_2014] and `phyid` library [@luppi_synergistic_2022; @mediano_towards_2021]. 
 
 
 # Statement of need
@@ -63,7 +63,7 @@ Transfer entropy ($TE_{Y \rightarrow X}$) is a measure that non-parametrically m
 More recently, approaches to exhaustively decompose a multivariate system’s informational structure has described three modes; namely, information about a target variable may be redundant (Rdn): information that is shared between variables; unique (Unq): information that is specific to a single variable; or synergistic (Syn): information that is only learnt from the conjunction of multiple sources and not individually, with the exclusive-OR function being a canonical example [@williams_nonnegative_2010]. These so-called “partial information atoms” are non-overlapping and form an additive set, exhaustively describing the informational composition of a multivariate system (\autoref{eq:pid}). 
 
 \begin{align}\label{eq:pid}
-    I(Y; X_1, X_2) &= \text{Syn}(Y; X_1, X_2) + \\ \notag
+    I(Y; X_1, X_2) = &\text{Syn}(Y; X_1, X_2) + \\ \notag
     &\text{Unq}(Y; X_1) + \text{Unq}(Y; X_2) + \\ \notag
     &\text{Rdn}(Y; X_1, X_2) \notag
 \end{align} 
@@ -71,7 +71,7 @@ More recently, approaches to exhaustively decompose a multivariate system’s in
 A recent development, termed integrated information decomposition, extends this decomposition to multi-source and multi-target continuous time-series random variables to decompose information dynamics into various qualitative modes including information storage, copy, transfer, erasure, downward causation, causal decoupling, and upward causation [@mediano_beyond_2019; @mediano_towards_2021]. This measure specifically decomposes the time-delayed mutual information between two multivariate processes (\autoref{eq:phi-id}).
 
 \begin{align}\label{eq:phi-id}
-    I(\mathbf{X}_t;\mathbf{X}_{t'}) &= \text{Syn}(X_t^1,X_t^2; \mathbf{X}_{t'}) + \\ \notag
+    I(\mathbf{X}_t;\mathbf{X}_{t'}) = &\text{Syn}(X_t^1,X_t^2; \mathbf{X}_{t'}) + \\ \notag
     &\text{Unq}(X_t^1; \mathbf{X}_{t'}|X_t^2) + \text{Unq}(X_t^2; \mathbf{X}_{t'}|X_t^1) + \\ \notag
     &\text{Rdn}(X_t^1,X_t^2; \mathbf{X}_{t'}) \\ \notag
 \end{align} by some time delay $t' > t$.
