@@ -25,10 +25,10 @@ class HyperIT(ABC):
     Args:
         ABC (_type_): Abstract Base Class for HyperIT.
 
-    Note: This class requires numpy, matplotlib, PIL, jpype (with the infodynamics.jar file), and phyid as dependencies.
+    Note: This class requires numpy, matplotlib, PIL, jpype (with the local infodynamics.jar file), and phyid as dependencies.
     """
 
-    def __init__(self, data1: np.ndarray, data2: np.ndarray, channel_names: List[str], standardise_data: bool = True, verbose: bool = False, working_directory: str = None):
+    def __init__(self, data1: np.ndarray, data2: np.ndarray, channel_names: List[str], standardise_data: bool = False, verbose: bool = False, working_directory: str = None):
         """ Creates HyperIT object containing time-series data and channel names for analysis. 
             Automatic data checks for consistency and dimensionality, identifying whether analysis is to be intra- or inter-brain.
 
@@ -37,8 +37,8 @@ class HyperIT(ABC):
                 - If data is 2 dimensional, data is assumed to be unepoched with shape          (channels, time_points).
 
         Args:
-            data1                   (np.ndarray): Time-series data for participant 1.
-            data2                   (np.ndarray): Time-series data for participant 1.
+            data1                   (np.ndarray): Time-series data for participant 1. Can take shape (n_epo, n_chan, n_samples) or (n_chan, n_samples) for epoched and unepoched data, respectively. 
+            data2                   (np.ndarray): Time-series data for participant 1. Must have the same shape as data1.
             channel_names            (List[str]): A list of strings representing the channel names for each participant. [[channel_names_p1], [channel_names_p2]] or [[channel_names_p1]] for intra-brain.
             standardise_data    (bool, optional): Whether to standardise the data before analysis. Defaults to True.
             verbose             (bool, optional): Whether constructor and analyses should output details and progress. Defaults to False.
