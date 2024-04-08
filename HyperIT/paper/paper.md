@@ -18,8 +18,16 @@ affiliations:
 date: 8 April 2024
 bibliography: paper.bib
 header-includes:
-  - \DeclareMathOperator*{\SumInt}{%\mathchoice%{\ooalign{$\displaystyle\sum$\cr\hidewidth$\displaystyle\int$\hidewidth\cr}}{\ooalign{\raisebox{.14\height}{\scalebox{.7}{$\textstyle\sum$}}\cr\hidewidth$\textstyle\int$\hidewidth\cr}}{\ooalign{\raisebox{.2\height}{\scalebox{.6}{$\scriptstyle\sum$}}\cr$\scriptstyle\int$\cr}}{\ooalign{\raisebox{.2\height}{\scalebox{.6}{$\scriptstyle\sum$}}\cr$\scriptstyle\int$\cr}}}
+  - |
+    \DeclareMathOperator*{\SumInt}{%
+      \mathchoice%
+      {\ooalign{$\displaystyle\sum$\cr\hidewidth$\displaystyle\int$\hidewidth\cr}}%
+      {\ooalign{\raisebox{.14\height}{\scalebox{.7}{$\textstyle\sum$}}\cr\hidewidth$\textstyle\int$\hidewidth\cr}}%
+      {\ooalign{\raisebox{.2\height}{\scalebox{.6}{$\scriptstyle\sum$}}\cr$\scriptstyle\int$\cr}}%
+      {\ooalign{\raisebox{.2\height}{\scalebox{.6}{$\scriptscriptstyle\sum$}}\cr$\scriptscriptstyle\int$\cr}}%
+    }
 ---
+
 
 # Summary
 
