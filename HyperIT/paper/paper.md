@@ -53,7 +53,7 @@ Mutual information ($I(X;Y)$) is a positively-biased, symmetric measure indicati
     I(X;Y) = \SumInt_{\mathcal{X}}\SumInt_{\mathcal{Y}}p_{XY}(x,y)\log_2\frac{p_{XY}(x,y)}{p_X(x)p_Y(y)} 
 \end{equation}
 
-Transfer entropy ($TE_{Y \rightarrow X}$) is a measure that non-parametrically measures the statistical coherence and time-directed transfer of information between random variables or processes. It is often taken as the non-linear equivalent of Granger causality and, indeed, equivalence has been demonstrated under Gaussianity [@barnett_granger_2009]. Specifically, this measure uses conditional mutual information to quantify the reduction in uncertainty about the future of one process given knowledge about another variable and its own history (\autoref{eq:te}).
+Transfer entropy ($TE_{Y \rightarrow X}$) is a measure that non-parametrically measures the statistical connectivity and time-directed transfer of information between random variables or processes. It is often taken as the non-linear equivalent of Granger causality and, indeed, equivalence has been demonstrated under Gaussianity [@barnett_granger_2009]. Specifically, this measure uses conditional mutual information to quantify the reduction in uncertainty about the future of one process given knowledge about another variable and its own history (\autoref{eq:te}).
 
 \begin{align}\label{eq:te} \notag
     TE_{Y\rightarrow X}^{(k,l,u,\tau)} &= I(\mathbf{Y}_{t-u}^{(l,\tau_Y)}; X_t | \mathbf{X}_{t-1}^{(k,\tau_X)}) \\ 
