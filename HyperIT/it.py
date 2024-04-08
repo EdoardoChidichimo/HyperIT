@@ -46,11 +46,7 @@ class HyperIT(ABC):
         """
         self.verbose: bool = verbose
 
-        try:
-            setup_JVM(working_directory, self.verbose)
-        except FileNotFoundError as e:
-            if self.verbose:
-                print(f"Initialization error: {e}")
+        setup_JVM(working_directory, self.verbose)
 
         self._channel_names = channel_names #  [[p1][p2]] or [[p1]] for intra-brain
         self._channel_indices1 = []
