@@ -1,19 +1,24 @@
 import numpy as np
-from jpype import isJVMStarted, getDefaultJVMPath, startJVM, JArray, JDouble, shutdownJVM
+from jpype import isJVMStarted, getDefaultJVMPath, startJVM, JArray, JDouble, shutdownJVM, JPackage, JClass
 import os
 
-def setup_JVM(working_directory: str = None) -> None:
-        if(not isJVMStarted()):
-            
-            if working_directory is None:
-                working_directory = os.getcwd()
+def setup_JVM(working_directory: str = None, verbose: bool = False) -> None:
+    if(not isJVMStarted()):
+        if verbose:
+            print("Setting up JVM...")
 
-            jarLocation = os.path.join(working_directory, "infodynamics.jar")
+        if working_directory is None:
+            working_directory = "/Users/edoardochidichimo/Desktop/HyperIT/HyperIT/"
 
-            if not os.path.isfile(jarLocation):
-                    raise FileNotFoundError(f"infodynamics.jar not found (expected at {os.path.abspath(jarLocation)}).")
+        jarLocation = os.path.join(working_directory, "infodynamics.jar")
 
-            startJVM(getDefaultJVMPath(), "-ea", "-Djava.class.path=" + jarLocation)
+        if not os.path.isfile(jarLocation):
+            raise FileNotFoundError(f"infodynamics.jar not found (expected at {os.path.abspath(jarLocation)}).")
+
+        startJVM(getDefaultJVMPath(), "-ea", "-Djava.class.path=" + jarLocation)
+        
+        if verbose:
+            print("JVM started.")
 
 
 def setup_JArray(a: np.ndarray) -> JArray:
@@ -29,7 +34,7 @@ def setup_JArray(a: np.ndarray) -> JArray:
     return ja
 
 
-def convert_names_to_indices(_channel_names, roi_part, participant):
+def convert_names_to_indices(_channel_names, roi_part, participant) -> list:
     """Converts ROI channel names or groups of names into indices based on the channel list.
 
     Args:
@@ -58,7 +63,7 @@ def convert_names_to_indices(_channel_names, roi_part, participant):
         return roi_part  # In case roi_part is already in the desired format (indices)
     
 
-def convert_indices_to_names(_channel_names, roi_part, participant):
+def convert_indices_to_names(_channel_names, roi_part, participant) -> list:
     """Converts ROI channel indices or groups of indices into names based on the channel list.
 
     Args:
@@ -88,3 +93,54 @@ def convert_indices_to_names(_channel_names, roi_part, participant):
     else:
         return roi_part  # In case roi_part is already in the desired format (names)
 
+
+def set_estimator(estimator_type: str, measure: str, params: dict) -> tuple:
+    
+    estimator_config = {
+        'mi': {
+            'histogram': ('Histogram/Binning Estimator', None, {}),
+            'ksg1': ('KSG Estimator (version 1)', 'infodynamics.measures.continuous.kraskov.MutualInfoCalculatorMultiVariateKraskov1', {'k': str(params.get('kraskov_param', 4))}),
+            'ksg2': ('KSG Estimator (version 2)', 'infodynamics.measures.continuous.kraskov.MutualInfoCalculatorMultiVariateKraskov2', {'k': str(params.get('kraskov_param', 4))}),
+            'kernel': ('Box Kernel Estimator', 'infodynamics.measures.continuous.kernel.MutualInfoCalculatorMultiVariateKernel', {'KERNEL_WIDTH': str(params.get('kernel_width', 0.25))}),
+            'gaussian': ('Gaussian Estimator', 'infodynamics.measures.continuous.gaussian.MutualInfoCalculatorMultiVariateGaussian', {}),
+            'symbolic': ('Symbolic Estimator', None, {})
+        },
+        'te': {
+            'ksg': ('KSG Estimator', 'infodynamics.measures.continuous.kraskov.TransferEntropyCalculatorMultiVariateKraskov', {
+                "k_HISTORY": str(params.get('k', 1)), "k_TAU": str(params.get('k_tau', 1)),
+                "l_HISTORY": str(params.get('l', 1)), "l_TAU": str(params.get('l_tau', 1)),
+                "DELAY": str(params.get('delay', 1)), "k": str(params.get('kraskov_param', 4))
+            }),
+            'kernel': ('Box Kernel Estimator', 'infodynamics.measures.continuous.kernel.TransferEntropyCalculatorMultiVariateKernel', {'KERNEL_WIDTH': str(params.get('kernel_width', 0.5))}),
+            'gaussian': ('Gaussian Estimator', 'infodynamics.measures.continuous.gaussian.TransferEntropyCalculatorMultiVariateGaussian', {
+                "k_HISTORY": str(params.get('k', 1)), "k_TAU": str(params.get('k_tau', 1)),
+                "l_HISTORY": str(params.get('l', 1)), "l_TAU": str(params.get('l_tau', 1)),
+                "DELAY": str(params.get('delay', 1)), "BIAS_CORRECTION": str(params.get('bias_correction', False)).lower()
+            }),
+            'symbolic': ('Symbolic Estimator', 'infodynamics.measures.continuous.symbolic.TransferEntropyCalculatorSymbolic', {"k_HISTORY": str(params.get('k', 1))}, 2)
+        }
+    }
+
+    estimator_name, calculator_path, properties, initialise_parameter = None, None, {}, None
+    measure_config = estimator_config.get(measure.lower(), {})
+    config = measure_config.get(estimator_type.lower(), None)
+
+    if config:
+        estimator_name, calculator_path, properties = config[:3]
+        initialise_parameter = config[3] if len(config) > 3 else None
+        if calculator_path:
+            
+            try:
+                calculator = JClass(calculator_path)
+
+            except Exception as e:
+                raise RuntimeError(f"Failed to load and instantiate the calculator: {e}")
+        else:
+            calculator = None
+
+        if measure.lower() == 'te' or estimator_type.lower() not in ['histogram', 'symbolic']:
+            properties['NORMALISE'] = 'true' if params.get('normalise', True) else 'false'
+    else:
+        raise ValueError(f"Estimator type {estimator_type} not supported for measure {measure}.")
+
+    return estimator_name, calculator, properties, initialise_parameter
