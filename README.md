@@ -12,7 +12,7 @@ HyperIT computes these information-theoretic measures between different channels
 
 HyperIT is designed to allow researchers to analyse various complex systems at different scales of organisation deploying information-theoretic measures, particularly focusing on neural time-series data in the context of hyperscanning. 
 
-Read the JOSS paper here: "[HyperIT: A Python toolbox for an information-theoretic social neuroscience](https://github.com/EdoardoChidichimo/HyperIT/blob/master/HyperIT/paper/JOSS%20Article%20%E2%80%94%20HyperIT-%20A%20Python%20toolbox%20for%20an%20information-theoretic%20social%20neuroscience.pdf)"
+Read the JOSS pre-print here: "[HyperIT: A Python toolbox for an information-theoretic social neuroscience](https://github.com/EdoardoChidichimo/HyperIT/blob/master/HyperIT/paper/JOSS%20Article%20%E2%80%94%20HyperIT-%20A%20Python%20toolbox%20for%20an%20information-theoretic%20social%20neuroscience.pdf)"
 
 ## Usage
 
