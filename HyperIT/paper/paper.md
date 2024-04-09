@@ -40,24 +40,24 @@ For the past two decades, social neuroscience has addressed the interpersonal ne
 
 Between interacting persons, we observe coordination and communication on various scales of organisation whose unit of transfer we can loosely describe as \textit{information}. Whilst the idea of interpersonal information transfer may appear intuitive \textit{prima facie}, it is not exactly clear how to define information, let alone measure its content, distribution, transfer, storage, modification, and other informational dynamics. Thus, an elegant definition and quantification of information that is \textit{mathematically precise and consistent} is essential, particularly one that is \textit{content-invariant} and \textit{model-free}; i.e., making no assumptions on the information content itself nor the statistical distributions or relationship model between random variables.
 
-Information theory, lauded as \textit{the} mathematical theory of communication [@shannon_mathematical_1948], lends itself well to this cause, proffering domain-generality and information as its common currency. Originally birthed for the development of communications engineering, various information-theoretic measures have found vast applicability in computer science (e.g., Kolmogorov complexity), economics (e.g., portfolio theory and Kelly gambling), statistics (e.g., Fisher information and hypothesis testing), and probability theory (e.g., limit theorems and large derivations; @cover_elements_2006), information theory has earned a notable place in neuroscience [@timme_tutorial_2018].  
+Information theory, lauded as \textit{the} mathematical theory of communication [@shannon_mathematical_1948], lends itself well to this cause, proffering domain-generality and information as its common currency. Originally birthed for the development of communications engineering, various information-theoretic measures have found vast applicability in computer science (e.g., Kolmogorov complexity), economics (e.g., portfolio theory and Kelly gambling), statistics (e.g., Fisher information and hypothesis testing), and probability theory (e.g., limit theorems and large derivations; @cover_elements_2006). Information theory has recently earned a notable place in neuroscience, too [@timme_tutorial_2018].  
 
 Of relevance for neuroscientific endeavours, information theory provides measures that can detect linear \textit{and} nonlinear dependencies between continuous time-series signals, allowing researchers to analyse both the correlation and causation between two or more random variables. In all, whilst standard measures of correlation and prediction are only sensitive to linear dependencies and only describe the variable's overall relationship, information-theoretic analyses and measures can quantify and more comprehensively describe the dynamics of complex systems that may demonstrate nonlinear dependencies whilst maintaining a particular robustness to noise. `HyperIT` computes well-recognised and validated information-theoretic measures that, for the first time, can be simultaneously applied to both hyperscanning and intra-brain analyses for various neural recordings. Usefully, and unlike other libraries, `HyperIT` is equipped to handle epoched and event-based data as well as specifying the level of organisation by comparing channels pairwise or by regions of interest. These measures include \textit{(I) mutual information}, \textit{(II) transfer entropy}, and \textit{(III) integrated information decomposition}, described below. 
 
 
 # Measures
 
-Mutual information ($I(X;Y)$) is a positively-biased, symmetric measure indicating how much (Shannon) information is shared between two random variables $X$ and $Y$ (\autoref{eq:mi}). One may also interpret MI as quantifying the “distance” between the joint probability distribution ($p_{XY}$) and the product of marginal probability distributions ($p_X \otimes p_Y$), such that $I(X;Y)=0$ \textit{iff} $p_{XY} = p_{X} \otimes p_{Y}$. Thus, it is understood as a special instance of the Kullback-Leibler divergence measure.
+\textit{Mutual information} ($I(X;Y)$) is a positively-biased, symmetric measure indicating how much (Shannon) information is shared between two random variables $X$ and $Y$ (\autoref{eq:mi}). One may also interpret MI as quantifying the “distance” between the joint probability distribution ($p_{XY}$) and the product of marginal probability distributions ($p_X \otimes p_Y$), such that $I(X;Y)=0$ \textit{iff} $p_{XY} = p_{X} \otimes p_{Y}$. Thus, it is understood as a special instance of the Kullback-Leibler divergence measure.
 
 \begin{equation}\label{eq:mi}
-    I(X;Y) = \SumInt_{\mathcal{X}}\SumInt_{\mathcal{Y}}p_{XY}(x,y)\log_2\frac{p_{XY}(x,y)}{p_X(x)p_Y(y)} 
+    I(X;Y) = \SumInt_{\mathcal{X}}\SumInt_{\mathcal{Y}}p_{XY}(x,y)\log_2\frac{p_{XY}(x,y)}{p_X(x)p_Y(y)}. 
 \end{equation}
 
-Transfer entropy ($TE_{Y \rightarrow X}$) is a measure that non-parametrically measures the statistical connectivity and time-directed transfer of information between random variables or processes. It is often taken as the non-linear equivalent of Granger causality and, indeed, equivalence has been demonstrated under Gaussianity [@barnett_granger_2009]. Specifically, this measure uses conditional mutual information to quantify the reduction in uncertainty about the future of one process given knowledge about another variable and its own history (\autoref{eq:te}).
+\textit{Transfer entropy} ($TE_{Y \rightarrow X}$) is a measure that non-parametrically measures the statistical connectivity and time-directed transfer of information between random variables or processes. It is often taken as the non-linear equivalent of Granger causality and, indeed, equivalence has been demonstrated under Gaussianity [@barnett_granger_2009]. Specifically, this measure uses conditional mutual information to quantify the reduction in uncertainty about the future of one process given knowledge about another variable and its own history (\autoref{eq:te}).
 
 \begin{align}\label{eq:te} \notag
     TE_{Y\rightarrow X}^{(k,l,u,\tau)} &= I(\mathbf{Y}_{t-u}^{(l,\tau_Y)}; X_t | \mathbf{X}_{t-1}^{(k,\tau_X)}) \\ 
-    &= \SumInt_{\substack{x_t, \mathbf{x}_{t-1}^{(k,\tau_X)} \in \mathcal{X}, \\ \mathbf{y}_{t-u}^{(l,\tau_Y)} \in \mathcal{Y}}} p\left(x_t, \mathbf{x}_{t-1}^{(k,\tau_X)}, \mathbf{y}_{t-u}^{(l,\tau_Y)}\right) \log_2 \left( \frac{p\left(\mathbf{y}_{t-u}^{(l,\tau_Y)}, x_t | \mathbf{x}_{t-1}^{(k,\tau_X)}\right)}{p\left(x_t | \mathbf{x}_{t-1}^{(k,\tau_X)}\right)} \right)
+    &= \SumInt_{\substack{x_t, \mathbf{x}_{t-1}^{(k,\tau_X)} \in \mathcal{X}, \\ \mathbf{y}_{t-u}^{(l,\tau_Y)} \in \mathcal{Y}}} p\left(x_t, \mathbf{x}_{t-1}^{(k,\tau_X)}, \mathbf{y}_{t-u}^{(l,\tau_Y)}\right) \log_2 \left( \frac{p\left(\mathbf{y}_{t-u}^{(l,\tau_Y)}, x_t | \mathbf{x}_{t-1}^{(k,\tau_X)}\right)}{p\left(x_t | \mathbf{x}_{t-1}^{(k,\tau_X)}\right)} \right),
 \end{align} with parameters including embedding history length for source ($l$) and target ($k$), embedding delay for source ($\tau_Y$) and target ($\tau_X$), and some causal delay or interaction lag $u$.
 
 More recently, approaches to exhaustively decompose a multivariate system’s informational structure has described three modes; namely, information about a target variable may be redundant (Rdn): information that is shared between variables; unique (Unq): information that is specific to a single variable; or synergistic (Syn): information that is only learnt from the conjunction of multiple sources and not individually, with the exclusive-OR function being a canonical example [@williams_nonnegative_2010]. These so-called “partial information atoms” are non-overlapping and form an additive set, exhaustively describing the informational composition of a multivariate system (\autoref{eq:pid}). 
@@ -65,16 +65,16 @@ More recently, approaches to exhaustively decompose a multivariate system’s in
 \begin{align}\label{eq:pid}
     I(Y; X_1, X_2) = &\text{Syn}(Y; X_1, X_2) + \\ \notag
     &\text{Unq}(Y; X_1) + \text{Unq}(Y; X_2) + \\ \notag
-    &\text{Rdn}(Y; X_1, X_2) \notag
+    &\text{Rdn}(Y; X_1, X_2). \notag
 \end{align} 
 
-A recent development, termed integrated information decomposition, extends this decomposition to multi-source and multi-target continuous time-series random variables to decompose information dynamics into various qualitative modes including information storage, copy, transfer, erasure, downward causation, causal decoupling, and upward causation [@mediano_beyond_2019; @mediano_towards_2021]. This measure specifically decomposes the time-delayed mutual information between two multivariate processes (\autoref{eq:phi-id}).
+A recent development, termed \textit{integrated information decomposition}, extends this decomposition to multi-source and multi-target continuous time-series random variables to decompose information dynamics into various qualitative modes including information storage, copy, transfer, erasure, downward causation, causal decoupling, and upward causation [@mediano_beyond_2019; @mediano_towards_2021]. This measure specifically decomposes the time-delayed mutual information ($t' > t$) between two multivariate processes (\autoref{eq:phi-id}).
 
 \begin{align}\label{eq:phi-id}
     I(\mathbf{X}_t;\mathbf{X}_{t'}) = &\text{Syn}(X_t^1,X_t^2; \mathbf{X}_{t'}) + \\ \notag
     &\text{Unq}(X_t^1; \mathbf{X}_{t'}|X_t^2) + \text{Unq}(X_t^2; \mathbf{X}_{t'}|X_t^1) + \\ \notag
-    &\text{Rdn}(X_t^1,X_t^2; \mathbf{X}_{t'}) \\ \notag
-\end{align} by some time delay $t' > t$.
+    &\text{Rdn}(X_t^1,X_t^2; \mathbf{X}_{t'}). \\ \notag
+\end{align}
 
 # Functionality
 
