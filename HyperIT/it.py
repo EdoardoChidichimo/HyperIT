@@ -10,7 +10,7 @@ from jpype import JPackage, shutdownJVM, isJVMStarted
 from phyid.calculate import calc_PhiID
 from phyid.utils import PhiID_atoms_abbr
 
-from utils import setup_JVM, setup_JArray, convert_names_to_indices, convert_indices_to_names, set_estimator
+from utils import setup_JVM, setup_JArray, bandpass_filter_data, convert_names_to_indices, convert_indices_to_names, set_estimator, text_positions
 
 
 class HyperIT(ABC):
@@ -25,10 +25,10 @@ class HyperIT(ABC):
     Args:
         ABC (_type_): Abstract Base Class for HyperIT.
 
-    Note: This class requires numpy, matplotlib, PIL, jpype (with the local infodynamics.jar file), and phyid as dependencies.
+    Note: This class requires numpy, mne, matplotlib, PIL, jpype (with the local infodynamics.jar file), and phyid as dependencies.
     """
 
-    def __init__(self, data1: np.ndarray, data2: np.ndarray, channel_names: List[str], standardise_data: bool = False, verbose: bool = False, working_directory: str = None):
+    def __init__(self, data1: np.ndarray, data2: np.ndarray, channel_names: List[str], sfreq: float, freq_bands: dict, standardise_data: bool = False, verbose: bool = False, working_directory: str = None, **filter_options):
         """ Creates HyperIT object containing time-series data and channel names for analysis. 
             Automatic data checks for consistency and dimensionality, identifying whether analysis is to be intra- or inter-brain.
 
@@ -40,6 +40,8 @@ class HyperIT(ABC):
             data1                   (np.ndarray): Time-series data for participant 1. Can take shape (n_epo, n_chan, n_samples) or (n_chan, n_samples) for epoched and unepoched data, respectively. 
             data2                   (np.ndarray): Time-series data for participant 1. Must have the same shape as data1.
             channel_names            (List[str]): A list of strings representing the channel names for each participant. [[channel_names_p1], [channel_names_p2]] or [[channel_names_p1]] for intra-brain.
+            sfreq                        (float): Sampling frequency of the data.
+            freq_bands                    (dict): Dictionary of frequency bands for bandpass filtering. {band_name: (low_freq, high_freq)}.
             standardise_data    (bool, optional): Whether to standardise the data before analysis. Defaults to True.
             verbose             (bool, optional): Whether constructor and analyses should output details and progress. Defaults to False.
             working_directory    (str, optional): The directory where the infodynamics.jar file is located. Defaults to None (later defaults to os.getcwd()).
@@ -51,6 +53,9 @@ class HyperIT(ABC):
         self._channel_names = channel_names #  [[p1][p2]] or [[p1]] for intra-brain
         self._channel_indices1 = []
         self._channel_indices2 = []
+        self._sfreq = sfreq if sfreq else None
+        self._freq_bands = freq_bands if freq_bands else None
+        self._filter_options = filter_options
 
         self._all_data = [data1, data2]
         self._data1, self._data2 = self._all_data
@@ -67,18 +72,20 @@ class HyperIT(ABC):
 
         self.__check_data()
 
-        ## SHOULD WE STANDARDISE INCOMING DATA BEFORE ANALYSIS?
-        if self._standardise_data:
-            self._data1 = (self._data1 - np.mean(self._data1, axis=-1, keepdims=True)) / np.std(self._data1, axis=-1, keepdims=True)
-            self._data2 = (self._data2 - np.mean(self._data2, axis=-1, keepdims=True)) / np.std(self._data2, axis=-1, keepdims=True)
-            self._all_data = [self._data1, self._data2]
+
+        _, self._n_freq_bands, self._n_epo, self._n_chan, self._n_samples = self._all_data.shape
+        print("Data shape: ", self._all_data.shape)
 
         if self.verbose:
             print("HyperIT object created successfully.")
-            if self.n_epo > 1:
-                print(f"{'Inter-Brain' if self._inter_brain else 'Intra-Brain'} analysis and epoched data detected. \nAssuming data passed have shape ({self.n_epo} epochs, {self.n_chan} channels, {self.n_samples} time points).")
+
+            if self._n_epo > 1:
+                print(f"{'Inter-Brain' if self._inter_brain else 'Intra-Brain'} analysis and epoched data detected. \nAssuming data passed have shape ({self._n_epo} epochs, {self._n_chan} channels, {self._n_samples} time points).")
             else:
-                print(f"{'Inter-Brain' if self._inter_brain else 'Intra-Brain'} analysis and unepoched data detected. \nAssuming data passed have shape ({self.n_chan} channels, {self.n_samples} time points).")
+                print(f"{'Inter-Brain' if self._inter_brain else 'Intra-Brain'} analysis and unepoched data detected. \nAssuming data passed have shape ({self._n_chan} channels, {self._n_samples} time points).")
+
+            if self._freq_bands:
+                print(f"Data has been bandpass filtered: {self._freq_bands}.")
 
 
     def __del__(self):
@@ -102,14 +109,14 @@ class HyperIT(ABC):
             channel_info += f" and {self._channel_names[0][1]}"
 
         return (f"HyperIT Object: \n"
-                f"{analysis_type} Analysis with {self.n_epo} epochs, {self.n_chan} channels, "
-                f"and {self.n_samples} time points. \n"
+                f"{analysis_type} Analysis with {self._n_epo} epochs, {self._n_chan} channels, "
+                f"and {self._n_samples} time points. \n"
                 f"Channel names passed: \n"
                 f"{channel_info}.")
 
     def __len__(self) -> int:
         """ Returns the number of epochs in the HyperIT object. """
-        return self.n_epo
+        return self._all_data.shape
     
     def __str__(self) -> str:
         """ String representation of HyperIT object. """
@@ -124,6 +131,8 @@ class HyperIT(ABC):
             - Data shapes are consistent.
             - Data dimensions are either 2 or 3 dimensional.
             - Channel names are in correct format and match number of channels in data.
+            - Data are bandpass filtered, if frequency bands are specified.
+            - Data are standardised, if specified.
         """
 
         if not all(isinstance(data, np.ndarray) for data in [self._data1, self._data2]):
@@ -136,6 +145,8 @@ class HyperIT(ABC):
             self._data1 = self._data1[np.newaxis, ...]
             self._data2 = self._data2[np.newaxis, ...]
 
+        self._n_chan = self._data1.shape[1] 
+
         if self._data1.ndim not in [2,3]:
             raise ValueError(f"Unexpected number of dimensions in time-series data: {self._data1.ndim}. Expected 2 dimensions (channels, time_points) or 3 dimensions (epochs, channels, time_points).")
 
@@ -145,16 +156,25 @@ class HyperIT(ABC):
         if not self._inter_brain and isinstance(self._channel_names[0], list):
             self._channel_names = [self._channel_names] * 2
 
-        self.n_epo, self.n_chan, self.n_samples = self._data1.shape
-
-
-        if any(len(names) != self.n_chan for names in self._channel_names):
+        if any(len(names) != self._n_chan for names in self._channel_names):
             raise ValueError("The number of channels in time-series data does not match the length of channel_names.")
         
         self._channel_indices1 = np.arange(len(self._channel_names[0]))
         self._channel_indices2 = np.arange(len(self._channel_names[1])) if len(self._channel_names) > 1 else self._channel_indices2.copy()
-        
-        
+
+
+        if self._freq_bands:
+            self._data1, self._data2 = bandpass_filter_data(self._data1, self._sfreq, self._freq_bands, **self._filter_options), bandpass_filter_data(self._data2, self._sfreq, self._freq_bands, **self._filter_options)
+                
+        else:
+            self._data1, self._data2 = np.expand_dims(self._data1, axis=0), np.expand_dims(self._data2, axis=0)
+
+        if self._standardise_data:
+            self._data1 = (self._data1 - np.mean(self._data1, axis=-1, keepdims=True)) / np.std(self._data1, axis=-1, keepdims=True)
+            self._data2 = (self._data2 - np.mean(self._data2, axis=-1, keepdims=True)) / np.std(self._data2, axis=-1, keepdims=True)
+            
+        self._all_data = np.stack([self._data1, self._data2], axis=0)
+
     @property
     def roi(self) -> List[List[Union[str, int, list]]]:
         """Regions of interest for both data of the HyperIT object (defining spatial scale of organisation). To set this, call .roi(roi_list). 
@@ -213,7 +233,7 @@ class HyperIT(ABC):
             raise ValueError("ROI structure is not recognised.")
         
         if self.verbose:
-            print(f"Scale of organisation: {self._scale_of_organisation} parts.")
+            print(f"Scale of organisation: {self._scale_of_organisation} channels.")
             print(f"Groups of channels: {self._soi_groups}")
 
         roi1, roi2 = roi_list
@@ -226,7 +246,7 @@ class HyperIT(ABC):
             self._data1 = self._data1[:, self._channel_indices1, :]
             self._data2 = self._data2[:, self._channel_indices2, :]
             
-            self.n_chan = len(self._channel_indices1)
+            self._n_chan = len(self._channel_indices1)
 
         # for other scales of organisation, this will be handled in the compute_mi and compute_te functions
 
@@ -240,7 +260,7 @@ class HyperIT(ABC):
         self._channel_indices2 = np.arange(len(self._channel_names[1]) if len(self._channel_names) > 1 else len(self._channel_names[0]))
         self._roi = [self._channel_indices1, self._channel_indices2]
         self._data1, self._data2 = self._all_data
-        self.n_chan = len(self._channel_indices1)
+        self._n_chan = len(self._channel_indices1)
         print("Region of interest has been reset to all channels.")
 
 
@@ -271,9 +291,9 @@ class HyperIT(ABC):
 
             return Hx + Hy - Hxy
 
-        estimations = np.zeros((self.n_epo, 4)) # stores MI result, mean, std, p-value per epoch
+        estimations = np.zeros((self._n_epo, 4)) # stores MI result, mean, std, p-value per epoch
 
-        for epo_i in range(self.n_epo):
+        for epo_i in range(self._n_epo):
 
             x, y = (s1[epo_i, :], s2[epo_i, :]) 
             mi = hist_calc_mi(x, y)
@@ -343,9 +363,9 @@ class HyperIT(ABC):
 
 
 
-        estimations = np.zeros((self.n_epo, 4)) # stores MI result, mean, std, p-value per epoch
+        estimations = np.zeros((self._n_epo, 4)) # stores MI result, mean, std, p-value per epoch
         
-        for epo_i in range(self.n_epo):
+        for epo_i in range(self._n_epo):
 
             x, y = (s1[epo_i, :], s2[epo_i, :])
             mi = symb_calc_mi(x, y, l, k)
@@ -386,26 +406,27 @@ class HyperIT(ABC):
     def __estimate_it(self, s1: np.ndarray, s2: np.ndarray) -> np.ndarray:
         """ Estimates Mutual Information or Transfer Entropy for a pair of time-series signals using JIDT estimators. """
 
-        estimations = np.zeros((self.n_epo, 4)) # stores MI/TE result, mean, std, p-value per epoch
+        estimations = np.zeros((self._n_freq_bands, self._n_epo, 4)) # stores MI/TE result, mean, std, p-value per epoch
 
-        for epo_i in range(self.n_epo):
-            
-            X, Y = (s1[epo_i, ...], s2[epo_i, ...]) 
+        for freq_band in range(self._n_freq_bands):
+            for epo_i in range(self._n_epo):
+                
+                X, Y = (s1[freq_band, epo_i, ...], s2[freq_band, epo_i, ...]) 
 
-            ## GROUPWISE; multivariate time series comparison
-            if self._scale_of_organisation > 1:
-                X, Y = X.T, Y.T # transpose to shape (samples, group_channels)
+                ## GROUPWISE; multivariate time series comparison
+                if self._scale_of_organisation > 1:
+                    X, Y = X.T, Y.T # transpose to shape (samples, group_channels)
 
-            # Initialise parameter describes the dimensions of the data
-            self.Calc.initialise(*self._initialise_parameter) if self._initialise_parameter else self.Calc.initialise()
-            self.Calc.setObservations(setup_JArray(X), setup_JArray(Y))
-            result = self.Calc.computeAverageLocalOfObservations() * np.log(2)
+                # Initialise parameter describes the dimensions of the data
+                self.Calc.initialise(*self._initialise_parameter) if self._initialise_parameter else self.Calc.initialise()
+                self.Calc.setObservations(setup_JArray(X), setup_JArray(Y))
+                result = self.Calc.computeAverageLocalOfObservations() * np.log(2)
 
-            if self.calc_sigstats:
-                stat_sig = self.Calc.computeSignificance(self.stat_sig_perm_num)
-                estimations[epo_i] = [result, stat_sig.getMeanOfDistribution(), stat_sig.getStdOfDistribution(), stat_sig.pValue]
-            else:
-                estimations[epo_i, 0] = result
+                if self.calc_sigstats:
+                    stat_sig = self.Calc.computeSignificance(self.stat_sig_perm_num)
+                    estimations[freq_band, epo_i] = [result, stat_sig.getMeanOfDistribution(), stat_sig.getStdOfDistribution(), stat_sig.pValue]
+                else:
+                    estimations[freq_band, epo_i, 0] = result
             
         return estimations
     
@@ -448,9 +469,9 @@ class HyperIT(ABC):
         # self.__which_mi_estimator()
         self.__which_estimator(measure = 'mi')
 
-        self.mi_matrix = np.zeros((self.n_chan, self.n_chan, self.n_epo, 4)) if self._scale_of_organisation == 1 else np.zeros((self._soi_groups, self._soi_groups, self.n_epo, 4))
+        self.mi_matrix = np.zeros((self._n_freq_bands, self._n_epo, self._n_chan, self._n_chan, 4)) if self._scale_of_organisation == 1 else np.zeros((self._n_freq_bands, self._n_epo, self._soi_groups, self._soi_groups, 4))
 
-        loop_range = self.n_chan if self._scale_of_organisation == 1 else self._soi_groups
+        loop_range = self._n_chan if self._scale_of_organisation == 1 else self._soi_groups
 
         for i in tqdm(range(loop_range)):
             for j in range(loop_range):
@@ -458,20 +479,20 @@ class HyperIT(ABC):
                 if self._inter_brain or i != j:
 
                     if self._scale_of_organisation == 1:
-                        s1, s2 = (self._data1[:, i, :], self._data2[:, j, :])
+                        s1, s2 = (self._data1[:, :, i, :], self._data2[:, :, j, :])
                     
                     elif self._scale_of_organisation > 1:
-                        s1, s2 = (self._data1[:, self._roi[0][i], :], self._data2[:, self._roi[1][j], :])
+                        s1, s2 = (self._data1[:, :, self._roi[0][i], :], self._data2[:, :, self._roi[1][j], :])
 
                     if self.estimator_type == 'histogram':
-                        self.mi_matrix[i, j] = self.__mi_hist(s1, s2)
+                        self.mi_matrix[:, :, i, j] = self.__mi_hist(s1, s2)
                     elif self.estimator_type == 'symbolic':
-                        self.mi_matrix[i, j] = self.__mi_symb(s1, s2)
+                        self.mi_matrix[:, :, i, j] = self.__mi_symb(s1, s2)
                     else:
-                        self.mi_matrix[i, j] = self.__estimate_it(s1, s2)
+                        self.mi_matrix[:, :, i, j] = self.__estimate_it(s1, s2)
 
                     if not self._inter_brain:
-                        self.mi_matrix[j, i] = self.mi_matrix[i, j]
+                        self.mi_matrix[:, :, j, i] = self.mi_matrix[i, j]
 
 
         mi = np.array((self.mi_matrix))
@@ -515,9 +536,11 @@ class HyperIT(ABC):
         # self.estimator = self.__which_te_estimator()
         self.__which_estimator(measure = 'te')
 
-        self.te_matrix_xy, self.te_matrix_yx = (np.zeros((self.n_chan, self.n_chan, self.n_epo, 4)), np.zeros((self.n_chan, self.n_chan, self.n_epo, 4))) if self._scale_of_organisation == 1 else (np.zeros((self._soi_groups, self._soi_groups, self.n_epo, 4)), np.zeros((self._soi_groups, self._soi_groups, self.n_epo, 4)))
+        self.te_matrix_xy, self.te_matrix_yx = (np.zeros((self._n_freq_bands, self._n_epo, self._n_chan, self._n_chan, 4)), 
+                                                np.zeros((self._n_freq_bands, self._n_epo, self._n_chan, self._n_chan, 4))) if self._scale_of_organisation == 1 else (np.zeros((self._n_freq_bands, self._n_epo, self._soi_groups, self._soi_groups, 4)), 
+                                                                                                                                                                  np.zeros((self._n_freq_bands, self._n_epo, self._soi_groups, self._soi_groups, 4)))
 
-        loop_range = self.n_chan if self._scale_of_organisation == 1 else self._soi_groups
+        loop_range = self._n_chan if self._scale_of_organisation == 1 else self._soi_groups
 
         for i in tqdm(range(loop_range)):
             for j in range(loop_range):
@@ -525,16 +548,16 @@ class HyperIT(ABC):
                 if self._inter_brain or i != j: # avoid self-channel calculations for intra_brain condition
                     
                     if self._scale_of_organisation == 1:
-                        s1, s2 = (self._data1[:, i, :], self._data2[:, j, :]) 
+                        s1, s2 = (self._data1[:, :, i, :], self._data2[:, :, j, :]) 
                     
                     elif self._scale_of_organisation > 1:
-                        s1, s2 = (self._data1[:, self._roi[0][i], :], self._data2[:, self._roi[1][j], :]) 
+                        s1, s2 = (self._data1[:, :, self._roi[0][i], :], self._data2[:, :, self._roi[1][j], :]) 
 
-                    self.te_matrix_xy[i, j] = self.__estimate_it(s1, s2)
+                    self.te_matrix_xy[:, :, i, j] = self.__estimate_it(s1, s2)
                     
                     if self._inter_brain: # don't need to compute opposite matrix for intra-brain as we already loop through each channel combination including symmetric
             
-                        self.te_matrix_yx[i, j] = self.__estimate_it(s2, s1)
+                        self.te_matrix_yx[:, :, i, j] = self.__estimate_it(s2, s1)
                     
         te_xy = np.array((self.te_matrix_xy))
         te_yx = np.array((self.te_matrix_yx))
@@ -564,40 +587,41 @@ class HyperIT(ABC):
         
         self.measure = 'Integrated Information Decomposition'
 
+        loop_range = self._n_chan if self._scale_of_organisation == 1 else self._soi_groups
 
-        loop_range = self.n_chan if self._scale_of_organisation == 1 else self._soi_groups
+        phi_dict_xy = [[[{} for _ in range(loop_range)] for _ in range(loop_range)] for _ in range(self._n_freq_bands)]
+        phi_dict_yx = [[[{} for _ in range(loop_range)] for _ in range(loop_range)] for _ in range(self._n_freq_bands)]
 
-        phi_dict_xy = [[{} for _ in range(loop_range)] for _ in range(loop_range)]
-        phi_dict_yx = [[{} for _ in range(loop_range)] for _ in range(loop_range)]
 
-        for i in tqdm(range(loop_range)):
-            for j in range(loop_range):
-                
-                if self._inter_brain or i != j:
-
-                    if self._scale_of_organisation == 1:
-                        s1, s2 = (self._data1[:, i, :], self._data2[:, j, :]) 
-                        if self.n_epo > 1:
-                            s1, s2 = s1.reshape(-1), s2.reshape(-1)
-
-                            ## If you want to pass (samples, epochs) as atomic calculations, delete line above and uncomment line below
-                            # s1, s2 = s1.T, s2.T
+        for freq_band in range(self._n_freq_bands):
+            for i in tqdm(range(loop_range)):
+                for j in range(loop_range):
                     
-                    elif self._scale_of_organisation > 1:
+                    if self._inter_brain or i != j:
+
+                        if self._scale_of_organisation == 1:
+                            s1, s2 = (self._data1[freq_band, :, i, :], self._data2[freq_band, :, j, :]) 
+                            if self._n_epo > 1:
+                                s1, s2 = s1.reshape(-1), s2.reshape(-1)
+
+                                ## If you want to pass (samples, epochs) as atomic calculations, delete line above and uncomment line below
+                                # s1, s2 = s1.T, s2.T
                         
-                        temp_s1, temp_s2 = self._data1[:, self._roi[0][i], :], self._data2[:, self._roi[1][j], :]
-                        # Flatten epochs and transpose to shape (samples, channels) [necessary configuration for phyid]
-                        s1, s2 = temp_s1.transpose(1,0,2).reshape(-1, temp_s1.shape[1]), temp_s2.transpose(1,0,2).reshape(-1, temp_s2.shape[1])
+                        elif self._scale_of_organisation > 1:
                             
+                            temp_s1, temp_s2 = self._data1[freq_band, :, self._roi[0][i], :], self._data2[freq_band, :, self._roi[1][j], :]
+                            # Flatten epochs and transpose to shape (samples, channels) [necessary configuration for phyid]
+                            s1, s2 = temp_s1.transpose(1,0,2).reshape(-1, temp_s1.shape[1]), temp_s2.transpose(1,0,2).reshape(-1, temp_s2.shape[1])
+                                
 
-                    atoms_results, _ = calc_PhiID(s1, s2, tau=tau, kind='gaussian', redundancy=redundancy)
-                    calc_atoms = np.mean(np.array([atoms_results[_] for _ in PhiID_atoms_abbr]), axis=1)
-                    phi_dict_xy[i][j] = {key: value for key, value in zip(atoms_results.keys(), calc_atoms)}
-
-                    if self._inter_brain:
-                        atoms_results, _ = calc_PhiID(s2, s1, tau=tau, kind='gaussian', redundancy=redundancy)
+                        atoms_results, _ = calc_PhiID(s1, s2, tau=tau, kind='gaussian', redundancy=redundancy)
                         calc_atoms = np.mean(np.array([atoms_results[_] for _ in PhiID_atoms_abbr]), axis=1)
-                        phi_dict_yx[i][j] = {key: value for key, value in zip(atoms_results.keys(), calc_atoms)}   
+                        phi_dict_xy[freq_band][i][j] = {key: value for key, value in zip(atoms_results.keys(), calc_atoms)}
+
+                        if self._inter_brain:
+                            atoms_results, _ = calc_PhiID(s2, s1, tau=tau, kind='gaussian', redundancy=redundancy)
+                            calc_atoms = np.mean(np.array([atoms_results[_] for _ in PhiID_atoms_abbr]), axis=1)
+                            phi_dict_yx[freq_band][i][j] = {key: value for key, value in zip(atoms_results.keys(), calc_atoms)}   
 
         if vis:
             self.__plot_atoms(phi_dict_xy)
@@ -637,128 +661,127 @@ class HyperIT(ABC):
                 print(f"{i+1}: {target_channel_names[i]}")
 
 
-        if self.n_epo > 1: 
-            choice = input(f"{self.n_epo} epochs detected. Plot for \n1. All epochs \n2. Specific epoch \n3. Average MI/TE across epochs \nEnter choice: ")
+        if self._n_epo > 1: 
+            choice = input(f"{self._n_epo} epochs detected. Plot for \n1. All epochs \n2. Specific epoch \n3. Average MI/TE across epochs \nEnter choice: ")
             if choice == "1":
                 print("Plotting for all epochs.")
-                epochs = range(self.n_epo)
+                epochs = range(self._n_epo)
             elif choice == "2":
-                epo_choice = input(f"Enter epoch number(s) [1 to {self.n_epo}] separated by comma only: ")
+                epo_choice = input(f"Enter epoch number(s) [1 to {self._n_epo}] separated by comma only: ")
                 try:
                     epochs = [int(epo)-1 for epo in epo_choice.split(',')]
                 except ValueError:
                     print("Invalid input. Defaulting to plotting all epochs.")
-                    epochs = range(self.n_epo)
+                    epochs = range(self._n_epo)
             elif choice == "3":
                 print("Plotting for average MI/TE across epochs. Note that p-values will not be shown.")
                 
             else:
                 print("Invalid choice. Defaulting to un-epoched data.")
 
-
-        for epo_i in epochs:
-            
-            highest = np.max(it_matrix[:,:,epo_i,0])
-            channel_pair_with_highest = np.unravel_index(np.argmax(it_matrix[:,:,epo_i,0]), it_matrix[:,:,epo_i,0].shape)
-            if self.verbose:
-                if self._scale_of_organisation == 1:
-                    print(f"Strongest regions: (Source Channel {convert_indices_to_names(self._channel_names, self._channel_indices1, 0)[channel_pair_with_highest[0]]} --> " +
-                                         f" Target Channel {convert_indices_to_names(self._channel_names, self._channel_indices2, 1)[channel_pair_with_highest[1]]}) = {highest}")
-                else:
-                    print(f"Strongest regions: (Source Group {source_channel_names[i]} --> Target Group {target_channel_names[i]}) = {highest}")
-
-            plt.figure(figsize=(12, 10))
-            plt.imshow(it_matrix[:,:,epo_i,0], cmap='BuPu', vmin=0, aspect='auto')
-
-            if self.n_epo > 1 and not choice == "3":
-                plt.title(f'{title}; Epoch {epo_i+1}', pad=20)
-            else:
-                plt.title(title, pad=20)
+        for freq_band in range(self._n_freq_bands):
+            for epo_i in epochs:
                 
-            if self.calc_sigstats and not choice == "3":
-                for i in range(it_matrix.shape[0]):
-                    for j in range(it_matrix.shape[1]):
-                        p_val = float(it_matrix[i, j, epo_i, 3])
-                        if p_val < self.p_threshold and (not self._inter_brain and i != j):
-                            normalized_value = (it_matrix[i, j, epo_i, 0] - np.min(it_matrix[:,:,epo_i,0])) / (np.max(it_matrix[:,:,epo_i,0]) - np.min(it_matrix[:,:,epo_i,0]))
-                            text_colour = 'white' if normalized_value > 0.5 else 'black'
-                            plt.text(j, i, f'p={p_val:.2f}', ha='center', va='center', color=text_colour, fontsize=8, fontweight='bold')
+                highest = np.max(it_matrix[freq_band, epo_i, :, :, 0])
+                channel_pair_with_highest = np.unravel_index(np.argmax(it_matrix[freq_band, epo_i, :, :, 0]), it_matrix[freq_band, epo_i, :, :, 0].shape)
+                if self.verbose:
+                    if self._scale_of_organisation == 1:
+                        print(f"Strongest regions: (Source Channel {convert_indices_to_names(self._channel_names, self._channel_indices1, 0)[channel_pair_with_highest[0]]} --> " +
+                                            f" Target Channel {convert_indices_to_names(self._channel_names, self._channel_indices2, 1)[channel_pair_with_highest[1]]}) = {highest}")
+                    else:
+                        print(f"Strongest regions: (Source Group {source_channel_names[i]} --> Target Group {target_channel_names[i]}) = {highest}")
 
-            plt.colorbar()
-            plt.xlabel('Target')
-            plt.ylabel('Source')
+                plt.figure(figsize=(12, 10))
+                plt.imshow(it_matrix[freq_band, epo_i, :, :, 0], cmap='BuPu', vmin=0, aspect='auto')
 
-            if self._scale_of_organisation == 1:
-                plt.xticks(range(self.n_chan), convert_indices_to_names(self._channel_names, self._channel_indices2, 1), rotation=90) 
-                plt.yticks(range(self.n_chan), convert_indices_to_names(self._channel_names, self._channel_indices1, 0))
-            else:
-                plt.xticks(range(self._soi_groups), [f'Group {i+1}' for i in range(self._soi_groups)], rotation=90)
-                plt.yticks(range(self._soi_groups), [f'Group {i+1}' for i in range(self._soi_groups)])
+                band_description = ""
+                if self._freq_bands:
+                    band_name, band_range = list(self._freq_bands.items())[freq_band]
+                    band_description = f"{band_name}: {band_range}"
 
-            plt.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False, labeltop=True)
-            plt.tick_params(axis='y', which='both', right=False, left=True, labelleft=True)
-            plt.show()
+                # Check if epochs are involved and adjust the title accordingly
+                if self._n_epo > 1 and not choice == "3":
+                    if band_description:
+                        plt.title(f'{title}; Frequency Band {band_description}, Epoch {epo_i+1}', pad=20)
+                    else:
+                        plt.title(f'{title}; Epoch {epo_i+1}', pad=20)
+                else:
+                    if band_description:
+                        plt.title(f'{title}; Frequency Band {band_description}', pad=20)
+                    else:
+                        plt.title(title, pad=20)
+                    
+                if self.calc_sigstats and not choice == "3":
+                    for i in range(it_matrix.shape[0]):
+                        for j in range(it_matrix.shape[1]):
+                            p_val = float(it_matrix[freq_band, epo_i, i, j, 3])
+                            if p_val < self.p_threshold and (not self._inter_brain and i != j):
+                                normalized_value = (it_matrix[freq_band, epo_i, i, j, 0] - np.min(it_matrix[freq_band, epo_i, :, :, 0])) / (np.max(it_matrix[freq_band, epo_i, :, :, 0]) - np.min(it_matrix[freq_band, epo_i, :, :, 0]))
+                                text_colour = 'white' if normalized_value > 0.5 else 'black'
+                                plt.text(j, i, f'p={p_val:.2f}', ha='center', va='center', color=text_colour, fontsize=8, fontweight='bold')
 
-    @staticmethod
-    def __plot_atoms(phi_dict: dict):
-        """Plots the values of the atoms in the lattice for a given pair of channels/ROI groups."""
-    
+                plt.colorbar()
+                plt.xlabel('Target')
+                plt.ylabel('Source')
+
+                if self._scale_of_organisation == 1:
+                    plt.xticks(range(self._n_chan), convert_indices_to_names(self._channel_names, self._channel_indices2, 1), rotation=90) 
+                    plt.yticks(range(self._n_chan), convert_indices_to_names(self._channel_names, self._channel_indices1, 0))
+                else:
+                    plt.xticks(range(self._soi_groups), [f'Group {i+1}' for i in range(self._soi_groups)], rotation=90)
+                    plt.yticks(range(self._soi_groups), [f'Group {i+1}' for i in range(self._soi_groups)])
+
+                plt.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False, labeltop=True)
+                plt.tick_params(axis='y', which='both', right=False, left=True, labelleft=True)
+                plt.show()
+
+    def __plot_atoms(self, phi_dict: dict):
+        """Plots the values of the atoms in the lattice for each frequency band for a given pair of channels/ROI groups."""
+        
         if not phi_dict or not phi_dict[0]:
             print("The phi_dict is empty or not properly structured.")
             return
 
-        x_range = len(phi_dict)
-        y_range = len(phi_dict[0])
-        prompt_message = f"Choose two numbers from this range: [0-{x_range - 1}] for X and [0-{y_range - 1}] for Y (or type 'done' to stop): "
+        f_range = len(phi_dict)
+        x_range = len(phi_dict[0])
+        y_range = len(phi_dict[0][0])
+        print("f_range:", f_range)
 
-        while True:
-            user_input = input(prompt_message).split(',')
+        for freq_band in range(f_range):
+            print(f"Now plotting for frequency band {freq_band}")
+            prompt_message = f"Choose two numbers from this range for X and Y channels/groups: [0-{x_range - 1}], [0-{y_range - 1}] (or type 'done' to stop): "
             
-            if len(user_input) == 1 and user_input[0].lower() == 'done':
-                break
+            while True:
+                user_input = input(prompt_message).split(',')
+                
+                if len(user_input) == 1 and user_input[0].lower() == 'done':
+                    break
 
-            if len(user_input) != 2 or not all(part.strip().isdigit() for part in user_input):
-                print("Invalid input. Please enter exactly two numbers separated by a comma.")
-                continue
+                if len(user_input) != 2 or not all(part.strip().isdigit() for part in user_input):
+                    print("Invalid input. Please enter exactly two numbers separated by a comma.")
+                    continue
 
-            ch_X, ch_Y = (int(part.strip()) for part in user_input)
+                ch_X, ch_Y = (int(part.strip()) for part in user_input)
 
-            try:
-                value_dict = phi_dict[ch_X][ch_Y]
-                if value_dict is None:
-                    raise KeyError
+                try:
+                    value_dict = phi_dict[freq_band][ch_X][ch_Y]
+                    if value_dict is None:
+                        raise KeyError
 
-                image = Image.open('visualisations/atoms_lattice_values.png')
-                draw = ImageDraw.Draw(image) 
+                    image = Image.open('visualisations/atoms_lattice_values.png')
+                    draw = ImageDraw.Draw(image) 
 
-                text_positions = {
-                    'rtr': (485, 1007), 
-                    'rtx': (160, 780),
-                    'rty': (363, 780), 
-                    'rts': (37, 512), 
-                    'xtr': (610, 779), 
-                    'xtx': (237, 510), 
-                    'xty': (487, 585), 
-                    'xts': (160, 243), 
-                    'ytr': (800, 780), 
-                    'ytx': (485, 427), 
-                    'yty': (725, 505), 
-                    'yts': (363, 243), 
-                    'str': (930, 505), 
-                    'stx': (605, 243), 
-                    'sty': (807, 243), 
-                    'sts': (485, 41)   
-                }
+                    for text, pos in text_positions.items():
+                        value = value_dict.get(text, '0')
+                        plot_text = f"{round(float(value), 3):.3f}"
+                        draw.text(pos, plot_text, fill="black", font_size=25)
 
-                for text, pos in text_positions.items():
-                    value = value_dict.get(text, '0')
-                    plot_text = f"{round(float(value), 3):.3f}"
-                    draw.text(pos, plot_text, fill="black", font_size=25)
+                    image.show()
+                
+                except KeyError:
+                    print("Invalid channel/group indices.")
 
-                image.show()
-            
-            except KeyError:
-                print("Invalid channel/group indices.")
+
 
 
 

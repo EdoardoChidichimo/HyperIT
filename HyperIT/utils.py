@@ -1,6 +1,25 @@
 import numpy as np
 from jpype import isJVMStarted, getDefaultJVMPath, startJVM, JArray, JDouble, shutdownJVM, JPackage, JClass
 import os
+import mne
+
+text_positions = {'rtr': (485, 1007),
+                  'rtx': (160, 780),
+                  'rty': (363, 780), 
+                  'rts': (37, 512), 
+                  'xtr': (610, 779), 
+                  'xtx': (237, 510), 
+                  'xty': (487, 585), 
+                  'xts': (160, 243), 
+                  'ytr': (800, 780), 
+                  'ytx': (485, 427), 
+                  'yty': (725, 505), 
+                  'yts': (363, 243), 
+                  'str': (930, 505), 
+                  'stx': (605, 243), 
+                  'sty': (807, 243), 
+                  'sts': (485, 41)   
+                }
 
 def setup_JVM(working_directory: str = None, verbose: bool = False) -> None:
     if(not isJVMStarted()):
@@ -20,6 +39,18 @@ def setup_JVM(working_directory: str = None, verbose: bool = False) -> None:
         if verbose:
             print("JVM started.")
 
+
+def bandpass_filter_data(data: np.ndarray, sfreq: float, freq_bands: dict, **filter_options) -> np.ndarray:
+
+    n_epochs, n_channels, n_samples = data.shape
+    n_freq_bands = len(freq_bands)
+
+    filtered_data = np.empty((n_freq_bands, n_epochs, n_channels, n_samples))
+
+    for i, (band, (l_freq, h_freq)) in enumerate(freq_bands.items()):
+        filtered_data[i] = mne.filter.filter_data(data, sfreq=sfreq, l_freq=l_freq, h_freq=h_freq, verbose=False, **filter_options)
+
+    return filtered_data # returns with shape of (n_freq_bands, n_epochs, n_channels, n_samples)
 
 def setup_JArray(a: np.ndarray) -> JArray:
     """ Converts a numpy array to a Java array for use in JIDT."""
