@@ -2,9 +2,15 @@ import unittest
 from unittest.mock import MagicMock, patch
 import numpy as np
 from hyperit import HyperIT 
+from utils import setup_JVM
 import os
 
 class TestHyperIT(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.jarLocation = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'infodynamics.jar')
+        setup_JVM(cls.jarLocation, verbose=True)
 
     def setUp(self):
         """Set up test variables used in the tests."""
@@ -13,7 +19,6 @@ class TestHyperIT(unittest.TestCase):
         self.data2 = np.random.rand(10, 3, 100)
         self.freq_bands = {'alpha': (8, 12)}
         self.sfreq = 256  # Hz
-        self.jarLocation = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'infodynamics.jar')
 
     @patch('hyperit.setup_JVM')
     def test_initialization(self, mock_setup_jvm):

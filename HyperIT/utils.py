@@ -27,7 +27,7 @@ text_positions = {'rtr': (485, 1007),
                 }
 
 def setup_JVM(working_directory: str = None, verbose: bool = False) -> None:
-    if(not isJVMStarted()):
+    if not isJVMStarted():
         if verbose:
             print("Setting up JVM...")
 
