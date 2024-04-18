@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 import numpy as np
-from it import HyperIT 
+from HyperIT.hyperit import HyperIT 
 
 class TestHyperIT(unittest.TestCase):
 

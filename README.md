@@ -19,7 +19,7 @@ Read the JOSS pre-print here: "[HyperIT: A Python toolbox for an information-the
 HyperIT uses a Class/OOP framework, allowing multiple instances of HyperIT objects (instantiated with different data). MI, TE, and $\Phi\text{ID}$ atoms can be computed by calling the following functions:
 
 ```python
-from it import HyperIT
+from hyperit import HyperIT
 
 
 it = HyperIT(data1, data2, channel_names)
