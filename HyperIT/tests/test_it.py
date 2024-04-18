@@ -44,24 +44,24 @@ class TestHyperIT(unittest.TestCase):
         with self.assertRaises(ValueError):
             HyperIT(data_wrong, data_wrong, self.channels, self.sfreq, self.freq_bands)
 
-    @patch('hyperit.HyperIT.utils.convert_names_to_indices', side_effect=lambda names, part, idx: [[0, 1], [1, 2]][idx])
-    def test_roi_setting(self, mock_convert):
+    @patch('hyperit.HyperIT.roi', new_callable=property)
+    def test_roi_setting(self, mock_roi):
         """Test setting ROI correctly assigns indices."""
+        mock_roi.return_value = [[0, 1], [1, 2]]
         hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
         hyperit_instance.roi = [['C1', 'C2'], ['C2', 'C3']]
-        self.assertEqual(hyperit_instance._roi, [[0, 1], [1, 2]])
-        mock_convert.assert_called()
+        self.assertEqual(hyperit_instance.roi, [[0, 1], [1, 2]])
+        mock_roi.assert_called_once()
 
-    @patch('hyperit.HyperIT.utils.convert_names_to_indices', side_effect=lambda names, part, idx: [[0, 1], [1, 2]][idx])
-    def test_reset_roi(self, mock_convert):
+    @patch('hyperit.HyperIT.reset_roi', side_effect=lambda: [[0, 1, 2], [0, 1, 2]])
+    def test_reset_roi(self, mock_reset_roi):
         """Test resetting ROI to all channels."""
         hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
-        hyperit_instance.roi = [['C1', 'C2'], ['C2', 'C3']]
         hyperit_instance.reset_roi()
         expected_roi = [np.arange(3), np.arange(3)]
-        self.assertTrue(np.array_equal(hyperit_instance._roi[0], expected_roi[0]) and
-                        np.array_equal(hyperit_instance._roi[1], expected_roi[1]))
-        mock_convert.assert_called()
+        self.assertTrue(np.array_equal(hyperit_instance.roi[0], expected_roi[0]) and
+                        np.array_equal(hyperit_instance.roi[1], expected_roi[1]))
+        mock_reset_roi.assert_called_once()
 
     @patch('hyperit.np.histogram2d', return_value=(np.zeros((10, 10)), None, None))
     @patch('hyperit.stats.iqr', return_value=1.0)
