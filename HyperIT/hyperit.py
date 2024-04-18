@@ -22,21 +22,18 @@ class HyperIT:
         Integrated statistical significance testing using permutation/boostrapping approach. 
         Visualisations of MI/TE matrices and information atoms/lattices also provided.
 
-    Args:
-        ABC (_type_): Abstract Base Class for HyperIT.
-
     Note: This class requires numpy, mne, matplotlib, PIL, jpype (with the local infodynamics.jar file), and phyid as dependencies.
     """
 
     _jvm_initialised = False
 
     @classmethod
-    def setup_JVM(cls, working_directory: str, verbose: bool = True) -> None:
+    def setup_JVM(cls, jarLocation: str, verbose: bool = True) -> None:
         """Setup JVM if not already started. To be called once before creating any instances."""
-        if not cls._jvm_initialized:
+        if not cls._jvm_initialised:
             if not isJVMStarted():
-                startJVM(getDefaultJVMPath(), "-ea", f"-Djava.class.path={jar_location}")
-                cls._jvm_initialized = True
+                startJVM(getDefaultJVMPath(), "-ea", f"-Djava.class.path={jarLocation}")
+                cls._jvm_initialised = True
                 if verbose:
                     print("JVM started successfully.")
             else:
@@ -69,8 +66,6 @@ class HyperIT:
             raise RuntimeError("JVM has not been started. Call setup_JVM() before creating any instances of HyperIT.")
 
         self.verbose: bool = verbose
-
-        setup_JVM(working_directory, self.verbose)
 
         self._channel_names = channel_names #  [[p1][p2]] or [[p1]] for intra-brain
         self._channel_indices1 = []
