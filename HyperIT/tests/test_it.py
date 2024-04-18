@@ -18,7 +18,12 @@ class TestHyperIT(unittest.TestCase):
     @patch('hyperit.setup_JVM')
     def test_initialization(self, mock_setup_jvm):
         """Test object initialization and JVM setup call."""
-        hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands, self.jarLocation)
+        hyperit_instance = HyperIT(data1=self.data1, 
+                                   data2=self.data2, 
+                                   channel_names=self.channels, 
+                                   sfreq=self.sfreq, 
+                                   freq_bands=self.freq_bands, 
+                                   working_directory=self.jarLocation)
         mock_setup_jvm.assert_called_once()
         self.assertEqual(hyperit_instance._sfreq, self.sfreq)
         self.assertTrue(np.array_equal(hyperit_instance._data1[0], self.data1))
@@ -26,7 +31,7 @@ class TestHyperIT(unittest.TestCase):
     def test_check_data_valid(self):
         """Test the data validation logic with correct input."""
         try:
-            HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
+            HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands, working_directory=self.jarLocation)
         except Exception as e:
             self.fail(f"Initialization failed with correct data: {e}")
 
@@ -34,19 +39,19 @@ class TestHyperIT(unittest.TestCase):
         """Test the data validation logic with incorrect input shapes."""
         data_wrong = np.random.rand(5, 100)  # Wrong shape
         with self.assertRaises(ValueError):
-            HyperIT(data_wrong, data_wrong, self.channels, self.sfreq, self.freq_bands)
+            HyperIT(data_wrong, data_wrong, self.channels, self.sfreq, self.freq_bands, working_directory=self.jarLocation)
 
     @patch('hyperit.convert_names_to_indices', return_value=[0, 1, 2])
     def test_roi_setting(self, mock_convert):
         """Test setting ROI correctly assigns indices."""
-        hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
+        hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_band, working_directory=self.jarLocation)
         hyperit_instance.roi = [['C1', 'C2'], ['C2', 'C3']]
         self.assertEqual(hyperit_instance._roi, [[0, 1], [1, 2]])
 
     @patch('hyperit.convert_names_to_indices', return_value=[0, 1, 2])
     def test_reset_roi(self, mock_convert):
         """Test resetting ROI to all channels."""
-        hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
+        hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands, working_directory=self.jarLocation)
         hyperit_instance.roi = [['C1', 'C2'], ['C2', 'C3']]
         hyperit_instance.reset_roi()
         self.assertEqual(hyperit_instance._roi, [list(range(3)), list(range(3))])
@@ -55,7 +60,7 @@ class TestHyperIT(unittest.TestCase):
     @patch('hyperit.stats.iqr', return_value=1.0)
     def test_mi_computation(self, mock_hist, mock_iqr):
         """Test Mutual Information computation."""
-        hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands, verbose=True)
+        hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands, verbose=True, working_directory=self.jarLocation)
         hyperit_instance.compute_mi('histogram')
         self.assertIsNotNone(hyperit_instance.mi_matrix)
         self.assertTrue(mock_hist.called)
@@ -65,7 +70,7 @@ class TestHyperIT(unittest.TestCase):
     @patch('hyperit.set_estimator', return_value=('kernel', MagicMock(), {'prop1': 'value1'}, (2,)))
     def test_te_computation(self, mock_set_estimator, mock_jarray):
         """Test Transfer Entropy computation setup."""
-        hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands, verbose=True)
+        hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands, verbose=True, working_directory=self.jarLocation)
         te_xy, te_yx = hyperit_instance.compute_te('kernel')
         self.assertIsNotNone(te_xy)
         self.assertIsNotNone(te_yx)
@@ -75,7 +80,7 @@ class TestHyperIT(unittest.TestCase):
     @patch('hyperit.calc_PhiID', return_value=({}, None))
     def test_phiid_computation(self, mock_phiid):
         """Test Integrated Information Decomposition computation."""
-        hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands, verbose=True)
+        hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands, verbose=True, working_directory=self.jarLocation)
         phi_xy, phi_yx = hyperit_instance.compute_atoms()
         self.assertIsNotNone(phi_xy)
         self.assertIsNotNone(phi_yx)
@@ -84,7 +89,7 @@ class TestHyperIT(unittest.TestCase):
     @patch('hyperit.plt.show')
     def test_plotting(self, mock_plot_show):
         """Test the plotting function calls."""
-        hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands, verbose=True)
+        hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands, verbose=True, working_directory=self.jarLocation)
         hyperit_instance.compute_mi('histogram', vis=True)
         mock_plot_show.assert_called()
 
