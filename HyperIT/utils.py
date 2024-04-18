@@ -3,6 +3,8 @@ from jpype import isJVMStarted, getDefaultJVMPath, startJVM, JArray, JDouble, sh
 import os
 import mne
 
+
+
 text_positions = {'rtr': (485, 1007),
                   'rtx': (160, 780),
                   'rty': (363, 780), 
@@ -28,8 +30,6 @@ def setup_JVM(working_directory: str = None, verbose: bool = False) -> None:
 
         if working_directory is None:
             working_directory = "/Users/edoardochidichimo/Desktop/HyperIT/HyperIT/"
-
-        jarLocation = os.path.join(working_directory, "infodynamics.jar")
 
         if not os.path.isfile(jarLocation):
             raise FileNotFoundError(f"infodynamics.jar not found (expected at {os.path.abspath(jarLocation)}).")

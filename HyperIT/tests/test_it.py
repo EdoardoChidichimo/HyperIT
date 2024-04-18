@@ -2,21 +2,23 @@ import unittest
 from unittest.mock import MagicMock, patch
 import numpy as np
 from hyperit import HyperIT 
+import os
 
 class TestHyperIT(unittest.TestCase):
 
     def setUp(self):
         """Set up test variables used in the tests."""
-        self.channels = ['C1', 'C2', 'C3']
+        self.channels = [['C1', 'C2', 'C3'], ['C1', 'C2', 'C3']]
         self.data1 = np.random.rand(10, 3, 100)  # 10 epochs, 3 channels, 100 samples
         self.data2 = np.random.rand(10, 3, 100)
         self.freq_bands = {'alpha': (8, 12)}
         self.sfreq = 256  # Hz
+        self.jarLocation = os.path.join(os.path.dirname(__file__), 'infodynamics.jar')
 
     @patch('hyperit.setup_JVM')
     def test_initialization(self, mock_setup_jvm):
         """Test object initialization and JVM setup call."""
-        hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
+        hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands, self.jarLocation)
         mock_setup_jvm.assert_called_once()
         self.assertEqual(hyperit_instance._sfreq, self.sfreq)
         self.assertTrue(np.array_equal(hyperit_instance._data1[0], self.data1))
