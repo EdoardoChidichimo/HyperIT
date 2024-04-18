@@ -86,6 +86,6 @@ In all, social neuroscience researchers working with continuous time-series sign
 
 # Acknowledgements
 
-Thanks to Pedro A. M. Mediano, Eric C. Dominguez, Andrea I. Luppi, Richard Bethlehem, and Guillaume Dumas during the genesis of this project.
+Thanks to Pedro A. M. Mediano, Eric C. Dominguez, Andrea I. Luppi, Richard Bethlehem, and Guillaume Dumas for their varying support and contributions to the fruition of this project.
 
 # References
