@@ -630,9 +630,11 @@ class HyperIT:
                             s1, s2 = temp_s1.transpose(1,0,2).reshape(-1, temp_s1.shape[1]), temp_s2.transpose(1,0,2).reshape(-1, temp_s2.shape[1])
                         
                         print("Shape of s1, s2 after scale of organisation:", s1.shape, s2.shape)
+                        print("s1:", s1)
+                        print("s2:", s2)
                         atoms_results, _ = calc_PhiID(s1, s2, tau=tau, kind='gaussian', redundancy=redundancy)
-                        
-                        
+                        print(atoms_results)
+
                         print("Available keys in atoms_results:", atoms_results.keys())
                         print("Expected keys from PhiID_atoms_abbr:", PhiID_atoms_abbr)
 
