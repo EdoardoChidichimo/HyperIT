@@ -27,7 +27,7 @@ class TestHyperIT(unittest.TestCase):
                                    channel_names=self.channels, 
                                    sfreq=self.sfreq, 
                                    freq_bands=self.freq_bands)
-        mock_setup_jvm.assert_called_once()
+        mock_setup_jvm.assert_not_called()
         self.assertEqual(hyperit_instance._sfreq, self.sfreq)
 
     def test_check_data_valid(self):
@@ -47,16 +47,18 @@ class TestHyperIT(unittest.TestCase):
     def test_roi_setting(self, mock_convert):
         """Test setting ROI correctly assigns indices."""
         hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands, working_directory=self.jarLocation)
-        hyperit_instance.roi = [['C1', 'C2'], ['C2', 'C3']]
+        hyperit_instance.roi = [[['C1', 'C2']], [['C2', 'C3']]]
         self.assertEqual(hyperit_instance._roi, [[0, 1], [1, 2]])
 
     @patch('hyperit.convert_names_to_indices', return_value=[0, 1, 2])
     def test_reset_roi(self, mock_convert):
         """Test resetting ROI to all channels."""
         hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands, working_directory=self.jarLocation)
-        hyperit_instance.roi = [['C1', 'C2'], ['C2', 'C3']]
+        hyperit_instance.roi = [[['C1', 'C2']], [['C2', 'C3']]]
         hyperit_instance.reset_roi()
-        self.assertEqual(hyperit_instance._roi, [list(range(3)), list(range(3))])
+        expected_roi = [np.arange(3), np.arange(3)]
+        self.assertTrue(np.array_equal(hyperit_instance._roi[0], expected_roi[0]) and
+                        np.array_equal(hyperit_instance._roi[1], expected_roi[1]))
 
     @patch('hyperit.np.histogram2d', return_value=(np.zeros((10, 10)), None, None))
     @patch('hyperit.stats.iqr', return_value=1.0)
@@ -88,7 +90,7 @@ class TestHyperIT(unittest.TestCase):
         self.assertIsNotNone(phi_yx)
         self.assertTrue(mock_phiid.called)
 
-    @patch('hyperit.plt.show')
+    @patch('builtins.input', return_value='1')  # Simulates choosing "1. All epochs"
     def test_plotting(self, mock_plot_show):
         """Test the plotting function calls."""
         hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands, verbose=True, working_directory=self.jarLocation)

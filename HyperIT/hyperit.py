@@ -632,6 +632,10 @@ class HyperIT:
                                 
 
                         atoms_results, _ = calc_PhiID(s1, s2, tau=tau, kind='gaussian', redundancy=redundancy)
+                        
+                        print("Available keys in atoms_results:", atoms_results.keys())
+                        print("Expected keys from PhiID_atoms_abbr:", PhiID_atoms_abbr)
+
                         calc_atoms = np.mean(np.array([atoms_results[_] for _ in PhiID_atoms_abbr]), axis=1)
                         phi_dict_xy[freq_band][i][j] = {key: value for key, value in zip(atoms_results.keys(), calc_atoms)}
 
@@ -661,7 +665,7 @@ class HyperIT:
 
         title = f'{self.measure} | {self.estimator_name} \n {"Inter-Brain" if self._inter_brain else "Intra-Brain"}'
         epochs = [0] # default to un-epoched or epoch-average case
-        choice = None
+        choice = 3 # default to average MI/TE across epochs
         
         if self._scale_of_organisation > 1:
             source_channel_names = convert_indices_to_names(self._channel_names, self._channel_indices1, 0) if self._scale_of_organisation == 1 else convert_indices_to_names(self._channel_names, self._roi[0], 0)
