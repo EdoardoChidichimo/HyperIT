@@ -48,7 +48,7 @@ class TestHyperIT(unittest.TestCase):
     def test_roi_setting(self, mock_convert):
         """Test setting ROI correctly assigns indices."""
         hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
-        hyperit_instance.roi([['C1', 'C2'], ['C2', 'C3']])
+        hyperit_instance.roi = [['C1', 'C2'], ['C2', 'C3']]
         self.assertEqual(hyperit_instance._roi, [[0, 1], [1, 2]])
 
     @patch('hyperit.convert_names_to_indices', return_value=[0, 1, 2])
@@ -94,7 +94,7 @@ class TestHyperIT(unittest.TestCase):
     @patch('builtins.input', return_value='1')  # Simulates choosing "1. All epochs"
     def test_plotting(self, mock_plot_show):
         """Test the plotting function calls."""
-        hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands, verbose=True, working_directory=self.jarLocation)
+        hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
         hyperit_instance.compute_mi('histogram', vis=True)
         mock_plot_show.assert_called()
 

@@ -258,8 +258,8 @@ class HyperIT:
 
         # POINTWISE CHANNEL COMPARISON
         if self._scale_of_organisation == 1:
-            self._data1 = self._data1[:, self._channel_indices1, :]
-            self._data2 = self._data2[:, self._channel_indices2, :]
+            self._data1 = self._data1[:, :, self._channel_indices1, :]
+            self._data2 = self._data2[:, :, self._channel_indices2, :]
             
             self._n_chan = len(self._channel_indices1)
 
