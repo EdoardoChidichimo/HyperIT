@@ -29,12 +29,12 @@ def setup_JVM(working_directory: str = None, verbose: bool = False) -> None:
             print("Setting up JVM...")
 
         if working_directory is None:
-            working_directory = "/Users/edoardochidichimo/Desktop/HyperIT/HyperIT/"
+            working_directory = os.path.join(os.path.dirname(__file__), 'infodynamics.jar')
 
-        if not os.path.isfile(jarLocation):
-            raise FileNotFoundError(f"infodynamics.jar not found (expected at {os.path.abspath(jarLocation)}).")
+        if not os.path.isfile(working_directory):
+            raise FileNotFoundError(f"infodynamics.jar not found (expected at {os.path.abspath(working_directory)}).")
 
-        startJVM(getDefaultJVMPath(), "-ea", "-Djava.class.path=" + jarLocation)
+        startJVM(getDefaultJVMPath(), "-ea", "-Djava.class.path=" + working_directory)
         
         if verbose:
             print("JVM started.")
