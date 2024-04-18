@@ -81,7 +81,7 @@ class TestHyperIT(unittest.TestCase):
         self.assertTrue(mock_set_estimator.called)
         self.assertEqual(mock_set_estimator.call_args[0], ('kernel', 'te', {}))
 
-    @patch('hyperit.calc_PhiID', return_value=({}, None))
+    @patch('hyperit.phyid.calc_PhiID', return_value=({}, None))
     def test_phiid_computation(self, mock_phiid):
         """Test Integrated Information Decomposition computation."""
         hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
