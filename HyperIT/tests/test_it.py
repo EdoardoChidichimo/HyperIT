@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 import numpy as np
 from hyperit import HyperIT 
 from utils import convert_names_to_indices
