@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 import numpy as np
 from hyperit import HyperIT 
+from utils import convert_names_to_indices
 import os
 
 class TestHyperIT(unittest.TestCase):
@@ -41,20 +42,20 @@ class TestHyperIT(unittest.TestCase):
         """Test the data validation logic with incorrect input shapes."""
         data_wrong = np.random.rand(5, 100)  # Wrong shape
         with self.assertRaises(ValueError):
-            HyperIT(data_wrong, data_wrong, self.channels, self.sfreq, self.freq_bands, working_directory=self.jarLocation)
+            HyperIT(data_wrong, data_wrong, self.channels, self.sfreq, self.freq_bands)
 
     @patch('hyperit.convert_names_to_indices', return_value=[0, 1, 2])
     def test_roi_setting(self, mock_convert):
         """Test setting ROI correctly assigns indices."""
-        hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands, working_directory=self.jarLocation)
-        hyperit_instance.roi = [[['C1', 'C2']], [['C2', 'C3']]]
+        hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
+        hyperit_instance.roi = [['C1', 'C2'], ['C2', 'C3']]
         self.assertEqual(hyperit_instance._roi, [[0, 1], [1, 2]])
 
     @patch('hyperit.convert_names_to_indices', return_value=[0, 1, 2])
     def test_reset_roi(self, mock_convert):
         """Test resetting ROI to all channels."""
-        hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands, working_directory=self.jarLocation)
-        hyperit_instance.roi = [[['C1', 'C2']], [['C2', 'C3']]]
+        hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
+        hyperit_instance.roi = [['C1', 'C2'], ['C2', 'C3']]
         hyperit_instance.reset_roi()
         expected_roi = [np.arange(3), np.arange(3)]
         self.assertTrue(np.array_equal(hyperit_instance._roi[0], expected_roi[0]) and
@@ -64,7 +65,7 @@ class TestHyperIT(unittest.TestCase):
     @patch('hyperit.stats.iqr', return_value=1.0)
     def test_mi_computation(self, mock_hist, mock_iqr):
         """Test Mutual Information computation."""
-        hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands, verbose=True, working_directory=self.jarLocation)
+        hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
         hyperit_instance.compute_mi('histogram')
         self.assertIsNotNone(hyperit_instance.mi_matrix)
         self.assertTrue(mock_hist.called)
@@ -74,7 +75,7 @@ class TestHyperIT(unittest.TestCase):
     @patch('hyperit.set_estimator', return_value=('kernel', MagicMock(), {'prop1': 'value1'}, (2,)))
     def test_te_computation(self, mock_set_estimator, mock_jarray):
         """Test Transfer Entropy computation setup."""
-        hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands, verbose=True, working_directory=self.jarLocation)
+        hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
         te_xy, te_yx = hyperit_instance.compute_te('kernel')
         self.assertIsNotNone(te_xy)
         self.assertIsNotNone(te_yx)
@@ -84,7 +85,7 @@ class TestHyperIT(unittest.TestCase):
     @patch('hyperit.calc_PhiID', return_value=({}, None))
     def test_phiid_computation(self, mock_phiid):
         """Test Integrated Information Decomposition computation."""
-        hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands, verbose=True, working_directory=self.jarLocation)
+        hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
         phi_xy, phi_yx = hyperit_instance.compute_atoms()
         self.assertIsNotNone(phi_xy)
         self.assertIsNotNone(phi_yx)
@@ -100,6 +101,42 @@ class TestHyperIT(unittest.TestCase):
     def tearDown(self):
         """Clean up any mock patches to prevent leaks between tests."""
         patch.stopall()
+
+
+
+class TestConvertNamesToIndices(unittest.TestCase):
+
+    def setUp(self):
+        self.channel_names = [['C1', 'C2', 'C3'], ['C1', 'C2', 'C3', 'C4']]
+
+    def test_grouped_comparison(self):
+        roi = [['C1', 'C3'], ['C2', 'C4']]
+        expected = [[0, 2], [1, 3]]
+        result = convert_names_to_indices(self.channel_names, roi, 1)
+        self.assertEqual(result, expected)
+
+    def test_pointwise_comparison(self):
+        roi = ['C2', 'C3']
+        expected = [1, 2]
+        result = convert_names_to_indices(self.channel_names, roi, 0)
+        self.assertEqual(result, expected)
+
+    def test_single_channel(self):
+        roi = 'C3'
+        expected = [2]
+        result = convert_names_to_indices(self.channel_names, roi, 0)
+        self.assertEqual(result, expected)
+
+    def test_direct_index_input(self):
+        roi = [1, 2]
+        expected = [1, 2]
+        result = convert_names_to_indices(self.channel_names, roi, 0)
+        self.assertEqual(result, expected)
+
+    def test_invalid_channel_name(self):
+        roi = ['C5']  # Does not exist in participant 0's list
+        with self.assertRaises(ValueError):
+            convert_names_to_indices(self.channel_names, roi, 0)
 
 if __name__ == '__main__':
     unittest.main()
