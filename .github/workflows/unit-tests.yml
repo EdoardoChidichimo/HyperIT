@@ -18,7 +18,7 @@ jobs:
         pip install git+https://github.com/Imperial-MIND-lab/integrated-info-decomp.git
     - name: Run Tests
       run: |
-        python -m unittest discover -s HyperIT/tests
+        python -m unittest discover -s tests
       working-directory: HyperIT
 
         
