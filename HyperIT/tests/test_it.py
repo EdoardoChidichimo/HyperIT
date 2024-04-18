@@ -44,7 +44,7 @@ class TestHyperIT(unittest.TestCase):
         with self.assertRaises(ValueError):
             HyperIT(data_wrong, data_wrong, self.channels, self.sfreq, self.freq_bands)
 
-    @patch('hyperit.utils.convert_names_to_indices', side_effect=lambda names, part, idx: [[0, 1], [1, 2]][idx])
+    @patch('hyperit.HyperIT.utils.convert_names_to_indices', side_effect=lambda names, part, idx: [[0, 1], [1, 2]][idx])
     def test_roi_setting(self, mock_convert):
         """Test setting ROI correctly assigns indices."""
         hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
@@ -52,7 +52,7 @@ class TestHyperIT(unittest.TestCase):
         self.assertEqual(hyperit_instance._roi, [[0, 1], [1, 2]])
         mock_convert.assert_called()
 
-    @patch('hyperit.utils.convert_names_to_indices', side_effect=lambda names, part, idx: [[0, 1], [1, 2]][idx])
+    @patch('hyperit.HyperIT.utils.convert_names_to_indices', side_effect=lambda names, part, idx: [[0, 1], [1, 2]][idx])
     def test_reset_roi(self, mock_convert):
         """Test resetting ROI to all channels."""
         hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)

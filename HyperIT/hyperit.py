@@ -811,32 +811,3 @@ class HyperIT:
                 
                 except KeyError:
                     print("Invalid channel/group indices.")
-
-
-
-
-
-if __name__ == '__main__':
-    # Example usage
-    data1 = np.random.randn(31, 1000)
-    data2 = np.random.randn(31, 1000)
-    channel_names = [['Fp1', 'Fp2', 'F7', 'F8', 'F3', 'F4', 'Fz', 'FT9', 'FT10', 'FC5', 'FC1', 'FC2', 'FC6', 'T7', 'C3', 'Cz', 'C4', 'T8', 'TP9', 'CP5', 'CP1', 'CP2', 'CP6', 'TP10', 'P7', 'P3', 'Pz', 'P4', 'P8', 'O1', 'O2'], 
-                     ['Fp1', 'Fp2', 'F7', 'F8', 'F3', 'F4', 'Fz', 'FT9', 'FT10', 'FC5', 'FC1', 'FC2', 'FC6', 'T7', 'C3', 'Cz', 'C4', 'T8', 'TP9', 'CP5', 'CP1', 'CP2', 'CP6', 'TP10', 'P7', 'P3', 'Pz', 'P4', 'P8', 'O1', 'O2']]
-
-    import os
-    hyperit = HyperIT(data1, data2, channel_names, standardise_data=True, verbose=True)
-
-    mi = hyperit.compute_mi(estimator_type='ksg', calc_sigstats=False, vis=True)
-
-    hyperit.roi = [[['Fp1', 'Fp2', 'F7', 'F8', 'F3', 'F4', 'Fz', 'FT9', 'FT10', 'FC5', 'FC1', 'FC2', 'FC6'],
-                    ['T7', 'C3', 'Cz', 'C4', 'T8', 'TP9', 'CP5', 'CP1', 'CP2', 'CP6', 'TP10', 'P7', 'P3']], 
-                    [['TP9', 'CP5', 'CP1', 'CP2', 'CP6', 'TP10', 'P7', 'P3', 'Pz', 'P4', 'P8', 'O1', 'O2'],
-                    ['T7', 'C3', 'Cz', 'C4', 'T8', 'TP9', 'CP5', 'CP1', 'CP2', 'CP6', 'TP10', 'P7', 'P3']]]
-    
-
-    mi = hyperit.compute_te(estimator_type='ksg', calc_sigstats=False, vis=True, k=5, k_tau=4, l=2, delay=10, normalise=False)
-
-
-    # mi = hyperit.compute_mi(estimator_type='kernel', calc_sigstats=True, vis=True)
-    # te_xy, te_yx = hyperit.compute_te(estimator_type='kernel', calc_sigstats=True, vis=True)
-    # phi_xy, phi_yx = hyperit.compute_atoms(tau=1, redundancy='mmi', vis=True, plot_channels=[0, 0])
