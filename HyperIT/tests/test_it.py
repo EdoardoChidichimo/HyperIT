@@ -14,8 +14,8 @@ class TestHyperIT(unittest.TestCase):
     def setUp(self):
         """Set up test variables used in the tests."""
         self.channels = [['C1', 'C2', 'C3'], ['C1', 'C2', 'C3']]
-        self.data1 = np.random.rand(10, 3, 100)  # 10 epochs, 3 channels, 100 samples
-        self.data2 = np.random.rand(10, 3, 100)
+        self.data1 = np.random.rand(10, 3, 600)  # 10 epochs, 3 channels, 100 samples
+        self.data2 = np.random.rand(10, 3, 600)
         self.freq_bands = {'alpha': (8, 12)}
         self.sfreq = 256  # Hz
 

@@ -78,8 +78,6 @@ class HyperIT:
         self._data1, self._data2 = self._all_data
         self._standardise_data = standardise_data
 
-        # NOTE: _data1, _data2, _channel_indices1, _channel_indices2 will be used for calculations (as these can be amended during ROI setting)
-
         self._roi = []
         self._roi_specified = False
         self._scale_of_organisation = 1 # 0 = global organisation (all channels), 1 = micro organisation (each channel), n = meso- or n-scale organisation (n channels)
@@ -308,27 +306,28 @@ class HyperIT:
 
             return Hx + Hy - Hxy
 
-        estimations = np.zeros((self._n_epo, 4)) # stores MI result, mean, std, p-value per epoch
+        estimations = np.zeros((self._n_freq_bands, self._n_epo, 4)) # stores MI result, mean, std, p-value per epoch
 
-        for epo_i in range(self._n_epo):
+        for freq_band in range(self._n_freq_bands):
+            for epo_i in range(self._n_epo):
 
-            x, y = (s1[epo_i, :], s2[epo_i, :]) 
-            mi = hist_calc_mi(x, y)
+                x, y = (s1[freq_band, epo_i, :], s2[freq_band, epo_i, :]) 
+                mi = hist_calc_mi(x, y)
 
-            if self.calc_sigstats:
-                permuted_mi_values = []
+                if self.calc_sigstats:
+                    permuted_mi_values = []
 
-                for _ in range(self.stat_sig_perm_num):
-                    np.random.shuffle(y)
-                    permuted_mi = hist_calc_mi(x, y)
-                    permuted_mi_values.append(permuted_mi)
+                    for _ in range(self.stat_sig_perm_num):
+                        np.random.shuffle(y)
+                        permuted_mi = hist_calc_mi(x, y)
+                        permuted_mi_values.append(permuted_mi)
 
-                mean_permuted_mi = np.mean(permuted_mi_values)
-                std_permuted_mi = np.std(permuted_mi_values)
-                p_value = np.sum(permuted_mi_values >= mi) / self.stat_sig_perm_num
-                estimations[epo_i] = [mi, mean_permuted_mi, std_permuted_mi, p_value]
-            else:
-                estimations[epo_i, 0] = mi
+                    mean_permuted_mi = np.mean(permuted_mi_values)
+                    std_permuted_mi = np.std(permuted_mi_values)
+                    p_value = np.sum(permuted_mi_values >= mi) / self.stat_sig_perm_num
+                    estimations[epo_i] = [mi, mean_permuted_mi, std_permuted_mi, p_value]
+                else:
+                    estimations[freq_band, epo_i, 0] = mi
 
         return estimations
 
@@ -380,27 +379,28 @@ class HyperIT:
 
 
 
-        estimations = np.zeros((self._n_epo, 4)) # stores MI result, mean, std, p-value per epoch
-        
-        for epo_i in range(self._n_epo):
+        estimations = np.zeros((self._n_freq_bands, self._n_epo, 4)) # stores MI result, mean, std, p-value per epoch
 
-            x, y = (s1[epo_i, :], s2[epo_i, :])
-            mi = symb_calc_mi(x, y, l, k)
+        for freq_band in range(self._n_freq_bands):
+            for epo_i in range(self._n_epo):
 
-            if self.calc_sigstats:
-                permuted_mi_values = []
+                x, y = (s1[freq_band, epo_i, :], s2[freq_band, epo_i, :])
+                mi = symb_calc_mi(x, y, l, k)
 
-                for _ in range(self.stat_sig_perm_num):
-                    np.random.shuffle(y)
-                    permuted_mi = symb_calc_mi(x, y, l, k)
-                    permuted_mi_values.append(permuted_mi)
+                if self.calc_sigstats:
+                    permuted_mi_values = []
 
-                mean_permuted_mi = np.mean(permuted_mi_values)
-                std_permuted_mi = np.std(permuted_mi_values)
-                p_value = np.sum(permuted_mi_values >= mi) / self.stat_sig_perm_num
-                estimations[epo_i] = [mi, mean_permuted_mi, std_permuted_mi, p_value]
-            else:
-                estimations[epo_i, 0] = mi
+                    for _ in range(self.stat_sig_perm_num):
+                        np.random.shuffle(y)
+                        permuted_mi = symb_calc_mi(x, y, l, k)
+                        permuted_mi_values.append(permuted_mi)
+
+                    mean_permuted_mi = np.mean(permuted_mi_values)
+                    std_permuted_mi = np.std(permuted_mi_values)
+                    p_value = np.sum(permuted_mi_values >= mi) / self.stat_sig_perm_num
+                    estimations[freq_band, epo_i] = [mi, mean_permuted_mi, std_permuted_mi, p_value]
+                else:
+                    estimations[freq_band, epo_i, 0] = mi
 
         return estimations
 
