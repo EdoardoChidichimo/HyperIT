@@ -28,7 +28,7 @@ class HyperIT:
     _jvm_initialised = False
 
     @classmethod
-    def setup_JVM(cls, jarLocation: str, verbose: bool = True) -> None:
+    def setup_JVM(cls, jarLocation: str, verbose: bool = False) -> None:
         """Setup JVM if not already started. To be called once before creating any instances."""
         if not cls._jvm_initialised:
             if not isJVMStarted():
@@ -43,7 +43,7 @@ class HyperIT:
             if verbose:
                 print("JVM setup already completed.")
 
-    def __init__(self, data1: np.ndarray, data2: np.ndarray, channel_names: List[str], sfreq: float, freq_bands: dict, standardise_data: bool = False, verbose: bool = False, working_directory: str = None, **filter_options):
+    def __init__(self, data1: np.ndarray, data2: np.ndarray, channel_names: List[str], sfreq: float, freq_bands: dict, standardise_data: bool = False, verbose: bool = False, **filter_options):
         """ Creates HyperIT object containing time-series data and channel names for analysis. 
             Automatic data checks for consistency and dimensionality, identifying whether analysis is to be intra- or inter-brain.
 
@@ -605,7 +605,6 @@ class HyperIT:
         self.measure = 'Integrated Information Decomposition'
 
         loop_range = self._n_chan if self._scale_of_organisation == 1 else self._soi_groups
-
         phi_dict_xy = [[[{} for _ in range(loop_range)] for _ in range(loop_range)] for _ in range(self._n_freq_bands)]
         phi_dict_yx = [[[{} for _ in range(loop_range)] for _ in range(loop_range)] for _ in range(self._n_freq_bands)]
 
@@ -618,8 +617,10 @@ class HyperIT:
 
                         if self._scale_of_organisation == 1:
                             s1, s2 = (self._data1[freq_band, :, i, :], self._data2[freq_band, :, j, :]) 
+                            print("Shape of s1, s2:", s1.shape, s2.shape)
                             if self._n_epo > 1:
                                 s1, s2 = s1.reshape(-1), s2.reshape(-1)
+                                print("Shape of s1, s2 after reshaping:", s1.shape, s2.shape)
 
                                 ## If you want to pass (samples, epochs) as atomic calculations, delete line above and uncomment line below
                                 # s1, s2 = s1.T, s2.T
@@ -630,12 +631,17 @@ class HyperIT:
                             # Flatten epochs and transpose to shape (samples, channels) [necessary configuration for phyid]
                             s1, s2 = temp_s1.transpose(1,0,2).reshape(-1, temp_s1.shape[1]), temp_s2.transpose(1,0,2).reshape(-1, temp_s2.shape[1])
                                 
-
                         atoms_results, _ = calc_PhiID(s1, s2, tau=tau, kind='gaussian', redundancy=redundancy)
                         
                         print("Available keys in atoms_results:", atoms_results.keys())
                         print("Expected keys from PhiID_atoms_abbr:", PhiID_atoms_abbr)
 
+
+                        if not atoms_results:  # Check if the results are empty
+                            print("Warning: Empty results from calc_PhiID, skipping.")
+                            continue
+
+                        
                         calc_atoms = np.mean(np.array([atoms_results[_] for _ in PhiID_atoms_abbr]), axis=1)
                         phi_dict_xy[freq_band][i][j] = {key: value for key, value in zip(atoms_results.keys(), calc_atoms)}
 
