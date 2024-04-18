@@ -257,10 +257,9 @@ class HyperIT:
         print("Channel names: ", self._channel_names)
         print("ROI1: ", roi1)
         print("ROI2: ", roi2)
-        self._channel_indices1 = convert_names_to_indices(self._channel_names, roi1, 0) # same array as roi1 just with indices instead of EEG channel names
-        self._channel_indices2 = convert_names_to_indices(self._channel_names, roi2, 1)
+        self._channel_indices1, self._channel_indices2 = [convert_names_to_indices(self._channel_names, part, idx) for idx, part in enumerate(roi_list)] 
         print("Channel indices: ", self._channel_indices1, self._channel_indices2)
-        
+
         # POINTWISE CHANNEL COMPARISON
         if self._scale_of_organisation == 1:
             self._data1 = self._data1[:, :, self._channel_indices1, :]
