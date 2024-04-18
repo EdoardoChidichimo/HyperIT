@@ -17,9 +17,6 @@ jobs:
         pip install numpy scipy matplotlib Pillow tqdm jpype1
         pip install git+https://github.com/Imperial-MIND-lab/integrated-info-decomp.git
         
-    - name: Add project directory to PYTHONPATH
-      run: echo "PYTHONPATH=${{ github.workspace }}/HyperIT" >> $GITHUB_ENV
-    
     - name: Run Tests
       run: |
         python -m unittest discover -s tests
