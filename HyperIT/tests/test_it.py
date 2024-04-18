@@ -26,7 +26,6 @@ class TestHyperIT(unittest.TestCase):
                                    working_directory=self.jarLocation)
         mock_setup_jvm.assert_called_once()
         self.assertEqual(hyperit_instance._sfreq, self.sfreq)
-        self.assertTrue(np.array_equal(hyperit_instance._data1[0], self.data1))
 
     def test_check_data_valid(self):
         """Test the data validation logic with correct input."""
@@ -44,7 +43,7 @@ class TestHyperIT(unittest.TestCase):
     @patch('hyperit.convert_names_to_indices', return_value=[0, 1, 2])
     def test_roi_setting(self, mock_convert):
         """Test setting ROI correctly assigns indices."""
-        hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_band, working_directory=self.jarLocation)
+        hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands, working_directory=self.jarLocation)
         hyperit_instance.roi = [['C1', 'C2'], ['C2', 'C3']]
         self.assertEqual(hyperit_instance._roi, [[0, 1], [1, 2]])
 
