@@ -13,7 +13,7 @@ class TestHyperIT(unittest.TestCase):
         self.data2 = np.random.rand(10, 3, 100)
         self.freq_bands = {'alpha': (8, 12)}
         self.sfreq = 256  # Hz
-        self.jarLocation = os.path.join(os.path.dirname(__file__), 'infodynamics.jar')
+        self.jarLocation = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'infodynamics.jar')
 
     @patch('hyperit.setup_JVM')
     def test_initialization(self, mock_setup_jvm):
