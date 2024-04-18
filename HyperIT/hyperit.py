@@ -6,14 +6,14 @@ from typing import Tuple, List, Union
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
-from jpype import JPackage, shutdownJVM, isJVMStarted
+from jpype import JPackage, shutdownJVM, isJVMStarted, JPackage, startJVM, getDefaultJVMPath
 from phyid.calculate import calc_PhiID
 from phyid.utils import PhiID_atoms_abbr
 
 from utils import setup_JVM, setup_JArray, bandpass_filter_data, convert_names_to_indices, convert_indices_to_names, set_estimator, text_positions
 
 
-class HyperIT(ABC):
+class HyperIT:
     """ HyperIT: Hyperscanning Analyses using Information Theoretic Measures.
 
         HyperIT is equipped to compute pairwise, multivariate Mutual Information (MI), Transfer Entropy (TE), and Integrated Information Decomposition (ΦID) for continuous time-series data. 
@@ -27,6 +27,24 @@ class HyperIT(ABC):
 
     Note: This class requires numpy, mne, matplotlib, PIL, jpype (with the local infodynamics.jar file), and phyid as dependencies.
     """
+
+    _jvm_initialised = False
+
+    @classmethod
+    def setup_JVM(cls, working_directory: str, verbose: bool = True) -> None:
+        """Setup JVM if not already started. To be called once before creating any instances."""
+        if not cls._jvm_initialized:
+            if not isJVMStarted():
+                startJVM(getDefaultJVMPath(), "-ea", f"-Djava.class.path={jar_location}")
+                cls._jvm_initialized = True
+                if verbose:
+                    print("JVM started successfully.")
+            else:
+                if verbose:
+                    print("JVM already started.")
+        else:
+            if verbose:
+                print("JVM setup already completed.")
 
     def __init__(self, data1: np.ndarray, data2: np.ndarray, channel_names: List[str], sfreq: float, freq_bands: dict, standardise_data: bool = False, verbose: bool = False, working_directory: str = None, **filter_options):
         """ Creates HyperIT object containing time-series data and channel names for analysis. 
@@ -46,6 +64,10 @@ class HyperIT(ABC):
             verbose             (bool, optional): Whether constructor and analyses should output details and progress. Defaults to False.
             working_directory    (str, optional): The directory where the infodynamics.jar file is located. Defaults to None (later defaults to os.getcwd()).
         """
+
+        if not self.__class__._jvm_initialised:
+            raise RuntimeError("JVM has not been started. Call setup_JVM() before creating any instances of HyperIT.")
+
         self.verbose: bool = verbose
 
         setup_JVM(working_directory, self.verbose)

@@ -2,7 +2,6 @@ import unittest
 from unittest.mock import MagicMock, patch
 import numpy as np
 from hyperit import HyperIT 
-from utils import setup_JVM
 import os
 
 class TestHyperIT(unittest.TestCase):
@@ -10,7 +9,7 @@ class TestHyperIT(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.jarLocation = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'infodynamics.jar')
-        setup_JVM(cls.jarLocation, verbose=True)
+        HyperIT.setup_JVM(cls.jarLocation, verbose=True)
 
     def setUp(self):
         """Set up test variables used in the tests."""
@@ -20,22 +19,21 @@ class TestHyperIT(unittest.TestCase):
         self.freq_bands = {'alpha': (8, 12)}
         self.sfreq = 256  # Hz
 
-    @patch('hyperit.setup_JVM')
+    @patch('hyperit.HyperIT.setup_JVM')
     def test_initialization(self, mock_setup_jvm):
         """Test object initialization and JVM setup call."""
         hyperit_instance = HyperIT(data1=self.data1, 
                                    data2=self.data2, 
                                    channel_names=self.channels, 
                                    sfreq=self.sfreq, 
-                                   freq_bands=self.freq_bands, 
-                                   working_directory=self.jarLocation)
+                                   freq_bands=self.freq_bands)
         mock_setup_jvm.assert_called_once()
         self.assertEqual(hyperit_instance._sfreq, self.sfreq)
 
     def test_check_data_valid(self):
         """Test the data validation logic with correct input."""
         try:
-            HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands, working_directory=self.jarLocation)
+            HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
         except Exception as e:
             self.fail(f"Initialization failed with correct data: {e}")
 

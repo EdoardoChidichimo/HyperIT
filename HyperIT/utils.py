@@ -26,22 +26,6 @@ text_positions = {'rtr': (485, 1007),
                   'sts': (485, 41)   
                 }
 
-def setup_JVM(working_directory: str = None, verbose: bool = False) -> None:
-    if not isJVMStarted():
-        if verbose:
-            print("Setting up JVM...")
-
-        if working_directory is None:
-            working_directory = os.path.join(os.path.dirname(__file__), 'infodynamics.jar')
-
-        if not os.path.isfile(working_directory):
-            raise FileNotFoundError(f"infodynamics.jar not found (expected at {os.path.abspath(working_directory)}).")
-
-        startJVM(getDefaultJVMPath(), "-ea", "-Djava.class.path=" + working_directory)
-        
-        if verbose:
-            print("JVM started.")
-
 
 def bandpass_filter_data(data: np.ndarray, sfreq: float, freq_bands: dict, **filter_options) -> np.ndarray:
 
