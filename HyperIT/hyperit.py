@@ -89,7 +89,6 @@ class HyperIT:
 
 
         _, self._n_freq_bands, self._n_epo, self._n_chan, self._n_samples = self._all_data.shape
-        print("Data shape: ", self._all_data.shape)
 
         if self.verbose:
             print("HyperIT object created successfully.")
@@ -253,13 +252,8 @@ class HyperIT:
 
         roi1, roi2 = roi_list
         
-
-        print("Channel names: ", self._channel_names)
-        print("ROI1: ", roi1)
-        print("ROI2: ", roi2)
         self._channel_indices1, self._channel_indices2 = [convert_names_to_indices(self._channel_names, part, idx) for idx, part in enumerate(roi_list)] 
-        print("Channel indices: ", self._channel_indices1, self._channel_indices2)
-
+       
         # POINTWISE CHANNEL COMPARISON
         if self._scale_of_organisation == 1:
             self._data1 = self._data1[:, :, self._channel_indices1, :]
@@ -634,18 +628,20 @@ class HyperIT:
                             temp_s1, temp_s2 = self._data1[freq_band, :, self._roi[0][i], :], self._data2[freq_band, :, self._roi[1][j], :]
                             # Flatten epochs and transpose to shape (samples, channels) [necessary configuration for phyid]
                             s1, s2 = temp_s1.transpose(1,0,2).reshape(-1, temp_s1.shape[1]), temp_s2.transpose(1,0,2).reshape(-1, temp_s2.shape[1])
-                                
+                        
+                        print("Shape of s1, s2 after scale of organisation:", s1.shape, s2.shape)
                         atoms_results, _ = calc_PhiID(s1, s2, tau=tau, kind='gaussian', redundancy=redundancy)
+                        
                         
                         print("Available keys in atoms_results:", atoms_results.keys())
                         print("Expected keys from PhiID_atoms_abbr:", PhiID_atoms_abbr)
 
 
                         if not atoms_results:  # Check if the results are empty
-                            print("Warning: Empty results from calc_PhiID, skipping.")
-                            continue
+                            raise ValueError("Empty results from calc_PhiID, critical data processing cannot continue.")
 
-                        
+
+        
                         calc_atoms = np.mean(np.array([atoms_results[_] for _ in PhiID_atoms_abbr]), axis=1)
                         phi_dict_xy[freq_band][i][j] = {key: value for key, value in zip(atoms_results.keys(), calc_atoms)}
 
@@ -687,7 +683,7 @@ class HyperIT:
             for i in range(self._soi_groups):
                 print(f"{i+1}: {source_channel_names[i]}")
 
-            print("\n\nTarget Groups:")
+            print("\nTarget Groups:")
             for i in range(self._soi_groups):
                 print(f"{i+1}: {target_channel_names[i]}")
 

@@ -64,8 +64,6 @@ def convert_names_to_indices(_channel_names, roi_part, participant) -> list:
     """
     channel_names = _channel_names[participant]
 
-    print(f"CNTI: Channel names: {channel_names}")
-
     def get_index(name):
         if not isinstance(name, (str, int)):
             raise TypeError(f"Unsupported type {type(name)} in ROI specification.")
@@ -78,33 +76,14 @@ def convert_names_to_indices(_channel_names, roi_part, participant) -> list:
     
     if isinstance(roi_part, (list, tuple)):  # support tuples as well
         if all(isinstance(item, list) for item in roi_part):
-            print("I am at X")
             return [[get_index(name) for name in group] for group in roi_part]
         else:
-            print("I am at Y")
             return [get_index(name) for name in roi_part]
     elif isinstance(roi_part, str):
-        print("I am at Z")
         return [get_index(roi_part)]
     else:
         raise TypeError("ROI must be a list, tuple, or string of channel names/indices.")
 
-    # Handle sub-sublists (grouped channel comparison)
-    if all(isinstance(item, list) for item in roi_part):
-        # roi_part is a list of lists
-        return [[get_index(name) if isinstance(name, str) else name for name in group] for group in roi_part]
-    
-    # Handle simple list (pointwise channel comparison)
-    elif isinstance(roi_part, list):
-        return [get_index(name) if isinstance(name, str) else name for name in roi_part]
-
-    # Handle single channel name or index
-    elif isinstance(roi_part, str):
-        return [get_index(roi_part)]
-
-    else:
-        return roi_part  # In case roi_part is already in the desired format (indices)
-    
 
 def convert_indices_to_names(_channel_names, roi_part, participant) -> list:
     """Converts ROI channel indices or groups of indices into names based on the channel list.
