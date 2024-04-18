@@ -14,7 +14,8 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install numpy scipy matplotlib
+        pip install numpy scipy matplotlib Pillow tqdm jpype1
+        pip install git+https://github.com/Imperial-MIND-lab/integrated-info-decomp.git
     - name: Run Tests
       run: |
         python -m unittest discover -s HyperIT/tests
