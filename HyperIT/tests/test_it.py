@@ -81,14 +81,16 @@ class TestHyperIT(unittest.TestCase):
         self.assertTrue(mock_set_estimator.called)
         self.assertEqual(mock_set_estimator.call_args[0], ('kernel', 'te', {}))
 
-    @patch('hyperit.phyid.calc_PhiID', return_value=({}, None))
-    def test_phiid_computation(self, mock_phiid):
-        """Test Integrated Information Decomposition computation."""
+    def test_compute_atoms_execution(self):
+        """Test that compute_atoms executes and returns data."""
         hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
-        phi_xy, phi_yx = hyperit_instance.compute_atoms()
-        self.assertIsNotNone(phi_xy)
-        self.assertIsNotNone(phi_yx)
-        self.assertTrue(mock_phiid.called)
+        try:
+            phi_xy, phi_yx = hyperit_instance.compute_atoms()
+            self.assertIsNotNone(phi_xy, "Phi_xy should not be None")
+            self.assertIsNotNone(phi_yx, "Phi_yx should not be None")
+            print("compute_atoms method executed successfully.")
+        except Exception as e:
+            self.fail(f"compute_atoms method failed with an exception {e}")
 
     @patch('builtins.input', return_value='1')  # Simulates choosing "1. All epochs"
     def test_plotting(self, mock_plot_show):

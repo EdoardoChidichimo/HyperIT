@@ -615,10 +615,8 @@ class HyperIT:
 
                         if self._scale_of_organisation == 1:
                             s1, s2 = (self._data1[freq_band, :, i, :], self._data2[freq_band, :, j, :]) 
-                            print("Shape of s1, s2:", s1.shape, s2.shape)
                             if self._n_epo > 1:
                                 s1, s2 = s1.reshape(-1), s2.reshape(-1)
-                                print("Shape of s1, s2 after reshaping:", s1.shape, s2.shape)
 
                                 ## If you want to pass (samples, epochs) as atomic calculations, delete line above and uncomment line below
                                 # s1, s2 = s1.T, s2.T
@@ -629,21 +627,11 @@ class HyperIT:
                             # Flatten epochs and transpose to shape (samples, channels) [necessary configuration for phyid]
                             s1, s2 = temp_s1.transpose(1,0,2).reshape(-1, temp_s1.shape[1]), temp_s2.transpose(1,0,2).reshape(-1, temp_s2.shape[1])
                         
-                        print("Shape of s1, s2 after scale of organisation:", s1.shape, s2.shape)
-                        print("s1:", s1)
-                        print("s2:", s2)
                         atoms_results, _ = calc_PhiID(s1, s2, tau=tau, kind='gaussian', redundancy=redundancy)
-                        print(atoms_results)
 
-                        print("Available keys in atoms_results:", atoms_results.keys())
-                        print("Expected keys from PhiID_atoms_abbr:", PhiID_atoms_abbr)
-
-
-                        if not atoms_results:  # Check if the results are empty
+                        if not atoms_results:  
                             raise ValueError("Empty results from calc_PhiID, critical data processing cannot continue.")
 
-
-        
                         calc_atoms = np.mean(np.array([atoms_results[_] for _ in PhiID_atoms_abbr]), axis=1)
                         phi_dict_xy[freq_band][i][j] = {key: value for key, value in zip(atoms_results.keys(), calc_atoms)}
 
