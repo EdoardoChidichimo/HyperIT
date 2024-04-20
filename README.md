@@ -41,7 +41,7 @@ To install HyperIT, simply use pip:
 
 ```bash
 pip install git+https://github.com/EdoardoChidichimo/HyperIT.git
-
+```
 
 
 ## Dependencies
