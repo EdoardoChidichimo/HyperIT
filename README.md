@@ -21,18 +21,23 @@ HyperIT uses a Class/OOP framework, allowing multiple instances of HyperIT objec
 ```python
 from hyperit import HyperIT
 
+# Only needs to be called once, pass file location of local infodynamics.jar
+HyperIT.setup_JVM(jarLocation)
 
-it = HyperIT(data1, data2, channel_names)
+# Gather your data here ...
+
+# Create instance
+it = HyperIT(data1, data2, channel_names, sfreq, freq_bands, verbose)
 
 # ROIs can be specified, too 
 it.roi(roi_list)
 
-mi = it.compute_mi(estimator_type, calc_sigstats, vis)
-te_xy, te_yx = it.compute_te(estimator_type, calc_sigstats, vis)
-atoms = it.compute_atoms(tau, redundancy, vis)
+mi = it.compute_mi(estimator_type='kernel', calc_sigstats=True, vis=True)
+te_xy, te_yx = it.compute_te(estimator_type='gaussian', calc_sigstats=True, vis=True)
+atoms = it.compute_atoms(tau=5, redundancy='mmi', vis=True)
 ```
-For specific estimator types and general functionality, see Documentation and Tutorial.
 
+For specific estimator types and general functionality, see Documentation and Tutorial.
 
 
 ## Installation
