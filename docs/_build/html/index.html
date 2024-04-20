@@ -125,14 +125,15 @@ Visualisations of MI/TE matrices and information atoms/lattices also provided.</
 <dt class="sig sig-object py" id="hyperit.HyperIT.compute_mi">
 <span class="sig-name descname"><span class="pre">compute_mi</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">estimator_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'kernel'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calc_sigstats</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vis</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="_modules/hyperit.html#HyperIT.compute_mi"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#hyperit.HyperIT.compute_mi" title="Permalink to this definition"></a></dt>
 <dd><p>Function to compute mutual information between data (time-series signals) instantiated in the HyperIT object.</p>
-<p>PARAMETER OPTIONS FOR MUTUAL INFORMATION ESTIMATORS (defaults in parentheses):
-Estimator types:    kwargs:
-- histogram:        None
-- ksg1:             kraskov_param (4), normalise (True)
-- ksg2:             kraskov_param (4), normalise (True)
-- kernel:           kernel_width (0.25), normalise (True)
-- gaussian:         normalise (True)
-- symbolic:         l (1), m (3)</p>
+<p>Parameter options for mutual information estimators (defaults in parentheses):
+- histogram:        None</p>
+<ul class="simple">
+<li><p>ksg1:             kraskov_param (4), normalise (True)</p></li>
+<li><p>ksg2:             kraskov_param (4), normalise (True)</p></li>
+<li><p>kernel:           kernel_width (0.25), normalise (True)</p></li>
+<li><p>gaussian:         normalise (True)</p></li>
+<li><p>symbolic:         l (1), m (3)</p></li>
+</ul>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -158,16 +159,15 @@ If calc_sigstats is False, only the local results will be returned in this last 
 <dl class="py method">
 <dt class="sig sig-object py" id="hyperit.HyperIT.compute_te">
 <span class="sig-name descname"><span class="pre">compute_te</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">estimator_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'kernel'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calc_sigstats</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vis</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/hyperit.html#HyperIT.compute_te"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#hyperit.HyperIT.compute_te" title="Permalink to this definition"></a></dt>
-<dd><dl class="simple">
-<dt>Function to compute transfer entropy between data (time-series signals) instantiated in the HyperIT object.</dt><dd><p>data1 is taken to be the source and data2 the target (X -&gt; Y). This function automatically computes the opposite matrix, too (Y -&gt; X).</p>
-</dd>
-</dl>
-<p>PARAMETER OPTIONS FOR TRANSFER ENTROPY ESTIMATORS (defaults in parentheses):
-Estimator types:    kwargs:
-- ksg:              k, k_tau, l, l_tau, delay, kraskov_param (all 1), normalise (True)
-- kernel:           kernel_width (0.5), normalise (True)
-- gaussian:         k, k_tau, l, l_tau, delay (all 1), bias_correction (False), normalise (True)
-- symbolic:         k (1), normalise (True)</p>
+<dd><p>Function to compute transfer entropy between data (time-series signals) instantiated in the HyperIT object.
+data1 is taken to be the source and data2 the target (X -&gt; Y). This function automatically computes the opposite matrix, too (Y -&gt; X).</p>
+<p>Parameter options for transfer entropy estimators (defaults in parentheses):
+- ksg:              k, k_tau, l, l_tau, delay, kraskov_param (all 1), normalise (True)</p>
+<ul class="simple">
+<li><p>kernel:           kernel_width (0.5), normalise (True)</p></li>
+<li><p>gaussian:         k, k_tau, l, l_tau, delay (all 1), bias_correction (False), normalise (True)</p></li>
+<li><p>symbolic:         k (1), normalise (True)</p></li>
+</ul>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">

@@ -760,13 +760,17 @@ class HyperIT:
         """
         Function to compute mutual information between data (time-series signals) instantiated in the HyperIT object.
 
-        PARAMETER OPTIONS FOR MUTUAL INFORMATION ESTIMATORS (defaults in parentheses):
-        Estimator types:    kwargs:
+        Parameter options for mutual information estimators (defaults in parentheses):
         - histogram:        None
+
         - ksg1:             kraskov_param (4), normalise (True)
+
         - ksg2:             kraskov_param (4), normalise (True)
+
         - kernel:           kernel_width (0.25), normalise (True)
+
         - gaussian:         normalise (True)
+        
         - symbolic:         l (1), m (3)
 
         Args:
@@ -787,13 +791,15 @@ class HyperIT:
     def compute_te(self, estimator_type: str = 'kernel', calc_sigstats: bool = False, vis: bool = False, **kwargs) -> np.ndarray | Tuple[np.ndarray, np.ndarray]:
         """
         Function to compute transfer entropy between data (time-series signals) instantiated in the HyperIT object. 
-            data1 is taken to be the source and data2 the target (X -> Y). This function automatically computes the opposite matrix, too (Y -> X).
+        data1 is taken to be the source and data2 the target (X -> Y). This function automatically computes the opposite matrix, too (Y -> X).
 
-        PARAMETER OPTIONS FOR TRANSFER ENTROPY ESTIMATORS (defaults in parentheses):
-        Estimator types:    kwargs:
+        Parameter options for transfer entropy estimators (defaults in parentheses):
         - ksg:              k, k_tau, l, l_tau, delay, kraskov_param (all 1), normalise (True)
+
         - kernel:           kernel_width (0.5), normalise (True)
+
         - gaussian:         k, k_tau, l, l_tau, delay (all 1), bias_correction (False), normalise (True)
+
         - symbolic:         k (1), normalise (True)
 
         Args:
