@@ -1,7 +1,7 @@
-it module
+hyperit module
 =========
 
-.. automodule:: it
+.. automodule:: hyperit
    :members:
    :undoc-members:
    :show-inheritance:

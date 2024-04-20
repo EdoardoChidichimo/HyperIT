@@ -1,7 +1,7 @@
-HyperIT
+hyperit
 =======
 
 .. toctree::
    :maxdepth: 4
 
-   it
+   hyperit
