@@ -6,11 +6,11 @@ from typing import Tuple, List, Union, Any
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
-from jpype import JPackage, shutdownJVM, isJVMStarted, JPackage, startJVM, getDefaultJVMPath
+from jpype import isJVMStarted, startJVM, getDefaultJVMPath
 from phyid.calculate import calc_PhiID
 from phyid.utils import PhiID_atoms_abbr
 
-from .utils import setup_JArray, bandpass_filter_data, convert_names_to_indices, convert_indices_to_names, set_estimator, text_positions
+from utils import setup_JArray, bandpass_filter_data, convert_names_to_indices, convert_indices_to_names, set_estimator, text_positions
 
 from enum import Enum
 
