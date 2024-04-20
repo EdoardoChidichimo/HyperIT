@@ -2,7 +2,7 @@ import numpy as np
 from abc import ABC, abstractmethod
 from scipy import stats
 from PIL import Image, ImageDraw
-from typing import Tuple, List, Union
+from typing import Tuple, List, Union, Any
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
@@ -11,6 +11,16 @@ from phyid.calculate import calc_PhiID
 from phyid.utils import PhiID_atoms_abbr
 
 from utils import setup_JArray, bandpass_filter_data, convert_names_to_indices, convert_indices_to_names, set_estimator, text_positions
+
+from enum import Enum
+
+class MeasureType(Enum):
+    MI = 'mi' # Mutual Information
+    TE = 'te' # Transfer Entropy
+    PhyID = 'phyid' # Integrated Information Decomposition
+
+    def __str__(self):
+        return self.value  
 
 
 class HyperIT:
@@ -24,6 +34,8 @@ class HyperIT:
 
     Note: This class requires numpy, mne, matplotlib, PIL, jpype (with the local infodynamics.jar file), and phyid as dependencies.
     """
+
+    ## SETTING UP JVM
 
     _jvm_initialised = False
 
@@ -43,7 +55,9 @@ class HyperIT:
             if verbose:
                 print("JVM setup already completed.")
 
-    def __init__(self, data1: np.ndarray, data2: np.ndarray, channel_names: List[str], sfreq: float, freq_bands: dict, standardise_data: bool = False, verbose: bool = False, **filter_options):
+
+
+    def __init__(self, data1: np.ndarray, data2: np.ndarray, channel_names: List[str], sfreq: float = None, freq_bands: dict = None, standardise_data: bool = False, inter_brain: bool = True, verbose: bool = False, **filter_options) -> None:
         """ Creates HyperIT object containing time-series data and channel names for analysis. 
             Automatic data checks for consistency and dimensionality, identifying whether analysis is to be intra- or inter-brain.
 
@@ -55,11 +69,12 @@ class HyperIT:
             data1                   (np.ndarray): Time-series data for participant 1. Can take shape (n_epo, n_chan, n_samples) or (n_chan, n_samples) for epoched and unepoched data, respectively. 
             data2                   (np.ndarray): Time-series data for participant 1. Must have the same shape as data1.
             channel_names            (List[str]): A list of strings representing the channel names for each participant. [[channel_names_p1], [channel_names_p2]] or [[channel_names_p1]] for intra-brain.
-            sfreq                        (float): Sampling frequency of the data.
-            freq_bands                    (dict): Dictionary of frequency bands for bandpass filtering. {band_name: (low_freq, high_freq)}.
+            sfreq              (float, optional): Sampling frequency of the data.
+            freq_bands          (dict, optional): Dictionary of frequency bands for bandpass filtering. {band_name: (low_freq, high_freq)}.
             standardise_data    (bool, optional): Whether to standardise the data before analysis. Defaults to True.
+            inter_brain         (bool, optional): Whether the analysis is inter-brain (True) or intra-brain (False). Defaults to True.
             verbose             (bool, optional): Whether constructor and analyses should output details and progress. Defaults to False.
-            working_directory    (str, optional): The directory where the infodynamics.jar file is located. Defaults to None (later defaults to os.getcwd()).
+            **filter_options    (dict, optional): Additional keyword arguments for bandpass filtering.
         """
 
         if not self.__class__._jvm_initialised:
@@ -73,22 +88,19 @@ class HyperIT:
         self._sfreq = sfreq if sfreq else None
         self._freq_bands = freq_bands if freq_bands else None
         self._filter_options = filter_options
-
-        self._all_data = [data1, data2]
-        self._data1, self._data2 = self._all_data
         self._standardise_data = standardise_data
+        self._inter_brain = inter_brain
+
+        self._data1 = data1
+        self._data2 = data2 
+
+        self.__check_data()
+        _, self._n_freq_bands, self._n_epo, self._n_chan, self._n_samples = self._all_data.shape
 
         self._roi = []
         self._roi_specified = False
-        self._scale_of_organisation = 1 # 0 = global organisation (all channels), 1 = micro organisation (each channel), n = meso- or n-scale organisation (n channels)
-        
-        self._inter_brain: bool = not np.array_equal(data1, data2)
+        self._scale_of_organisation = 1 # 1 = micro organisation (single channel pairwise), n = meso- or n-scale organisation (n-sized groups of channels)
         self._initialise_parameter = None
-
-        self.__check_data()
-
-
-        _, self._n_freq_bands, self._n_epo, self._n_chan, self._n_samples = self._all_data.shape
 
         if self.verbose:
             print("HyperIT object created successfully.")
@@ -102,16 +114,16 @@ class HyperIT:
                 print(f"Data has been bandpass filtered: {self._freq_bands}.")
 
 
-    def __del__(self):
+    ## DUNDER METHODS
+
+    def __del__(self) -> None:
         """ Destructor for HyperIT object. Ensures JVM is shutdown upon deletion of object. """
         try:
             if isJVMStarted():
                 shutdownJVM()
-                if self.verbose:
-                    print("JVM has been shutdown.")
+                print("JVM has been shutdown.")
         except Exception as e:
-            if self.verbose:
-                print(f"Error shutting down JVM: {e}")
+            print(f"Warning concerning shutting down JVM: {e}")
 
     def __repr__(self) -> str:
         """ String representation of HyperIT object. """
@@ -137,10 +149,13 @@ class HyperIT:
         return self.__repr__()
     
 
+    ## DATA, CHANNEL, & INITIALISATION CHECKING
+
     def __check_data(self) -> None:
         """ Checks the consistency and dimensionality of the time-series data and channel names. Sets the number of epochs, channels, and time points as object variables.
 
         Ensures:
+            - Whether an intra-brain analysis is expected (when no second data set is provided or when data1==data2).
             - Data are numpy arrays.
             - Data shapes are consistent.
             - Data dimensions are either 2 or 3 dimensional.
@@ -149,6 +164,10 @@ class HyperIT:
             - Data are standardised, if specified.
         """
 
+        if self._data2 is None or np.array_equal(self._data1, self._data2) or self._data2.shape == (0,) or self._inter_brain == False:
+            self._data2 = self._data1.copy()
+            self._inter_brain = False
+            
         if not all(isinstance(data, np.ndarray) for data in [self._data1, self._data2]):
             raise ValueError("Time-series data must be numpy arrays.")
         
@@ -164,14 +183,35 @@ class HyperIT:
         if self._data1.ndim not in [2,3]:
             raise ValueError(f"Unexpected number of dimensions in time-series data: {self._data1.ndim}. Expected 2 dimensions (channels, time_points) or 3 dimensions (epochs, channels, time_points).")
 
-        if not isinstance(self._channel_names, (list, np.ndarray)) or isinstance(self._channel_names[0], str):
-            raise ValueError("Channel names must be a list of strings or a list of lists of strings for inter-brain analysis.")
-    
-        if not self._inter_brain and isinstance(self._channel_names[0], list):
-            self._channel_names = [self._channel_names] * 2
+        if not isinstance(self._channel_names, list):
+            raise ValueError("Channel names must be a list of strings or a list of lists of strings.")
+
+        # Checking the type of the first element to determine the structure
+        if isinstance(self._channel_names[0], str):
+            # If the first element is a string, assume all are strings and check accordingly
+            if not all(isinstance(name, str) for name in self._channel_names):
+                raise ValueError("All elements must be strings if the first element is a string.")
+            # Duplicate the list if it is intended for use in an intra-brain or similar context
+            self._channel_names = [self._channel_names, self._channel_names.copy()]
+
+        elif isinstance(self._channel_names[0], list):
+            # If the first element is a list, ensure all elements are lists of strings
+            if not all(isinstance(sublist, list) for sublist in self._channel_names):
+                raise ValueError("All elements must be lists of strings if the first element is a list.")
+            for sublist in self._channel_names:
+                if not all(isinstance(name, str) for name in sublist):
+                    raise ValueError("All sublists must be lists of strings.")
+
+            # Here, check if there's only one sublist and duplicate if necessary
+            if len(self._channel_names) == 1:
+                self._channel_names = self._channel_names * 2
+
+        else:
+            raise ValueError("Channel names must be either a list of strings or a list of lists of strings.")
 
         if any(len(names) != self._n_chan for names in self._channel_names):
             raise ValueError("The number of channels in time-series data does not match the length of channel_names.")
+        
         
         self._channel_indices1 = np.arange(len(self._channel_names[0]))
         self._channel_indices2 = np.arange(len(self._channel_names[1])) if len(self._channel_names) > 1 else self._channel_indices2.copy()
@@ -188,6 +228,10 @@ class HyperIT:
             self._data2 = (self._data2 - np.mean(self._data2, axis=-1, keepdims=True)) / np.std(self._data2, axis=-1, keepdims=True)
             
         self._all_data = np.stack([self._data1, self._data2], axis=0)
+
+    
+    
+    ## DEFINING REGIONS OF INTEREST
 
     @property
     def roi(self) -> List[List[Union[str, int, list]]]:
@@ -278,7 +322,9 @@ class HyperIT:
 
 
 
-    def __mi_hist(self, s1: np.ndarray, s2: np.ndarray) -> float:
+    ## HARD-CODED HISTOGRAM AND SYMBOLIC MI ESTIMATION FUNCTIONS
+
+    def __estimate_mi_hist(self, s1: np.ndarray, s2: np.ndarray) -> float:
         """Calculates Mutual Information using Histogram/Binning Estimator for time-series signals."""
 
         def calc_fd_bins(X: np.ndarray, Y: np.ndarray) -> int:
@@ -290,10 +336,11 @@ class HyperIT:
             return fd_bins
         
         def hist_calc_mi(X, Y):
+            # Joint probability distribution
             j_hist, _, _ = np.histogram2d(X, Y, bins=calc_fd_bins(X, Y))
             pxy = j_hist / np.sum(j_hist)  # Joint probability distribution
 
-            # Marginals
+            # Marginals probability distribution
             px = np.sum(pxy, axis=1) 
             py = np.sum(pxy, axis=0) 
 
@@ -304,35 +351,29 @@ class HyperIT:
 
             return Hx + Hy - Hxy
 
-        estimations = np.zeros((self._n_freq_bands, self._n_epo, 4)) # stores MI result, mean, std, p-value per epoch
+        result = hist_calc_mi(s1, s2)
 
-        for freq_band in range(self._n_freq_bands):
-            for epo_i in range(self._n_epo):
+        if self.calc_sigstats:
+            permuted_mi_values = []
 
-                x, y = (s1[freq_band, epo_i, :], s2[freq_band, epo_i, :]) 
-                mi = hist_calc_mi(x, y)
+            for _ in range(self.stat_sig_perm_num):
+                np.random.shuffle(s2)
+                permuted_mi = hist_calc_mi(s1, s2)
+                permuted_mi_values.append(permuted_mi)
 
-                if self.calc_sigstats:
-                    permuted_mi_values = []
+            mean_permuted_mi = np.mean(permuted_mi_values)
+            std_permuted_mi = np.std(permuted_mi_values)
+            p_value = np.sum(permuted_mi_values >= result) / self.stat_sig_perm_num
+            return np.array([result, mean_permuted_mi, std_permuted_mi, p_value])
 
-                    for _ in range(self.stat_sig_perm_num):
-                        np.random.shuffle(y)
-                        permuted_mi = hist_calc_mi(x, y)
-                        permuted_mi_values.append(permuted_mi)
+        return np.array([result])
 
-                    mean_permuted_mi = np.mean(permuted_mi_values)
-                    std_permuted_mi = np.std(permuted_mi_values)
-                    p_value = np.sum(permuted_mi_values >= mi) / self.stat_sig_perm_num
-                    estimations[epo_i] = [mi, mean_permuted_mi, std_permuted_mi, p_value]
-                else:
-                    estimations[freq_band, epo_i, 0] = mi
-
-        return estimations
-
-    def __mi_symb(self, s1: np.ndarray, s2: np.ndarray, l: int = 1, k: int = 3) -> float:
+    def __estimate_mi_symb(self, s1: np.ndarray, s2: np.ndarray, l: int = 1, k: int = 3) -> float:
         """Calculates Mutual Information using Symbolic Estimator for time-series signals.
+
             l: time delay or lag (i.e., how many time points to skip)
             k: embedding dimension (i.e., how many time points to consider in each symbol)
+        
         """
 
         symbol_weights = np.power(k, np.arange(k))
@@ -354,7 +395,6 @@ class HyperIT:
             # multiply each symbol [1,0,3] by symbol_weights [1,3,9] => [1,0,27] and give a final array of the sum of each code ([.., .., 28, .. ])
             symbol_hash_X = (np.multiply(X, symbol_weights)).sum(1) 
             symbol_hash_Y = (np.multiply(Y, symbol_weights)).sum(1)
-    
 
             p_xy, p_x, p_y = map(symb_normalise_counts, [dict(), dict(), dict()])
             
@@ -376,34 +416,29 @@ class HyperIT:
             return entropy_X + entropy_Y - entropy_XY
 
 
+        result = symb_calc_mi(s1, s2, l, k)
 
-        estimations = np.zeros((self._n_freq_bands, self._n_epo, 4)) # stores MI result, mean, std, p-value per epoch
+        if self.calc_sigstats:
+            permuted_mi_values = []
 
-        for freq_band in range(self._n_freq_bands):
-            for epo_i in range(self._n_epo):
+            for _ in range(self.stat_sig_perm_num):
+                np.random.shuffle(s2)
+                permuted_mi = symb_calc_mi(s1, s2, l, k)
+                permuted_mi_values.append(permuted_mi)
 
-                x, y = (s1[freq_band, epo_i, :], s2[freq_band, epo_i, :])
-                mi = symb_calc_mi(x, y, l, k)
+            mean_permuted_mi = np.mean(permuted_mi_values)
+            std_permuted_mi = np.std(permuted_mi_values)
+            p_value = np.sum(permuted_mi_values >= result) / self.stat_sig_perm_num
+            return np.array([result, mean_permuted_mi, std_permuted_mi, p_value])
 
-                if self.calc_sigstats:
-                    permuted_mi_values = []
+        return np.array([result])
 
-                    for _ in range(self.stat_sig_perm_num):
-                        np.random.shuffle(y)
-                        permuted_mi = symb_calc_mi(x, y, l, k)
-                        permuted_mi_values.append(permuted_mi)
 
-                    mean_permuted_mi = np.mean(permuted_mi_values)
-                    std_permuted_mi = np.std(permuted_mi_values)
-                    p_value = np.sum(permuted_mi_values >= mi) / self.stat_sig_perm_num
-                    estimations[freq_band, epo_i] = [mi, mean_permuted_mi, std_permuted_mi, p_value]
-                else:
-                    estimations[freq_band, epo_i, 0] = mi
 
-        return estimations
-
+    ## ESTIMATION AND HELPER FUNCTIONS
 
     def __which_estimator(self, measure: str) -> None:
+        """Determines the estimator to use based on the measure type and sets the estimator, properties, and initialisation parameters."""
 
         self.estimator_name, calculator, properties, initialise_parameter = set_estimator(self.estimator_type, measure, self.params) # from utils.py function
 
@@ -417,237 +452,165 @@ class HyperIT:
         if initialise_parameter:
             self._initialise_parameter = initialise_parameter
 
+    def __setup_matrices(self) -> int:
+        """ Sets up the matrices for Mutual Information, Transfer Entropy, or Integrated Information Decomposition. """
 
+        n_combo = self._n_chan if self._scale_of_organisation == 1 else self._soi_groups
+
+        if self.measure == MeasureType.MI or self.measure == MeasureType.TE:
+            self.it_matrix_xy = np.zeros((self._n_freq_bands, self._n_epo, n_combo, n_combo, 4))
+            
+            if self.measure == MeasureType.TE and self._inter_brain:
+                # TE is assymetrical so will need to compute both X->Y and Y->X.
+                # BUT, only need another matrix for interbrain as intra-brain channels are already all cycled through in first matrix (half 1 = X->Y, half 2 = Y->X)
+                # MI is symmetrical and therefore all information is stored in one matrix
+                self.it_matrix_yx = self.it_matrix_xy.copy()
+
+        elif self.measure == MeasureType.PhyID:
+            self.it_matrix_xy = [[[[{} for _ in range(n_combo)] for _ in range(n_combo)] for _ in range(self._n_epo)] for _ in range(self._n_freq_bands)]
+            if self._inter_brain:
+                self.it_matrix_yx = self.it_matrix_xy.copy() 
+
+        return n_combo
+        
     def __estimate_it(self, s1: np.ndarray, s2: np.ndarray) -> np.ndarray:
         """ Estimates Mutual Information or Transfer Entropy for a pair of time-series signals using JIDT estimators. """
 
-        estimations = np.zeros((self._n_freq_bands, self._n_epo, 4)) # stores MI/TE result, mean, std, p-value per epoch
+        # Initialise parameter describes the dimensions of the data
+        self.Calc.initialise(*self._initialise_parameter) if self._initialise_parameter else self.Calc.initialise()
+        self.Calc.setObservations(setup_JArray(s1), setup_JArray(s2))
+        result = self.Calc.computeAverageLocalOfObservations() * np.log(2)
 
-        for freq_band in range(self._n_freq_bands):
-            for epo_i in range(self._n_epo):
-                
-                X, Y = (s1[freq_band, epo_i, ...], s2[freq_band, epo_i, ...]) 
-
-                ## GROUPWISE; multivariate time series comparison
-                if self._scale_of_organisation > 1:
-                    X, Y = X.T, Y.T # transpose to shape (samples, group_channels)
-
-                # Initialise parameter describes the dimensions of the data
-                self.Calc.initialise(*self._initialise_parameter) if self._initialise_parameter else self.Calc.initialise()
-                self.Calc.setObservations(setup_JArray(X), setup_JArray(Y))
-                result = self.Calc.computeAverageLocalOfObservations() * np.log(2)
-
-                if self.calc_sigstats:
-                    stat_sig = self.Calc.computeSignificance(self.stat_sig_perm_num)
-                    estimations[freq_band, epo_i] = [result, stat_sig.getMeanOfDistribution(), stat_sig.getStdOfDistribution(), stat_sig.pValue]
-                else:
-                    estimations[freq_band, epo_i, 0] = result
+        # Conduct significance testing
+        if self.calc_sigstats:
+            stat_sig = self.Calc.computeSignificance(self.stat_sig_perm_num)
+            return np.array([result, stat_sig.getMeanOfDistribution(), stat_sig.getStdOfDistribution(), stat_sig.pValue])
             
-        return estimations
+        return np.array([result])
     
+    def __estimate_atoms(self, s1: np.ndarray, s2: np.ndarray) -> None:
+
+        atoms_results_xy, _ = calc_PhiID(s1, s2, tau=self.tau, kind='gaussian', redundancy=self.redundancy)
+
+        if not atoms_results_xy:  
+            raise ValueError("Empty results from calc_PhiID, critical data processing cannot continue.")
+
+        calc_atoms_xy = np.mean(np.array([atoms_results_xy[_] for _ in PhiID_atoms_abbr]), axis=1)
+        return {key: value for key, value in zip(atoms_results_xy.keys(), calc_atoms_xy)}
+
+    def __filter_estimation(self, s1: np.ndarray, s2: np.ndarray) -> np.ndarray:
+        """ Filters the estimation in case incompatible with JIDT. """
+
+        if self.measure == MeasureType.MI:
+            match self.estimator_type:
+                case 'histogram':
+                    return self.__estimate_mi_hist(s1, s2)
+                case 'symbolic':
+                    return self.__estimate_mi_symb(s1, s2)
+
+        elif self.measure == MeasureType.PhyID:
+            return self.__estimate_atoms(s1, s2)
 
 
-    def compute_mi(self, estimator_type: str = 'kernel', calc_sigstats: bool = False, vis: bool = False, **kwargs) -> np.ndarray:
-        """Function to compute mutual information between data (time-series signals) instantiated in the HyperIT object.
 
-        PARAMETER OPTIONS FOR MUTUAL INFORMATION ESTIMATORS (defaults in parentheses):
-        Estimator types:        kwargs:
-            - histogram:        None
-            - ksg1:             kraskov_param (4), normalise (True)
-            - ksg2:             kraskov_param (4), normalise (True)
-            - kernel:           kernel_width (0.25), normalise (True)
-            - gaussian:         normalise (True)
-            - symbolic:         l (1), m (3)
+        return self.__estimate_it(s1, s2)
 
-        Args:
-            estimator_type       (str, optional): Which mutual information estimator to use. Defaults to 'kernel'.
-            calc_sigstats       (bool, optional): Whether to conduct statistical signficance testing. Defaults to False.
-            vis                 (bool, optional): Whether to visualise (via __plot_it()). Defaults to False.
+    def __compute_pair_or_group(self, freq_band: int, epoch: int, i: int, j: int) -> None:
+        """ Computes the Mutual Information or Transfer Entropy for a pair of channels or groups of channels. """
 
-        Returns:
-                                    (np.ndarray): A matrix of mutual information values with shape (n_chan, n_chan, n_epo, 4),
-                                                  where the last dimension represents the statistical signficance testing results: (local result, distribution mean, distribution standard deviation, p-value). 
-                                                  If calc_sigstats is False, only the local results will be returned in this last dimension.
-        """
-        
-        self.measure = 'Mutual Information'
-        if estimator_type.lower() == 'ksg':
-            estimator_type = 'ksg1'
-        self.estimator_type: str = estimator_type.lower()
-        self.calc_sigstats: bool = calc_sigstats
-        self.vis: bool = vis
-        self.params = kwargs
+        if not (self._inter_brain or i != j):
+            return
 
-        self.stat_sig_perm_num = self.params.get('stat_sig_perm_num', 100)
-        self.p_threshold = self.params.get('p_threshold', 0.05)
-        
-        # self.__which_mi_estimator()
-        self.__which_estimator(measure = 'mi')
+        channel_or_group_i = i if self._scale_of_organisation == 1 else self._roi[0][i]
+        channel_or_group_j = j if self._scale_of_organisation == 1 else self._roi[1][j]    
+        # data needs to be (samples, channels/groups) if not pointwise comparison 
+        # (this is how both JIDT and phyid handle and expect incoming multivariate data)
+        # (Note that .T does not affect pointwise comparison as it is already in the correct shape)
+        s1, s2 = self._data1[freq_band, epoch, channel_or_group_i, :].T, self._data2[freq_band, epoch, channel_or_group_j, :].T
 
-        self.mi_matrix = np.zeros((self._n_freq_bands, self._n_epo, self._n_chan, self._n_chan, 4)) if self._scale_of_organisation == 1 else np.zeros((self._n_freq_bands, self._n_epo, self._soi_groups, self._soi_groups, 4))
-
-        loop_range = self._n_chan if self._scale_of_organisation == 1 else self._soi_groups
-
-        for i in tqdm(range(loop_range)):
-            for j in range(loop_range):
-
-                if self._inter_brain or i != j:
-
-                    if self._scale_of_organisation == 1:
-                        s1, s2 = (self._data1[:, :, i, :], self._data2[:, :, j, :])
-                    
-                    elif self._scale_of_organisation > 1:
-                        s1, s2 = (self._data1[:, :, self._roi[0][i], :], self._data2[:, :, self._roi[1][j], :])
-
-                    if self.estimator_type == 'histogram':
-                        self.mi_matrix[:, :, i, j] = self.__mi_hist(s1, s2)
-                    elif self.estimator_type == 'symbolic':
-                        self.mi_matrix[:, :, i, j] = self.__mi_symb(s1, s2)
-                    else:
-                        self.mi_matrix[:, :, i, j] = self.__estimate_it(s1, s2)
-
-                    if not self._inter_brain:
-                        self.mi_matrix[:, :, j, i] = self.mi_matrix[i, j]
-
-
-        mi = np.array((self.mi_matrix))
-
-        if self.vis:
-            self.__plot_it(mi)
-
-        return mi
-    
-    def compute_te(self, estimator_type: str = 'kernel', calc_sigstats: bool = False, vis: bool = False, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
-        """Function to compute transfer entropy between data (time-series signals) instantiated in the HyperIT object. 
-            data1 is taken to be the source and data2 the target (X -> Y). This function automatically computes the opposite matrix, too (Y -> X).
-
-        PARAMETER OPTIONS FOR TRANSFER ENTROPY ESTIMATORS (defaults in parentheses):
-        Estimator types:        kwargs:
-            - ksg:              k, k_tau, l, l_tau, delay, kraskov_param (all 1), normalise (True)
-            - kernel:           kernel_width (0.5), normalise (True)
-            - gaussian:         k, k_tau, l, l_tau, delay (all 1), bias_correction (False), normalise (True)
-            - symbolic:         k (1), normalise (True)
-
-        Args:
-            estimator_type       (str, optional): Which transfer entropy estimator to use. Defaults to 'kernel'.
-            calc_sigstats       (bool, optional): Whether to conduct statistical signficance testing. Defaults to False.
-            vis                 (bool, optional): Whether to visualise (via __plot_it()). Defaults to False.
-
-        Returns:
-                   Tuple(np.ndarray, np.ndarray): Two matrices of transfer entropy values (X->Y and Y->X), each with shape (n_chan, n_chan, n_epo, 4),
-                                                  where the last dimension represents the statistical signficance testing results: (local result, distribution mean, distribution standard deviation, p-value). 
-                                                  If calc_sigstats is False, only the local results will be returned in this last dimension.
-        """
-        
-        self.measure = 'Transfer Entropy'
-        self.estimator_type: str = estimator_type.lower()
-        self.calc_sigstats: bool = calc_sigstats
-        self.vis: bool = vis
-        self.params = kwargs
-        
-        self.stat_sig_perm_num = self.params.get('stat_sig_perm_num', 100)
-        self.p_threshold = self.params.get('p_threshold', 0.05)
-
-        # self.estimator = self.__which_te_estimator()
-        self.__which_estimator(measure = 'te')
-
-        self.te_matrix_xy, self.te_matrix_yx = (np.zeros((self._n_freq_bands, self._n_epo, self._n_chan, self._n_chan, 4)), 
-                                                np.zeros((self._n_freq_bands, self._n_epo, self._n_chan, self._n_chan, 4))) if self._scale_of_organisation == 1 else (np.zeros((self._n_freq_bands, self._n_epo, self._soi_groups, self._soi_groups, 4)), 
-                                                                                                                                                                  np.zeros((self._n_freq_bands, self._n_epo, self._soi_groups, self._soi_groups, 4)))
-
-        loop_range = self._n_chan if self._scale_of_organisation == 1 else self._soi_groups
-
-        for i in tqdm(range(loop_range)):
-            for j in range(loop_range):
-                
-                if self._inter_brain or i != j: # avoid self-channel calculations for intra_brain condition
-                    
-                    if self._scale_of_organisation == 1:
-                        s1, s2 = (self._data1[:, :, i, :], self._data2[:, :, j, :]) 
-                    
-                    elif self._scale_of_organisation > 1:
-                        s1, s2 = (self._data1[:, :, self._roi[0][i], :], self._data2[:, :, self._roi[1][j], :]) 
-
-                    self.te_matrix_xy[:, :, i, j] = self.__estimate_it(s1, s2)
-                    
-                    if self._inter_brain: # don't need to compute opposite matrix for intra-brain as we already loop through each channel combination including symmetric
-            
-                        self.te_matrix_yx[:, :, i, j] = self.__estimate_it(s2, s1)
-                    
-        te_xy = np.array((self.te_matrix_xy))
-        te_yx = np.array((self.te_matrix_yx))
-        
-        if self.vis:
-            print("Plotting Transfer Entropy for X -> Y...")
-            self.__plot_it(te_xy)
+        if self.measure == MeasureType.PhyID:
+            self.it_matrix_xy[freq_band][epoch][i][j] = self.__filter_estimation(s1, s2)
             if self._inter_brain:
-                print("Plotting Transfer Entropy for Y -> X...")
-                self.__plot_it(te_yx)
-                
-        return te_xy, te_yx
-
-    def compute_atoms(self, tau: int = 1, redundancy: str = 'MMI', vis: bool = False, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
-        """Function to compute Integrated Information Decomposition (ΦID) between data (time-series signals) instantiated in the HyperIT object.
-            Option to visualise the lattice values for a specific channel pair (be sure to specify via plot_channels kwarg).
-
-        Args:
-            tau             (int, optional): Time-lag parameter. Defaults to 1.
-            kind            (str, optional): Estimator type. Defaults to "gaussian".
-            redundancy      (str, optional): Redundancy function to use. Defaults to 'MMI' (Minimum Mutual Information).
-            vis            (bool, optional): Whether to visualise (via __plot_atoms()). Defaults to False.
-
-        Returns:
-              Tuple(np.ndarray, np.ndarray): Two matrices of Integrated Information Decomposition dictionaries (representing all atoms, both X->Y and Y->X), each with shape (n_chan, n_chan),
-        """
+                self.it_matrix_yx[freq_band][epoch][i][j] = self.__filter_estimation(s2, s1)
+            return
         
-        self.measure = 'Integrated Information Decomposition'
 
-        loop_range = self._n_chan if self._scale_of_organisation == 1 else self._soi_groups
-        phi_dict_xy = [[[{} for _ in range(loop_range)] for _ in range(loop_range)] for _ in range(self._n_freq_bands)]
-        phi_dict_yx = [[[{} for _ in range(loop_range)] for _ in range(loop_range)] for _ in range(self._n_freq_bands)]
+        self.it_matrix_xy[freq_band, epoch, i, j] = self.__filter_estimation(s1, s2)
 
+        if self.measure == MeasureType.MI and not self._inter_brain:
+            self.it_matrix_xy[freq_band, epoch, j, i] = self.it_matrix_xy[freq_band, epoch, i, j]
+
+        if self.measure == MeasureType.TE and self._inter_brain:
+            self.it_matrix_yx[freq_band, epoch, i, j] = self.__filter_estimation(s2, s1)
+
+
+
+    ## MAIN CALCULATION FUNCTIONS         
+
+    def __main_calc(self) -> np.ndarray | Tuple[np.ndarray, np.ndarray]:
+
+        # Set up it_matrix_xy (and it_matrix_yx if necessary) and store the number of channels/groups to loop through
+        loop_range = self.__setup_matrices()
 
         for freq_band in range(self._n_freq_bands):
-            for i in tqdm(range(loop_range)):
-                for j in range(loop_range):
-                    
-                    if self._inter_brain or i != j:
+            for epoch in range(self._n_epo):
+                for i in tqdm(range(loop_range)):
+                    for j in range(loop_range):
+                        self.__compute_pair_or_group(freq_band, epoch, i, j)
 
-                        if self._scale_of_organisation == 1:
-                            s1, s2 = (self._data1[freq_band, :, i, :], self._data2[freq_band, :, j, :]) 
-                            if self._n_epo > 1:
-                                s1, s2 = s1.reshape(-1), s2.reshape(-1)
+        if self.vis:
+            self.__prepare_vis()
+            
+        if not self.measure == MeasureType.MI and self._inter_brain:
+            return self.it_matrix_xy, self.it_matrix_yx
+        
+        return self.it_matrix_xy
 
-                                ## If you want to pass (samples, epochs) as atomic calculations, delete line above and uncomment line below
-                                # s1, s2 = s1.T, s2.T
-                        
-                        elif self._scale_of_organisation > 1:
-                            
-                            temp_s1, temp_s2 = self._data1[freq_band, :, self._roi[0][i], :], self._data2[freq_band, :, self._roi[1][j], :]
-                            # Flatten epochs and transpose to shape (samples, channels) [necessary configuration for phyid]
-                            s1, s2 = temp_s1.transpose(1,0,2).reshape(-1, temp_s1.shape[1]), temp_s2.transpose(1,0,2).reshape(-1, temp_s2.shape[1])
-                        
-                        atoms_results, _ = calc_PhiID(s1, s2, tau=tau, kind='gaussian', redundancy=redundancy)
+    def __setup_mite_calc(self, estimator_type: str, calc_sigstats: bool, vis: bool, **kwargs) -> np.ndarray | Tuple[np.ndarray, np.ndarray]:
+        """ General function for computing Mutual Information or Transfer Entropy. """
 
-                        if not atoms_results:  
-                            raise ValueError("Empty results from calc_PhiID, critical data processing cannot continue.")
+        self.estimator_type = estimator_type.lower() if not (self.measure == MeasureType.MI and estimator_type.lower() == 'ksg') else 'ksg1'
+        self.calc_sigstats = calc_sigstats
+        self.vis = vis
+        self.params = kwargs
+        self.stat_sig_perm_num = self.params.get('stat_sig_perm_num', 100)
+        self.p_threshold = self.params.get('p_threshold', 0.05)
+        
+        # Set up the estimator and properties
+        self.__which_estimator(str(self.measure))
+        
+        return self.__main_calc()
 
-                        calc_atoms = np.mean(np.array([atoms_results[_] for _ in PhiID_atoms_abbr]), axis=1)
-                        phi_dict_xy[freq_band][i][j] = {key: value for key, value in zip(atoms_results.keys(), calc_atoms)}
+    def __setup_atom_calc(self, tau: int, redundancy: str, vis: bool, **kwargs) -> np.ndarray | Tuple[np.ndarray, np.ndarray]:
+        """ General function for computing Integrated Information Decomposition. """
 
-                        if self._inter_brain:
-                            atoms_results, _ = calc_PhiID(s2, s1, tau=tau, kind='gaussian', redundancy=redundancy)
-                            calc_atoms = np.mean(np.array([atoms_results[_] for _ in PhiID_atoms_abbr]), axis=1)
-                            phi_dict_yx[freq_band][i][j] = {key: value for key, value in zip(atoms_results.keys(), calc_atoms)}   
+        self.tau = tau
+        self.redundancy = redundancy
+        self.vis = vis
+        self.params = kwargs
 
-        if vis:
-            self.__plot_atoms(phi_dict_xy)
-            self.__plot_atoms(phi_dict_yx) 
+        return self.__main_calc()
 
-        return phi_dict_xy, phi_dict_yx
+
+
+    ## VISUALISATION FUNCTIONS
+
+    def __prepare_vis(self) -> None:
+        """ Prepares the visualisation of Mutual Information, Transfer Entropy, or Integrated Information Decomposition matrix/matrices. """
+
+        if self.verbose:
+            print(f"Plotting {self.measure_title}...")
+
+        if self.measure == MeasureType.PhyID:
+            self.__plot_atoms(self.it_matrix_xy)
+            if self._inter_brain:
+                self.__plot_atoms(self.it_matrix_yx)
+            return
     
+        self.__plot_it(self.it_matrix_xy)
 
-
+        if self.measure == MeasureType.TE and self._inter_brain:
+            self.__plot_it(self.it_matrix_yx)
 
     def __plot_it(self, it_matrix: np.ndarray) -> None:
         """Plots the Mutual Information or Transfer Entropy matrix for visualisation. 
@@ -659,7 +622,7 @@ class HyperIT:
             where the last dimension represents the statistical signficance testing results: (local result, distribution mean, distribution standard deviation, p-value).
         """
 
-        title = f'{self.measure} | {self.estimator_name} \n {"Inter-Brain" if self._inter_brain else "Intra-Brain"}'
+        title = f'{self.measure_title} | {self.estimator_name} \n {"Inter-Brain" if self._inter_brain else "Intra-Brain"}'
         epochs = [0] # default to un-epoched or epoch-average case
         choice = 3 # default to average MI/TE across epochs
         
@@ -752,7 +715,7 @@ class HyperIT:
                 plt.tick_params(axis='y', which='both', right=False, left=True, labelleft=True)
                 plt.show()
 
-    def __plot_atoms(self, phi_dict: dict):
+    def __plot_atoms(self, phi_dict: dict) -> None:
         """Plots the values of the atoms in the lattice for each frequency band for a given pair of channels/ROI groups."""
         
         if not phi_dict or not phi_dict[0]:
@@ -797,3 +760,78 @@ class HyperIT:
                 
                 except KeyError:
                     print("Invalid channel/group indices.")
+
+
+
+    ## HIGH-LEVEL INTERFACE FUNCTIONS
+
+    def compute_mi(self, estimator_type: str = 'kernel', calc_sigstats: bool = False, vis: bool = False, **kwargs) -> np.ndarray:
+        """Function to compute mutual information between data (time-series signals) instantiated in the HyperIT object.
+
+        PARAMETER OPTIONS FOR MUTUAL INFORMATION ESTIMATORS (defaults in parentheses):
+        Estimator types:        kwargs:
+            - histogram:        None
+            - ksg1:             kraskov_param (4), normalise (True)
+            - ksg2:             kraskov_param (4), normalise (True)
+            - kernel:           kernel_width (0.25), normalise (True)
+            - gaussian:         normalise (True)
+            - symbolic:         l (1), m (3)
+
+        Args:
+            estimator_type       (str, optional): Which mutual information estimator to use. Defaults to 'kernel'.
+            calc_sigstats       (bool, optional): Whether to conduct statistical signficance testing. Defaults to False.
+            vis                 (bool, optional): Whether to visualise (via __plot_it()). Defaults to False.
+
+        Returns:
+                                    (np.ndarray): A matrix of mutual information values with shape (n_chan, n_chan, n_epo, 4),
+                                                  where the last dimension represents the statistical signficance testing results: (local result, distribution mean, distribution standard deviation, p-value). 
+                                                  If calc_sigstats is False, only the local results will be returned in this last dimension.
+        """
+        
+        self.measure = MeasureType.MI
+        self.measure_title = 'Mutual Information'
+        return self.__setup_mite_calc(estimator_type, calc_sigstats, vis, **kwargs)
+
+    def compute_te(self, estimator_type: str = 'kernel', calc_sigstats: bool = False, vis: bool = False, **kwargs) -> np.ndarray | Tuple[np.ndarray, np.ndarray]:
+        """Function to compute transfer entropy between data (time-series signals) instantiated in the HyperIT object. 
+            data1 is taken to be the source and data2 the target (X -> Y). This function automatically computes the opposite matrix, too (Y -> X).
+
+        PARAMETER OPTIONS FOR TRANSFER ENTROPY ESTIMATORS (defaults in parentheses):
+        Estimator types:        kwargs:
+            - ksg:              k, k_tau, l, l_tau, delay, kraskov_param (all 1), normalise (True)
+            - kernel:           kernel_width (0.5), normalise (True)
+            - gaussian:         k, k_tau, l, l_tau, delay (all 1), bias_correction (False), normalise (True)
+            - symbolic:         k (1), normalise (True)
+
+        Args:
+            estimator_type       (str, optional): Which transfer entropy estimator to use. Defaults to 'kernel'.
+            calc_sigstats       (bool, optional): Whether to conduct statistical signficance testing. Defaults to False.
+            vis                 (bool, optional): Whether to visualise (via __plot_it()). Defaults to False.
+
+        Returns:
+                   Tuple(np.ndarray, np.ndarray): Two matrices of transfer entropy values (X->Y and Y->X), each with shape (n_chan, n_chan, n_epo, 4),
+                                                  where the last dimension represents the statistical signficance testing results: (local result, distribution mean, distribution standard deviation, p-value). 
+                                                  If calc_sigstats is False, only the local results will be returned in this last dimension.
+        """
+        
+        self.measure = MeasureType.TE
+        self.measure_title = 'Transfer Entropy'
+        return self.__setup_mite_calc(estimator_type, calc_sigstats, vis, **kwargs)
+
+    def compute_atoms(self, tau: int = 1, redundancy: str = 'MMI', vis: bool = False, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
+        """Function to compute Integrated Information Decomposition (ΦID) between data (time-series signals) instantiated in the HyperIT object.
+            Option to visualise the lattice values for a specific channel pair (be sure to specify via plot_channels kwarg).
+
+        Args:
+            tau             (int, optional): Time-lag parameter. Defaults to 1.
+            kind            (str, optional): Estimator type. Defaults to "gaussian".
+            redundancy      (str, optional): Redundancy function to use. Defaults to 'MMI' (Minimum Mutual Information).
+            vis            (bool, optional): Whether to visualise (via __plot_atoms()). Defaults to False.
+
+        Returns:
+              Tuple(np.ndarray, np.ndarray): Two matrices of Integrated Information Decomposition dictionaries (representing all atoms, both X->Y and Y->X), each with shape (n_chan, n_chan),
+        """
+        
+        self.measure = MeasureType.PhyID
+        self.measure_title = 'Integrated Information Decomposition'
+        return self.__setup_atom_calc(tau, redundancy, vis, **kwargs)
