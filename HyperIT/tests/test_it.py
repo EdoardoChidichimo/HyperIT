@@ -14,7 +14,7 @@ class TestHyperIT(unittest.TestCase):
         cls.jarLocation = os.path.abspath(os.path.join(os.path.dirname(__file__), 'infodynamics.jar'))
         if not jpype.isJVMStarted():
             jpype.startJVM(jpype.getDefaultJVMPath(), "-ea", f"-Djava.class.path={cls.jarLocation}")
-            HyperIT.setup_JVM(cls.jarLocation)
+            HyperIT.setup_JVM(os.path.abspath(os.path.join(os.path.dirname(__file__), 'infodynamics.jar')))
 
     @classmethod
     def tearDownClass(cls):
@@ -29,6 +29,7 @@ class TestHyperIT(unittest.TestCase):
         self.data2 = np.random.rand(10, 3, 600)
         self.freq_bands = {'alpha': (8, 12)}
         self.sfreq = 256  # Hz
+        HyperIT.setup_JVM(os.path.abspath(os.path.join(os.path.dirname(__file__), 'infodynamics.jar')))
         self.hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
 
     @patch('hyperit.HyperIT.setup_JVM')
