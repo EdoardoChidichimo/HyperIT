@@ -33,6 +33,17 @@ atoms = it.compute_atoms(tau, redundancy, vis)
 ```
 For specific estimator types and general functionality, see Documentation and Tutorial.
 
+
+
+## Installation
+
+To install HyperIT, simply use pip:
+
+```bash
+pip install git+https://github.com/EdoardoChidichimo/HyperIT.git
+
+
+
 ## Dependencies
 ```
 numpy
