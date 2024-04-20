@@ -2,3 +2,10 @@
 # https://github.com/readthedocs/readthedocs.org/issues/10279
 sphinx>=2.0, <7.0.0
 sphinx_rtd_theme
+numpy
+scipy 
+PIL 
+tqdm 
+matplotlib
+jpype 
+git+https://github.com/Imperial-MIND-lab/integrated-info-decomp.git
