@@ -1,5 +1,5 @@
 .. hyperit documentation master file, created by
-   sphinx-quickstart on Sat Apr 20 20:46:36 2024.
+   sphinx-quickstart on Sat Apr 20 21:09:02 2024.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
