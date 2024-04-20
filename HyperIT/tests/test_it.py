@@ -66,12 +66,12 @@ class TestHyperIT(unittest.TestCase):
         """Test Mutual Information computation."""
         hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
         hyperit_instance.compute_mi('histogram')
-        self.assertIsNotNone(hyperit_instance.mi_matrix)
+        self.assertIsNotNone(hyperit_instance.mi_matrix_xy)
         self.assertTrue(mock_hist.called)
         self.assertTrue(mock_iqr.called)
 
     @patch('hyperit.setup_JArray', return_value=None)
-    @patch('hyperit.set_estimator', return_value=('kernel', MagicMock(), {'prop1': 'value1'}, (2,)))
+    @patch('hyperit.set_estimator', return_value=('kernel', MagicMock(), {'prop1': 'value1'}, (2,4)))
     def test_te_computation(self, mock_set_estimator, mock_jarray):
         """Test Transfer Entropy computation setup."""
         hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
