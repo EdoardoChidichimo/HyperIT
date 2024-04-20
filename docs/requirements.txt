@@ -5,6 +5,7 @@ sphinx_rtd_theme
 numpy
 scipy 
 tqdm 
+mne
 matplotlib
 jpype1
 git+https://github.com/Imperial-MIND-lab/integrated-info-decomp.git
