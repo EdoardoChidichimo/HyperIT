@@ -21,6 +21,15 @@ class TestHyperIT(unittest.TestCase):
         if jpype.isJVMStarted():
             jpype.shutdownJVM()
 
+    def setUp(self):
+        """Set up test variables used in the tests."""
+        self.channels = [['C1', 'C2', 'C3'], ['C1', 'C2', 'C3']]
+        self.data1 = np.random.rand(10, 3, 600)  # 10 epochs, 3 channels, 100 samples
+        self.data2 = np.random.rand(10, 3, 600)
+        self.freq_bands = {'alpha': (8, 12)}
+        self.sfreq = 256  # Hz
+        self.hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
+
     @patch('hyperit.HyperIT.setup_JVM')
     def test_initialization(self, mock_setup_jvm):
         """Test object initialization and JVM setup call."""
