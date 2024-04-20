@@ -13,6 +13,7 @@ Welcome to hyperit's documentation!
    introduction
    installation
    usage
+   hyperit
 
 
 
