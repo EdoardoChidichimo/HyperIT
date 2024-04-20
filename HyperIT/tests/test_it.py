@@ -11,7 +11,7 @@ class TestHyperIT(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """Set up at the class level: Start the JVM with the required library."""
-        cls.jarLocation = 'path/to/infodynamics.jar'  # Adjust path accordingly
+        cls.jarLocation = os.path.abspath(os.path.join(os.path.dirname(__file__), 'infodynamics.jar'))
         if not jpype.isJVMStarted():
             jpype.startJVM(jpype.getDefaultJVMPath(), "-ea", f"-Djava.class.path={cls.jarLocation}")
 
