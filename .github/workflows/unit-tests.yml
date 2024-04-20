@@ -20,7 +20,7 @@ jobs:
     - name: Run Tests
       run: |
         python -m unittest discover -s tests
-      working-directory: /home/runner/work/HyperIT/hyperit
+      working-directory: hyperit
 
         
   paper:
@@ -33,9 +33,9 @@ jobs:
         uses: openjournals/openjournals-draft-action@master
         with:
           journal: joss
-          paper-path: /home/runner/work/HyperIT/hyperit/paper/paper.md
+          paper-path: hyperit/paper/paper.md
       - name: Upload
         uses: actions/upload-artifact@v1
         with:
           name: joss_paper
-          path: /home/runner/work/HyperIT/hyperit/paper/paper.pdf
+          path: hyperit/paper/paper.pdf
