@@ -10,6 +10,10 @@ Welcome to hyperit's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   introduction
+   installation
+   usage
+
 
 
 Indices and tables
