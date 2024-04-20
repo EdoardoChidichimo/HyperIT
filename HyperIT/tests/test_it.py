@@ -60,20 +60,18 @@ class TestHyperIT(unittest.TestCase):
     @patch('hyperit.stats.iqr', return_value=1.0)
     def test_mi_computation(self, mock_hist, mock_iqr):
         """Test Mutual Information computation."""
-        HyperIT.setup_JVM(self.jarLocation, verbose=True)
         newitmi = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
         newitmi.compute_mi('kernel')
-        self.assertIsNotNone(self.newitmi.it_matrix_xy)
+        self.assertIsNotNone(newitmi.it_matrix_xy)
         self.assertTrue(mock_hist.called)
         self.assertTrue(mock_iqr.called)
 
     def test_te_computation(self):
         """Test Transfer Entropy computation setup."""
-        HyperIT.setup_JVM(self.jarLocation, verbose=True)
         newitte = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
         newitte.compute_mi('gaussian')
-        self.assertIsNotNone(self.newitte.it_matrix_xy)
-        self.assertIsNotNone(self.newitte.it_matrix_yx)
+        self.assertIsNotNone(newitte.it_matrix_xy)
+        self.assertIsNotNone(newitte.it_matrix_yx)
 
     def test_compute_atoms_execution(self):
         """Test that compute_atoms executes and returns data."""
