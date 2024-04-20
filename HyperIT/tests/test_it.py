@@ -61,7 +61,7 @@ class TestHyperIT(unittest.TestCase):
     def test_mi_computation(self, mock_hist, mock_iqr):
         """Test Mutual Information computation."""
         newitmi = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
-        newitmi.compute_mi('kernel')
+        newitmi.compute_mi('histogram')
         self.assertIsNotNone(newitmi.it_matrix_xy)
         self.assertTrue(mock_hist.called)
         self.assertTrue(mock_iqr.called)
@@ -69,7 +69,7 @@ class TestHyperIT(unittest.TestCase):
     def test_te_computation(self):
         """Test Transfer Entropy computation setup."""
         newitte = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
-        newitte.compute_mi('gaussian')
+        newitte.compute_te('gaussian')
         self.assertIsNotNone(newitte.it_matrix_xy)
         self.assertIsNotNone(newitte.it_matrix_yx)
 
