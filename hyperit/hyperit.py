@@ -10,7 +10,7 @@ from jpype import JPackage, shutdownJVM, isJVMStarted, JPackage, startJVM, getDe
 from phyid.calculate import calc_PhiID
 from phyid.utils import PhiID_atoms_abbr
 
-from utils import setup_JArray, bandpass_filter_data, convert_names_to_indices, convert_indices_to_names, set_estimator, text_positions
+from hyperit.utils import setup_JArray, bandpass_filter_data, convert_names_to_indices, convert_indices_to_names, set_estimator, text_positions
 
 from enum import Enum
 
@@ -757,16 +757,17 @@ class HyperIT:
     ## HIGH-LEVEL INTERFACE FUNCTIONS
 
     def compute_mi(self, estimator_type: str = 'kernel', calc_sigstats: bool = False, vis: bool = False, **kwargs) -> np.ndarray:
-        """Function to compute mutual information between data (time-series signals) instantiated in the HyperIT object.
+        """
+        Function to compute mutual information between data (time-series signals) instantiated in the HyperIT object.
 
         PARAMETER OPTIONS FOR MUTUAL INFORMATION ESTIMATORS (defaults in parentheses):
-        Estimator types:        kwargs:
-            - histogram:        None
-            - ksg1:             kraskov_param (4), normalise (True)
-            - ksg2:             kraskov_param (4), normalise (True)
-            - kernel:           kernel_width (0.25), normalise (True)
-            - gaussian:         normalise (True)
-            - symbolic:         l (1), m (3)
+        Estimator types:    kwargs:
+        - histogram:        None
+        - ksg1:             kraskov_param (4), normalise (True)
+        - ksg2:             kraskov_param (4), normalise (True)
+        - kernel:           kernel_width (0.25), normalise (True)
+        - gaussian:         normalise (True)
+        - symbolic:         l (1), m (3)
 
         Args:
             estimator_type       (str, optional): Which mutual information estimator to use. Defaults to 'kernel'.
@@ -784,15 +785,16 @@ class HyperIT:
         return self.__setup_mite_calc(estimator_type, calc_sigstats, vis, **kwargs)
 
     def compute_te(self, estimator_type: str = 'kernel', calc_sigstats: bool = False, vis: bool = False, **kwargs) -> np.ndarray | Tuple[np.ndarray, np.ndarray]:
-        """Function to compute transfer entropy between data (time-series signals) instantiated in the HyperIT object. 
+        """
+        Function to compute transfer entropy between data (time-series signals) instantiated in the HyperIT object. 
             data1 is taken to be the source and data2 the target (X -> Y). This function automatically computes the opposite matrix, too (Y -> X).
 
         PARAMETER OPTIONS FOR TRANSFER ENTROPY ESTIMATORS (defaults in parentheses):
-        Estimator types:        kwargs:
-            - ksg:              k, k_tau, l, l_tau, delay, kraskov_param (all 1), normalise (True)
-            - kernel:           kernel_width (0.5), normalise (True)
-            - gaussian:         k, k_tau, l, l_tau, delay (all 1), bias_correction (False), normalise (True)
-            - symbolic:         k (1), normalise (True)
+        Estimator types:    kwargs:
+        - ksg:              k, k_tau, l, l_tau, delay, kraskov_param (all 1), normalise (True)
+        - kernel:           kernel_width (0.5), normalise (True)
+        - gaussian:         k, k_tau, l, l_tau, delay (all 1), bias_correction (False), normalise (True)
+        - symbolic:         k (1), normalise (True)
 
         Args:
             estimator_type       (str, optional): Which transfer entropy estimator to use. Defaults to 'kernel'.
@@ -810,7 +812,8 @@ class HyperIT:
         return self.__setup_mite_calc(estimator_type, calc_sigstats, vis, **kwargs)
 
     def compute_atoms(self, tau: int = 1, redundancy: str = 'MMI', vis: bool = False, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
-        """Function to compute Integrated Information Decomposition (ΦID) between data (time-series signals) instantiated in the HyperIT object.
+        """
+        Function to compute Integrated Information Decomposition (ΦID) between data (time-series signals) instantiated in the HyperIT object.
             Option to visualise the lattice values for a specific channel pair (be sure to specify via plot_channels kwarg).
 
         Args:

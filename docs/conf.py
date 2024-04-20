@@ -12,8 +12,21 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../../hyperit'))
+from unittest.mock import Mock
+sys.path.insert(0, os.path.abspath('..'))
 
+sys.modules['jpype'] = Mock()
+sys.modules['org.jpype.javadoc'] = Mock()
+sys.modules['org.jpype.javadoc.JavadocExtractor'] = Mock()
+
+from hyperit import HyperIT
+HyperIT.setup_JVM(jarLocation=os.path.join(os.path.dirname(os.path.dirname(__file__)), 'infodynamics.jar'))
+
+import mock
+
+MOCK_MODULES = ['org.jpype.javadoc.JavadocExtractor']
+for mod_name in MOCK_MODULES:
+    sys.modules[mod_name] = mock.Mock()
 
 # -- Project information -----------------------------------------------------
 
@@ -44,7 +57,7 @@ templates_path = ['_templates']
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', '**/utils.py']
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -70,3 +83,18 @@ html_static_path = ['_static']
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
 language = 'English'
+
+
+def skip_java_classes(app, what, name, obj, skip, options):
+    try:
+        java_keywords = ['java', 'JArray', 'JDouble', 'Javadoc']
+        object_representation = str(obj)
+        if any(keyword in object_representation for keyword in java_keywords):
+            return True
+    except Exception as e:
+        print(f"Skipping {name} due to error: {e}")
+        return True
+    return skip
+
+def setup(app):
+    app.connect("autodoc-skip-member", skip_java_classes)
