@@ -29,11 +29,15 @@ HyperIT.setup_JVM(jarLocation)
 # Create instance
 it = HyperIT(data1, data2, channel_names, sfreq, freq_bands, verbose)
 
-# ROIs can be specified, too 
+# ROIs can be specified and then reset back to default
 it.roi(roi_list)
+it.reset_roi()
 
+# Calculate Mutual Information and Transfer Entropy
 mi = it.compute_mi(estimator_type='kernel', calc_sigstats=True, vis=True)
 te_xy, te_yx = it.compute_te(estimator_type='gaussian', calc_sigstats=True, vis=True)
+
+# Calculate Integrated Information Decomposition
 atoms = it.compute_atoms(tau=5, redundancy='mmi', vis=True)
 ```
 
@@ -52,6 +56,7 @@ pip install git+https://github.com/EdoardoChidichimo/HyperIT.git
 ## Dependencies
 ```
 numpy
+scipy
 matplotlib
 jpype
 phyid
@@ -68,7 +73,7 @@ For MI and TE calculations, HyperIT depends on **JIDT** by Lizier and colleagues
 
 - Lizier, J. T. (2014). "JIDT: An information-theoretic toolkit for studying the dynamics of complex systems", _Frontiers in Robotics and AI 1_(11). doi:[10.3389/frobt.2014.00011](http://dx.doi.org/10.3389/frobt.2014.00011) (pre-print: arXiv:[1408.3270](http://arxiv.org/abs/1408.3270))
 
-For $\Phi\text{ID}$ atom calculations, HyperIT depends on **phyid** by the Imperial Mind Lab, with thanks to Pedro Mediano and Eric Ceballos Dominguez for providing the code.
+For $\Phi\text{ID}$ atom calculations, HyperIT depends on **phyid** from Imperial Mind Lab, with thanks to Pedro Mediano and Eric Ceballos Dominguez for providing the code and guidance.
 
 - Mediano, P. A. M., Rosas, F. E., Luppi, A. I., Carhart-Harris, R. L., Bor, D., Seth, A. K., & Barrett, A. B. (2021). Towards an extended taxonomy of information dynamics via Integrated Information Decomposition. https://doi.org/10.48550/ARXIV.2109.13186
 - Luppi, A. I., Mediano, P. A. M., Rosas, F. E., Holland, N., Fryer, T. D., O’Brien, J. T., Rowe, J. B., Menon, D. K., Bor, D., & Stamatakis, E. A. (2022). A synergistic core for human brain evolution and cognition. Nature Neuroscience, 25(6), 771–782. https://doi.org/10.1038/s41593-022-01070-0
