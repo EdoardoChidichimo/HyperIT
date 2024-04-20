@@ -29,16 +29,12 @@ HyperIT.setup_JVM(jarLocation)
 # Create instance
 it = HyperIT(data1, data2, channel_names, sfreq, freq_bands, verbose)
 
-# ROIs can be specified, too 
+# ROIs can be specified and then reset back to default
 it.roi(roi_list)
-
-# Calculate Mutual Information
-mi = it.compute_mi(estimator_type='kernel', calc_sigstats=True, vis=True)
-
-# Reset ROIs to original
 it.reset_roi()
 
-# Calculate Transfer Entropy
+# Calculate Mutual Information and Transfer Entropy
+mi = it.compute_mi(estimator_type='kernel', calc_sigstats=True, vis=True)
 te_xy, te_yx = it.compute_te(estimator_type='gaussian', calc_sigstats=True, vis=True)
 
 # Calculate Integrated Information Decomposition
