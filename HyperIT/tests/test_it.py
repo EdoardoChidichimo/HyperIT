@@ -70,17 +70,17 @@ class TestHyperIT(unittest.TestCase):
         self.assertTrue(mock_hist.called)
         self.assertTrue(mock_iqr.called)
 
-    @patch('hyperit.HyperIT.set_estimator', return_value=('kernel', MagicMock(), {'prop1': 'value1'}, np.array([2, 2, 2, 2])))
-    @patch('hyperit.HyperIT.setup_JArray', return_value=np.zeros((4,)))
-    def test_te_computation(self, mock_set_estimator, mock_jarray):
+    @patch('hyperit.HyperIT.set_estimator')
+    def test_te_computation(self, mock_set_estimator):
         """Test Transfer Entropy computation setup."""
+        mock_set_estimator.return_value = ('kernel', MagicMock(), {'prop1': 'value1'}, (2,))
         hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
         te_xy, te_yx = hyperit_instance.compute_te('kernel')
         self.assertIsNotNone(te_xy)
         self.assertIsNotNone(te_yx)
         self.assertTrue(mock_set_estimator.called)
         self.assertEqual(mock_set_estimator.call_args[0], ('kernel', 'te', {}))
-
+        
     def test_compute_atoms_execution(self):
         """Test that compute_atoms executes and returns data."""
         hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
