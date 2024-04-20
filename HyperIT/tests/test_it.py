@@ -19,6 +19,7 @@ class TestHyperIT(unittest.TestCase):
         self.data2 = np.random.rand(10, 3, 600)
         self.freq_bands = {'alpha': (8, 12)}
         self.sfreq = 256  # Hz
+        self.jarLocation = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'infodynamics.jar')
         self.hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
 
     @patch('hyperit.HyperIT.setup_JVM')
@@ -59,6 +60,7 @@ class TestHyperIT(unittest.TestCase):
     @patch('hyperit.stats.iqr', return_value=1.0)
     def test_mi_computation(self, mock_hist, mock_iqr):
         """Test Mutual Information computation."""
+        HyperIT.setup_JVM(self.jarLocation, verbose=True)
         newitmi = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
         newitmi.compute_mi('kernel')
         self.assertIsNotNone(self.newitmi.it_matrix_xy)
@@ -67,6 +69,7 @@ class TestHyperIT(unittest.TestCase):
 
     def test_te_computation(self):
         """Test Transfer Entropy computation setup."""
+        HyperIT.setup_JVM(self.jarLocation, verbose=True)
         newitte = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
         newitte.compute_mi('gaussian')
         self.assertIsNotNone(self.newitte.it_matrix_xy)
