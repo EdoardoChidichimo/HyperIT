@@ -4,13 +4,22 @@ import numpy as np
 from hyperit import HyperIT 
 from utils import convert_names_to_indices, convert_indices_to_names
 import os
+import jpype
 
 class TestHyperIT(unittest.TestCase):
 
     @classmethod
-    def setUpClass(cls) -> None:
-        cls.jarLocation = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'infodynamics.jar')
-        HyperIT.setup_JVM(cls.jarLocation, verbose=True)
+    def setUpClass(cls):
+        """Set up at the class level: Start the JVM with the required library."""
+        cls.jarLocation = os.path.abspath(os.path.join(os.path.dirname(__file__), 'infodynamics.jar'))
+        if not jpype.isJVMStarted():
+            jpype.startJVM(jpype.getDefaultJVMPath(), "-ea", f"-Djava.class.path={cls.jarLocation}")
+
+    @classmethod
+    def tearDownClass(cls):
+        """Shutdown the JVM after all tests are done."""
+        if jpype.isJVMStarted():
+            jpype.shutdownJVM()
 
     def setUp(self):
         """Set up test variables used in the tests."""
@@ -59,14 +68,15 @@ class TestHyperIT(unittest.TestCase):
     @patch('hyperit.stats.iqr', return_value=1.0)
     def test_mi_computation(self, mock_hist, mock_iqr):
         """Test Mutual Information computation."""
-        self.hyperit_instance.compute_mi('histogram')
+
+        self.hyperit_instance.compute_mi('kernel')
         self.assertIsNotNone(self.hyperit_instance.it_matrix_xy)
         self.assertTrue(mock_hist.called)
         self.assertTrue(mock_iqr.called)
 
     def test_te_computation(self):
         """Test Transfer Entropy computation setup."""
-        self.hyperit_instance.compute_te('kernel')
+        self.hyperit_instance.compute_te('gaussian')
         self.assertIsNotNone(self.hyperit_instance.it_matrix_xy)
         self.assertIsNotNone(self.hyperit_instance.it_matrix_yx)
 
