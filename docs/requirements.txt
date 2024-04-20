@@ -6,5 +6,5 @@ numpy
 scipy 
 tqdm 
 matplotlib
-jpype 
+jpype1
 git+https://github.com/Imperial-MIND-lab/integrated-info-decomp.git
