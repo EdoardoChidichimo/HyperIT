@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="HyperIT",
+    name="hyperit",
     version="0.1.0",
     author="Edoardo Chidichimo",
     author_email="ec750@cam.ac.uk",
