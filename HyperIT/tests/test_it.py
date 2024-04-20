@@ -14,6 +14,7 @@ class TestHyperIT(unittest.TestCase):
         cls.jarLocation = os.path.abspath(os.path.join(os.path.dirname(__file__), 'infodynamics.jar'))
         if not jpype.isJVMStarted():
             jpype.startJVM(jpype.getDefaultJVMPath(), "-ea", f"-Djava.class.path={cls.jarLocation}")
+            HyperIT.setup_JVM(cls.jarLocation)
 
     @classmethod
     def tearDownClass(cls):
