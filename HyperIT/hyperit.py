@@ -116,15 +116,6 @@ class HyperIT:
 
     ## DUNDER METHODS
 
-    # def __del__(self) -> None:
-    #     """ Destructor for HyperIT object. Ensures JVM is shutdown upon deletion of object. """
-    #     try:
-    #         if isJVMStarted():
-    #             shutdownJVM()
-    #             print("JVM has been shutdown.")
-    #     except Exception as e:
-    #         print(f"Warning concerning shutting down JVM: {e}")
-
     def __repr__(self) -> str:
         """ String representation of HyperIT object. """
         analysis_type = 'Hyperscanning' if self._inter_brain else 'Intra-Brain'
