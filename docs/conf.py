@@ -15,7 +15,7 @@ import os
 import sys
 # from unittest.mock import MagicMock
 
-sys.path.insert(0, os.path.abspath('../HyperIT/'))
+sys.path.insert(0, os.path.abspath('../hyperit/'))
 
 # def setup_JVM():
 #     from jpype import startJVM, getDefaultJVMPath, isJVMStarted, shutdownJVM
@@ -44,7 +44,7 @@ sys.path.insert(0, os.path.abspath('../HyperIT/'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'HyperIT'
+project = 'hyperit'
 copyright = '2024, Edoardo Chidichimo'
 author = 'Edoardo Chidichimo'
 
