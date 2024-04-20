@@ -19,7 +19,6 @@ jobs:
         
     - name: Run Tests
       run: |
-        cd hyperit
         python -m unittest discover -s tests
       working-directory: hyperit
 
@@ -34,13 +33,9 @@ jobs:
         uses: openjournals/openjournals-draft-action@master
         with:
           journal: joss
-          # This should be the path to the paper within your repo.
           paper-path: hyperit/paper/paper.md
       - name: Upload
         uses: actions/upload-artifact@v1
         with:
-          name: paper
-          # This is the output path where Pandoc will write the compiled
-          # PDF. Note, this should be the same directory as the input
-          # paper.md
+          name: joss_paper
           path: hyperit/paper/paper.pdf
