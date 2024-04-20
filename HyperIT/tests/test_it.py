@@ -4,22 +4,22 @@ import numpy as np
 from hyperit import HyperIT 
 from utils import convert_names_to_indices, convert_indices_to_names
 import os
+import jpype
 
 class TestHyperIT(unittest.TestCase):
 
     @classmethod
-    def setUpClass(cls) -> None:
-        cls.jarLocation = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'infodynamics.jar')
-        HyperIT.setup_JVM(cls.jarLocation, verbose=True)
+    def setUpClass(cls):
+        """Set up at the class level: Start the JVM with the required library."""
+        cls.jarLocation = 'path/to/infodynamics.jar'  # Adjust path accordingly
+        if not jpype.isJVMStarted():
+            jpype.startJVM(jpype.getDefaultJVMPath(), "-ea", f"-Djava.class.path={cls.jarLocation}")
 
-    def setUp(self):
-        """Set up test variables used in the tests."""
-        self.channels = [['C1', 'C2', 'C3'], ['C1', 'C2', 'C3']]
-        self.data1 = np.random.rand(10, 3, 600)  # 10 epochs, 3 channels, 100 samples
-        self.data2 = np.random.rand(10, 3, 600)
-        self.freq_bands = {'alpha': (8, 12)}
-        self.sfreq = 256  # Hz
-        self.hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
+    @classmethod
+    def tearDownClass(cls):
+        """Shutdown the JVM after all tests are done."""
+        if jpype.isJVMStarted():
+            jpype.shutdownJVM()
 
     @patch('hyperit.HyperIT.setup_JVM')
     def test_initialization(self, mock_setup_jvm):
