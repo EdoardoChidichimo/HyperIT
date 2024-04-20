@@ -57,7 +57,7 @@ pip install git+https://github.com/EdoardoChidichimo/HyperIT.git
 numpy
 scipy
 matplotlib
-jpype
+jpype1
 phyid
 ```
 See: 
