@@ -761,17 +761,19 @@ class HyperIT:
         Function to compute mutual information between data (time-series signals) instantiated in the HyperIT object.
 
         Parameter options for mutual information estimators (defaults in parentheses):
-        - histogram:        None
-
-        - ksg1:             kraskov_param (4), normalise (True)
-
-        - ksg2:             kraskov_param (4), normalise (True)
-
-        - kernel:           kernel_width (0.25), normalise (True)
-
-        - gaussian:         normalise (True)
         
-        - symbolic:         l (1), m (3)
+        - histogram:
+            None
+        - ksg1:
+            kraskov_param (4), normalise (True)
+        - ksg2:
+            kraskov_param (4), normalise (True)
+        - kernel:
+            kernel_width (0.25), normalise (True)
+        - gaussian:
+            normalise (True)
+        - symbolic:
+            l (1), m (3)
 
         Args:
             estimator_type       (str, optional): Which mutual information estimator to use. Defaults to 'kernel'.
@@ -794,13 +796,20 @@ class HyperIT:
         data1 is taken to be the source and data2 the target (X -> Y). This function automatically computes the opposite matrix, too (Y -> X).
 
         Parameter options for transfer entropy estimators (defaults in parentheses):
-        - ksg:              k, k_tau, l, l_tau, delay, kraskov_param (all 1), normalise (True)
-
-        - kernel:           kernel_width (0.5), normalise (True)
-
-        - gaussian:         k, k_tau, l, l_tau, delay (all 1), bias_correction (False), normalise (True)
-
-        - symbolic:         k (1), normalise (True)
+        
+        - ksg:
+            - k, k_tau, l, l_tau, delay, kraskov_param (all 1)
+            - normalise (True)
+        - kernel:
+            - kernel_width (0.5)
+            - normalise (True)
+        - gaussian:
+            - k, k_tau, l, l_tau, delay (all 1)
+            - bias_correction (False)
+            - normalise (True)
+        - symbolic:
+            - k (1)
+            - normalise (True)
 
         Args:
             estimator_type       (str, optional): Which transfer entropy estimator to use. Defaults to 'kernel'.
