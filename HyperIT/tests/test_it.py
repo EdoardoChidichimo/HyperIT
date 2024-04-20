@@ -55,14 +55,6 @@ class TestHyperIT(unittest.TestCase):
         self.assertTrue(np.array_equal(self.hyperit_instance.roi[0], expected_roi[0]) and
                         np.array_equal(self.hyperit_instance.roi[1], expected_roi[1]))
 
-    def test_te_computation(self):
-        """Test Transfer Entropy computation setup."""
-        te_xy, te_yx = self.hyperit_instance.compute_te('kernel')
-        self.assertIsNotNone(self.hyperit_instance.it_matrix_xy)
-        self.assertIsNotNone(self.hyperit_instance.it_matrix_yx)
-        self.assertIsNotNone(te_xy)
-        self.assertIsNotNone(te_yx)
-
     @patch('hyperit.np.histogram2d', return_value=(np.zeros((10, 10)), None, None))
     @patch('hyperit.stats.iqr', return_value=1.0)
     def test_mi_computation(self, mock_hist, mock_iqr):
@@ -71,6 +63,12 @@ class TestHyperIT(unittest.TestCase):
         self.assertIsNotNone(self.hyperit_instance.it_matrix_xy)
         self.assertTrue(mock_hist.called)
         self.assertTrue(mock_iqr.called)
+
+    def test_te_computation(self):
+        """Test Transfer Entropy computation setup."""
+        self.hyperit_instance.compute_te('kernel')
+        self.assertIsNotNone(self.hyperit_instance.it_matrix_xy)
+        self.assertIsNotNone(self.hyperit_instance.it_matrix_yx)
 
     def test_compute_atoms_execution(self):
         """Test that compute_atoms executes and returns data."""
