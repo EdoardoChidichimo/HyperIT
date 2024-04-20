@@ -2,7 +2,7 @@
 
 _Hyperscanning Analyses using Information-Theoretic Measures!_
 
-[![Documentation Status](https://readthedocs.org/projects/hyperit/badge/?version=latest)](https://hyperit.readthedocs.io/en/latest/?badge=latest) ![Unit Testing](https://github.com/EdoardoChidichimo/HyperIT/actions/workflows/unit-tests.yml/badge.svg)
+[![Documentation Status](https://readthedocs.org/projects/hyperit/badge/?version=latest)](https://hyperit.readthedocs.io/en/latest/?badge=latest) ![Unit Testing](https://github.com/EdoardoChidichimo/HyperIT/actions/workflows/unit-tests.yml/badge.svg?random=123456) 
 
 
 The HyperIT Class is a framework that calculates **Mutual Information** (MI), **Transfer Entropy** (TE), and **Integrated Information Decomposition** ($\Phi\text{ID}$) for **both hyperscanning and intra-brain analyses**. 
