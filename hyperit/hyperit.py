@@ -58,7 +58,7 @@ class HyperIT:
 
 
 
-    def __init__(self, data1: np.ndarray, data2: np.ndarray, channel_names: List[str], sfreq: float = None, freq_bands: dict = None, standardise_data: bool = False, inter_brain: bool = True, verbose: bool = False, **filter_options) -> None:
+    def __init__(self, data1: np.ndarray, data2: np.ndarray, channel_names: List[str] = None, sfreq: float = None, freq_bands: dict = None, standardise_data: bool = False, inter_brain: bool = True, verbose: bool = False, **filter_options) -> None:
         """ Creates HyperIT object containing time-series data and channel names for analysis. 
             Automatic data checks for consistency and dimensionality, identifying whether analysis is to be intra- or inter-brain.
 
