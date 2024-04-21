@@ -1,8 +1,8 @@
 import unittest
 from unittest.mock import MagicMock, PropertyMock, patch
 import numpy as np
-from hyperit import HyperIT 
-from utils import convert_names_to_indices, convert_indices_to_names
+from hyperit.hyperit import HyperIT 
+from hyperit.utils import convert_names_to_indices, convert_indices_to_names
 import os
 
 class TestHyperIT(unittest.TestCase):

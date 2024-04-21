@@ -20,7 +20,7 @@ jobs:
     - name: Run Tests
       run: |
         python -m unittest discover -s tests
-      working-directory: hyperit
+      working-directory: HyperIT
 
         
   paper:
