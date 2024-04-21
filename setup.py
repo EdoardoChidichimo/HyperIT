@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="hyperit",
-    version="v0.1.0",
+    version="v1.0.0",
     author="Edoardo Chidichimo",
     author_email="ec750@cam.ac.uk",
     description="Information-theoretic tools for social neuroscientific endeavours",
@@ -21,7 +21,7 @@ setup(
         'integrated-info-decomp>=0.1'  # This should be the name of the package as expected to be imported in Python
     ],
     dependency_links=[
-        'https://github.com/Imperial-MIND-lab/integrated-info-decomp/tarball/master#egg=integrated-info-decomp-0.1'
+        'https://github.com/EdoardoChidichimo/HyperIT/tarball/master#egg=hyperit-v1.0.0'
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
