@@ -31,7 +31,7 @@ def bandpass_filter_data(data: np.ndarray, sfreq: float, freq_bands: dict, **fil
 
     filtered_data = np.empty((n_epochs, n_freq_bands, n_channels, n_samples))
 
-    for i, (band, (l_freq, h_freq)) in enumerate(freq_bands.items()):
+    for i, (_, (l_freq, h_freq)) in enumerate(freq_bands.items()):
         filtered_data[:,i,:,:] = mne.filter.filter_data(data, sfreq=sfreq, l_freq=l_freq, h_freq=h_freq, verbose=False, **filter_options)
 
     return filtered_data # returns with shape of (n_epochs, n_freq_bands, n_channels, n_samples)
