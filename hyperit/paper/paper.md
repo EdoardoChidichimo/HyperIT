@@ -15,7 +15,7 @@ authors:
 affiliations:
  - name: Department of Psychology, University of Cambridge, UK
    index: 1
-date: 8 April 2024
+date: 21 April 2024
 bibliography: paper.bib
 header-includes:
   - |
@@ -63,9 +63,9 @@ Of relevance for neuroscientific endeavours, information theory provides measure
 More recently, approaches to exhaustively decompose a multivariate system’s informational structure has described three modes; namely, information about a target variable may be redundant (Rdn): information that is shared between variables; unique (Unq): information that is specific to a single variable; or synergistic (Syn): information that is only learnt from the conjunction of multiple sources and not individually, with the exclusive-OR function being a canonical example [@williams_nonnegative_2010]. These so-called “partial information atoms” are non-overlapping and form an additive set, exhaustively describing the informational composition of a multivariate system (\autoref{eq:pid}). 
 
 \begin{align}\label{eq:pid}
-    I(Y; X_1, X_2) = &\text{Syn}(Y; X_1, X_2) + \\ \notag
-    &\text{Unq}(Y; X_1) + \text{Unq}(Y; X_2) + \\ \notag
-    &\text{Rdn}(Y; X_1, X_2). \notag
+    I(X_1, X_2; Y) = &\text{Syn}(X_1, X_2; Y) + \\ \notag
+    &\text{Unq}(X_1; Y) + \text{Unq}(X_2; Y) + \\ \notag
+    &\text{Rdn}(X_1, X_2; Y). \notag
 \end{align} 
 
 A recent development, termed \textit{integrated information decomposition}, extends this decomposition to multi-source and multi-target continuous time-series random variables to decompose information dynamics into various qualitative modes including information storage, copy, transfer, erasure, downward causation, causal decoupling, and upward causation [@mediano_beyond_2019; @mediano_towards_2021]. This measure specifically decomposes the time-delayed mutual information ($t' > t$) between two multivariate processes (\autoref{eq:phi-id}).
