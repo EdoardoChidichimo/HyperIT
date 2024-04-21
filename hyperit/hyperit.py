@@ -5,6 +5,7 @@ from PIL import Image, ImageDraw
 from typing import Tuple, List, Union, Any
 from tqdm import tqdm
 import matplotlib.pyplot as plt
+import os
 
 from jpype import isJVMStarted, startJVM, getDefaultJVMPath
 from phyid.calculate import calc_PhiID
@@ -40,11 +41,11 @@ class HyperIT:
     _jvm_initialised = False
 
     @classmethod
-    def setup_JVM(cls, jarLocation: str, verbose: bool = False) -> None:
+    def setup_JVM(cls, jarLocation: str = '', verbose: bool = False) -> None:
         """Setup JVM if not already started. To be called once before creating any instances."""
         if not cls._jvm_initialised:
             if not isJVMStarted():
-                startJVM(getDefaultJVMPath(), "-ea", f"-Djava.class.path={jarLocation}")
+                startJVM(getDefaultJVMPath(), "-ea", f"-Djava.class.path={os.path.join(jarLocation, 'infodynamics.jar')}")
                 cls._jvm_initialised = True
                 if verbose:
                     print("JVM started successfully.")
