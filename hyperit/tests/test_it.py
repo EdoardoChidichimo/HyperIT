@@ -9,7 +9,7 @@ class TestHyperIT(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        cls.jarLocation = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'infodynamics.jar')
+        cls.jarLocation = os.path.join(os.path.dirname(os.path.dirname(__file__)))
         HyperIT.setup_JVM(cls.jarLocation, verbose=True)
 
     def setUp(self):
@@ -19,7 +19,7 @@ class TestHyperIT(unittest.TestCase):
         self.data2 = np.random.rand(10, 3, 600)
         self.freq_bands = {'alpha': (8, 12)}
         self.sfreq = 256  # Hz
-        self.jarLocation = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'infodynamics.jar')
+        self.jarLocation = os.path.join(os.path.dirname(os.path.dirname(__file__)))
         self.hyperit_instance = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
 
     @patch('hyperit.HyperIT.setup_JVM')
