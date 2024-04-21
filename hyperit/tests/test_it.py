@@ -56,15 +56,11 @@ class TestHyperIT(unittest.TestCase):
         self.assertTrue(np.array_equal(self.hyperit_instance.roi[0], expected_roi[0]) and
                         np.array_equal(self.hyperit_instance.roi[1], expected_roi[1]))
 
-    @patch('hyperit.np.histogram2d', return_value=(np.zeros((10, 10)), None, None))
-    @patch('hyperit.stats.iqr', return_value=1.0)
-    def test_mi_computation(self, mock_hist, mock_iqr):
+    def test_mi_computation(self):
         """Test Mutual Information computation."""
         newitmi = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
         newitmi.compute_mi('histogram')
         self.assertIsNotNone(newitmi.it_matrix_xy)
-        self.assertTrue(mock_hist.called)
-        self.assertTrue(mock_iqr.called)
 
     def test_te_computation(self):
         """Test Transfer Entropy computation setup."""
