@@ -1,12 +1,9 @@
 import numpy as np
-from jpype import isJVMStarted, getDefaultJVMPath, startJVM, JArray, JDouble, shutdownJVM, JPackage, JClass
-import os
+from jpype import JArray, JDouble, JPackage, JClass
 import mne
 import warnings
 
-
 warnings.filterwarnings("ignore", message="filter_length .* is longer than the signal .*")
-
 
 text_positions = {'rtr': (485, 1007),
                   'rtx': (160, 780),
