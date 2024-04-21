@@ -11,7 +11,7 @@ from jpype import isJVMStarted, startJVM, getDefaultJVMPath
 from phyid.calculate import calc_PhiID
 from phyid.utils import PhiID_atoms_abbr
 
-from .utils import setup_JArray, bandpass_filter_data, convert_names_to_indices, convert_indices_to_names, set_estimator, text_positions
+from .utils import setup_JArray, bandpass_filter_data, convert_names_to_indices, convert_indices_to_names, set_estimator
 
 from enum import Enum
 
@@ -82,12 +82,7 @@ class HyperIT:
             raise RuntimeError("JVM has not been started. Call setup_JVM() before creating any instances of HyperIT.")
 
         self.verbose: bool = verbose
-        self._can_vis = True
-
-        self._channel_names = channel_names or None
-        if not self._channel_names and self.verbose:
-            print("No channel names provided. Visualisation will be disabled.")
-            self._can_vis = False
+        self._channel_names = channel_names or None   
             
         self._channel_indices1 = []
         self._channel_indices2 = []
@@ -101,6 +96,9 @@ class HyperIT:
         self._data2 = data2 
 
         self.__check_data()
+        self.__check_channels()
+        self.__configure_data()
+
         _, self._n_epo, self._n_freq_bands, self._n_chan, self._n_samples = self._all_data.shape
 
         self._roi = []
@@ -180,41 +178,44 @@ class HyperIT:
             self._data1 = self._data1[np.newaxis, ...]
             self._data2 = self._data2[np.newaxis, ...]
 
-        self._n_chan = self._data1.shape[1] 
+    def __check_channel_names(self) -> None:
+        """ Checks the consistency of the channel names provided. """
 
         if not isinstance(self._channel_names, list):
             raise ValueError("Channel names must be a list of strings or a list of lists of strings.")
 
-        # Checking the type of the first element to determine the structure
-        if isinstance(self._channel_names[0], str):
-            # If the first element is a string, assume all are strings and check accordingly
+        elif isinstance(self._channel_names[0], str):
             if not all(isinstance(name, str) for name in self._channel_names):
                 raise ValueError("All elements must be strings if the first element is a string.")
-            # Duplicate the list if it is intended for use in an intra-brain or similar context
             self._channel_names = [self._channel_names, self._channel_names.copy()]
 
         elif isinstance(self._channel_names[0], list):
-            # If the first element is a list, ensure all elements are lists of strings
             if not all(isinstance(sublist, list) for sublist in self._channel_names):
                 raise ValueError("All elements must be lists of strings if the first element is a list.")
             for sublist in self._channel_names:
                 if not all(isinstance(name, str) for name in sublist):
                     raise ValueError("All sublists must be lists of strings.")
-
-            # Here, check if there's only one sublist and duplicate if necessary
             if len(self._channel_names) == 1:
                 self._channel_names = self._channel_names * 2
-
         else:
             raise ValueError("Channel names must be either a list of strings or a list of lists of strings.")
 
         if any(len(names) != self._n_chan for names in self._channel_names):
             raise ValueError("The number of channels in time-series data does not match the length of channel_names.")
-        
-        
-        self._channel_indices1 = np.arange(len(self._channel_names[0]))
-        self._channel_indices2 = np.arange(len(self._channel_names[1])) if len(self._channel_names) > 1 else self._channel_indices2.copy()
 
+    def __check_channels(self) -> None:
+        """ Checks the consistency of the channel names provided and sets the number of channels as an object variable. """
+
+        self._n_chan = self._data1.shape[1] 
+        self._channel_indices1, self._channel_indices2 = np.arange(self._n_chan), np.arange(self._n_chan)
+        
+        if self._channel_names:
+            self.__check_channel_names()
+        else:
+            self._channel_names = [np.arange(self._n_chan), np.arange(self._n_chan)]
+            
+    def __configure_data(self) -> None:
+        """ Configures the data for analysis by bandpass filtering and standardising. """
 
         if self._freq_bands:
             self._data1, self._data2 = bandpass_filter_data(self._data1, self._sfreq, self._freq_bands, **self._filter_options), bandpass_filter_data(self._data2, self._sfreq, self._freq_bands, **self._filter_options)
@@ -227,6 +228,10 @@ class HyperIT:
             self._data2 = (self._data2 - np.mean(self._data2, axis=-1, keepdims=True)) / np.std(self._data2, axis=-1, keepdims=True)
             
         self._all_data = np.stack([self._data1, self._data2], axis=0)
+            
+        
+        
+        
 
     
 
@@ -555,7 +560,7 @@ class HyperIT:
                     for j in range(loop_range):
                         self.__compute_pair_or_group(epoch, freq_band, i, j)
 
-        if self.vis and self._can_vis:
+        if self.vis:
             self.__prepare_vis()
             
         if not self.measure == MeasureType.MI and self._inter_brain:
@@ -578,12 +583,12 @@ class HyperIT:
         
         return self.__main_calc()
 
-    def __setup_atom_calc(self, tau: int, redundancy: str, vis: bool, **kwargs) -> np.ndarray | Tuple[np.ndarray, np.ndarray]:
+    def __setup_atom_calc(self, tau: int, redundancy: str, **kwargs) -> np.ndarray | Tuple[np.ndarray, np.ndarray]:
         """ General function for computing Integrated Information Decomposition. """
 
         self.tau = tau
         self.redundancy = redundancy
-        self.vis = vis
+        self.vis = False
         self.params = kwargs
 
         return self.__main_calc()
@@ -597,12 +602,6 @@ class HyperIT:
 
         if self.verbose:
             print(f"Plotting {self.measure_title}...")
-
-        if self.measure == MeasureType.PhyID:
-            self.__plot_atoms(self.it_matrix_xy)
-            if self._inter_brain:
-                self.__plot_atoms(self.it_matrix_yx)
-            return
     
         self.__plot_it(self.it_matrix_xy)
 
@@ -713,59 +712,12 @@ class HyperIT:
                 plt.tick_params(axis='y', which='both', right=False, left=True, labelleft=True)
                 plt.show()
 
-    def __plot_atoms(self, phi_dict: dict) -> None:
-        """Plots the values of the atoms in the lattice for each frequency band for a given pair of channels/ROI groups."""
-        
-        if not phi_dict or not phi_dict[0]:
-            print("The phi_dict is empty or not properly structured.")
-            return
-
-        f_range = len(phi_dict)
-        x_range = len(phi_dict[0])
-        y_range = len(phi_dict[0][0])
-        print("f_range:", f_range)
-
-        for freq_band in range(f_range):
-            print(f"Now plotting for frequency band {freq_band}")
-            prompt_message = f"Choose two numbers from this range for X and Y channels/groups: [0-{x_range - 1}], [0-{y_range - 1}] (or type 'done' to stop): "
-            
-            while True:
-                user_input = input(prompt_message).split(',')
-                
-                if len(user_input) == 1 and user_input[0].lower() == 'done':
-                    break
-
-                if len(user_input) != 2 or not all(part.strip().isdigit() for part in user_input):
-                    print("Invalid input. Please enter exactly two numbers separated by a comma.")
-                    continue
-
-                ch_X, ch_Y = (int(part.strip()) for part in user_input)
-
-                try:
-                    value_dict = phi_dict[freq_band][ch_X][ch_Y]
-                    if value_dict is None:
-                        raise KeyError
-
-                    image = Image.open('visualisations/atoms_lattice_values.png')
-                    draw = ImageDraw.Draw(image) 
-
-                    for text, pos in text_positions.items():
-                        value = value_dict.get(text, '0')
-                        plot_text = f"{round(float(value), 3):.3f}"
-                        draw.text(pos, plot_text, fill="black", font_size=25)
-
-                    image.show()
-                
-                except KeyError:
-                    print("Invalid channel/group indices.")
-
-
 
     ## HIGH-LEVEL INTERFACE FUNCTIONS
 
     def compute_mi(self, estimator_type: str = 'kernel', calc_sigstats: bool = False, vis: bool = False, **kwargs) -> np.ndarray:
         """
-        Function to compute mutual information between data (time-series signals) instantiated in the HyperIT object.
+        Function to compute Mutual Information between data (time-series signals) instantiated in the HyperIT object.
 
         Parameter options for mutual information estimators (defaults in parentheses):
         
@@ -799,7 +751,7 @@ class HyperIT:
 
     def compute_te(self, estimator_type: str = 'kernel', calc_sigstats: bool = False, vis: bool = False, **kwargs) -> np.ndarray | Tuple[np.ndarray, np.ndarray]:
         """
-        Function to compute transfer entropy between data (time-series signals) instantiated in the HyperIT object. 
+        Function to compute Transfer Entropy between data (time-series signals) instantiated in the HyperIT object. 
         data1 is taken to be the source and data2 the target (X -> Y). This function automatically computes the opposite matrix, too (Y -> X).
 
         Parameter options for transfer entropy estimators (defaults in parentheses):
@@ -833,16 +785,14 @@ class HyperIT:
         self.measure_title = 'Transfer Entropy'
         return self.__setup_mite_calc(estimator_type, calc_sigstats, vis, **kwargs)
 
-    def compute_atoms(self, tau: int = 1, redundancy: str = 'MMI', vis: bool = False, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
+    def compute_atoms(self, tau: int = 1, redundancy: str = 'mmi', **kwargs) -> Tuple[np.ndarray, np.ndarray]:
         """
         Function to compute Integrated Information Decomposition (ΦID) between data (time-series signals) instantiated in the HyperIT object.
-            Option to visualise the lattice values for a specific channel pair (be sure to specify via plot_channels kwarg).
 
         Args:
             tau             (int, optional): Time-lag parameter. Defaults to 1.
             kind            (str, optional): Estimator type. Defaults to "gaussian".
-            redundancy      (str, optional): Redundancy function to use. Defaults to 'MMI' (Minimum Mutual Information).
-            vis            (bool, optional): Whether to visualise (via __plot_atoms()). Defaults to False.
+            redundancy      (str, optional): Redundancy function to use. Defaults to 'mmi' (Minimum Mutual Information).
 
         Returns:
               Tuple(np.ndarray, np.ndarray): Two matrices of Integrated Information Decomposition dictionaries (representing all atoms, both X->Y and Y->X), each with shape (n_chan, n_chan),
@@ -850,4 +800,4 @@ class HyperIT:
         
         self.measure = MeasureType.PhyID
         self.measure_title = 'Integrated Information Decomposition'
-        return self.__setup_atom_calc(tau, redundancy, vis, **kwargs)
+        return self.__setup_atom_calc(tau, redundancy, **kwargs)

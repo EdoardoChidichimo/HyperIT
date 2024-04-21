@@ -5,23 +5,23 @@ import warnings
 
 warnings.filterwarnings("ignore", message="filter_length .* is longer than the signal .*")
 
-text_positions = {'rtr': (485, 1007),
-                  'rtx': (160, 780),
-                  'rty': (363, 780), 
-                  'rts': (37, 512), 
-                  'xtr': (610, 779), 
-                  'xtx': (237, 510), 
-                  'xty': (487, 585), 
-                  'xts': (160, 243), 
-                  'ytr': (800, 780), 
-                  'ytx': (485, 427), 
-                  'yty': (725, 505), 
-                  'yts': (363, 243), 
-                  'str': (930, 505), 
-                  'stx': (605, 243), 
-                  'sty': (807, 243), 
-                  'sts': (485, 41)   
-                }
+# text_positions = {'rtr': (485, 1007),
+#                   'rtx': (160, 780),
+#                   'rty': (363, 780), 
+#                   'rts': (37, 512), 
+#                   'xtr': (610, 779), 
+#                   'xtx': (237, 510), 
+#                   'xty': (487, 585), 
+#                   'xts': (160, 243), 
+#                   'ytr': (800, 780), 
+#                   'ytx': (485, 427), 
+#                   'yty': (725, 505), 
+#                   'yts': (363, 243), 
+#                   'str': (930, 505), 
+#                   'stx': (605, 243), 
+#                   'sty': (807, 243), 
+#                   'sts': (485, 41)   
+#                 }
 
 
 def bandpass_filter_data(data: np.ndarray, sfreq: float, freq_bands: dict, **filter_options) -> np.ndarray:
