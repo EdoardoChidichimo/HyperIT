@@ -589,7 +589,6 @@ class HyperIT:
         self.tau = tau
         self.redundancy = redundancy
         self.vis = False
-        self.params = kwargs
 
         return self.__main_calc()
 
@@ -785,14 +784,17 @@ class HyperIT:
         self.measure_title = 'Transfer Entropy'
         return self.__setup_mite_calc(estimator_type, calc_sigstats, vis, **kwargs)
 
-    def compute_atoms(self, tau: int = 1, redundancy: str = 'mmi', **kwargs) -> Tuple[np.ndarray, np.ndarray]:
+    def compute_atoms(self, tau: int = 1, redundancy: str = 'MMI') -> Tuple[np.ndarray, np.ndarray]:
         """
         Function to compute Integrated Information Decomposition (ΦID) between data (time-series signals) instantiated in the HyperIT object.
 
         Args:
             tau             (int, optional): Time-lag parameter. Defaults to 1.
-            kind            (str, optional): Estimator type. Defaults to "gaussian".
-            redundancy      (str, optional): Redundancy function to use. Defaults to 'mmi' (Minimum Mutual Information).
+            redundancy      (str, optional): Redundancy function to use. Defaults to 'MMI' (Minimum Mutual Information).
+
+        NOTE: ``redundancy``: MMI (Minimum Mutual Information) or CCS (Common Change in Surprisal)
+            
+
 
         Returns:
               Tuple(np.ndarray, np.ndarray): Two matrices of Integrated Information Decomposition dictionaries (representing all atoms, both X->Y and Y->X), each with shape (n_chan, n_chan),
@@ -800,4 +802,4 @@ class HyperIT:
         
         self.measure = MeasureType.PhyID
         self.measure_title = 'Integrated Information Decomposition'
-        return self.__setup_atom_calc(tau, redundancy, **kwargs)
+        return self.__setup_atom_calc(tau, redundancy)
