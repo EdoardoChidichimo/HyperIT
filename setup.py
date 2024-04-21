@@ -17,8 +17,7 @@ setup(
         'matplotlib',
         'Pillow',
         'tqdm',
-        'jpype1',  # Make sure to specify the correct package name here if jpype is meant
-        'integrated-info-decomp>=0.1'  # This should be the name of the package as expected to be imported in Python
+        'jpype1',
     ],
     dependency_links=[
         'https://github.com/EdoardoChidichimo/HyperIT/tarball/master#egg=hyperit-v1.0.0'
