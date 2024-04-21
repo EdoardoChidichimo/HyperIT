@@ -82,12 +82,17 @@ class HyperIT:
             raise RuntimeError("JVM has not been started. Call setup_JVM() before creating any instances of HyperIT.")
 
         self.verbose: bool = verbose
+        self._can_vis = True
 
-        self._channel_names = channel_names #  [[p1][p2]] or [[p1]] for intra-brain
+        self._channel_names = channel_names or None
+        if not self._channel_names and self.verbose:
+            print("No channel names provided. Visualisation will be disabled.")
+            self._can_vis = False
+            
         self._channel_indices1 = []
         self._channel_indices2 = []
-        self._sfreq = sfreq if sfreq else None
-        self._freq_bands = freq_bands if freq_bands else None
+        self._sfreq = sfreq or None
+        self._freq_bands = freq_bands or None
         self._filter_options = filter_options
         self._standardise_data = standardise_data
         self._inter_brain = inter_brain
@@ -215,7 +220,7 @@ class HyperIT:
             self._data1, self._data2 = bandpass_filter_data(self._data1, self._sfreq, self._freq_bands, **self._filter_options), bandpass_filter_data(self._data2, self._sfreq, self._freq_bands, **self._filter_options)
                 
         else:
-            self._data1, self._data2 = np.expand_dims(self._data1, axis=0), np.expand_dims(self._data2, axis=0)
+            self._data1, self._data2 = np.expand_dims(self._data1, axis=1), np.expand_dims(self._data2, axis=1)
 
         if self._standardise_data:
             self._data1 = (self._data1 - np.mean(self._data1, axis=-1, keepdims=True)) / np.std(self._data1, axis=-1, keepdims=True)
@@ -224,7 +229,7 @@ class HyperIT:
         self._all_data = np.stack([self._data1, self._data2], axis=0)
 
     
-    
+
     ## DEFINING REGIONS OF INTEREST
 
     @property
@@ -288,8 +293,6 @@ class HyperIT:
             print(f"Scale of organisation: {self._scale_of_organisation} channels.")
             print(f"Groups of channels: {self._soi_groups}")
 
-        roi1, roi2 = roi_list
-        
         self._channel_indices1, self._channel_indices2 = [convert_names_to_indices(self._channel_names, part, idx) for idx, part in enumerate(roi_list)] 
        
         # POINTWISE CHANNEL COMPARISON
@@ -552,7 +555,7 @@ class HyperIT:
                     for j in range(loop_range):
                         self.__compute_pair_or_group(epoch, freq_band, i, j)
 
-        if self.vis:
+        if self.vis and self._can_vis:
             self.__prepare_vis()
             
         if not self.measure == MeasureType.MI and self._inter_brain:
