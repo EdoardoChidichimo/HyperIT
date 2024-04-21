@@ -32,12 +32,12 @@ def bandpass_filter_data(data: np.ndarray, sfreq: float, freq_bands: dict, **fil
     n_epochs, n_channels, n_samples = data.shape
     n_freq_bands = len(freq_bands)
 
-    filtered_data = np.empty((n_freq_bands, n_epochs, n_channels, n_samples))
+    filtered_data = np.empty((n_epochs, n_freq_bands, n_channels, n_samples))
 
     for i, (band, (l_freq, h_freq)) in enumerate(freq_bands.items()):
-        filtered_data[i] = mne.filter.filter_data(data, sfreq=sfreq, l_freq=l_freq, h_freq=h_freq, verbose=False, **filter_options)
+        filtered_data[:,i,:,:] = mne.filter.filter_data(data, sfreq=sfreq, l_freq=l_freq, h_freq=h_freq, verbose=False, **filter_options)
 
-    return filtered_data # returns with shape of (n_freq_bands, n_epochs, n_channels, n_samples)
+    return filtered_data # returns with shape of (n_epochs, n_freq_bands, n_channels, n_samples)
 
 def setup_JArray(a: np.ndarray) -> JArray:
     """ Converts a numpy array to a Java array for use in JIDT."""

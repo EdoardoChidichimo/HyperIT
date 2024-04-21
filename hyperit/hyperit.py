@@ -95,7 +95,7 @@ class HyperIT:
         self._data2 = data2 
 
         self.__check_data()
-        _, self._n_freq_bands, self._n_epo, self._n_chan, self._n_samples = self._all_data.shape
+        _, self._n_epo, self._n_freq_bands, self._n_chan, self._n_samples = self._all_data.shape
 
         self._roi = []
         self._roi_specified = False
@@ -165,14 +165,16 @@ class HyperIT:
         if self._data1.shape != self._data2.shape:
             raise ValueError("Time-series data must have the same shape for both participants.")
     
+        if self._data1.ndim not in [2,3]:
+            raise ValueError(f"Unexpected number of dimensions in time-series data: {self._data1.ndim}. Expected 2 dimensions (channels, time_points) or 3 dimensions (epochs, channels, time_points).")
+
+        # Ensure data is 3 dimensional and has shape (n_epochs, n_channels, n_samples). 
+        # If freq_bands have been specified, this will become 4 dimensional: (n_epochs, n_freq_bands, n_channels, n_samples)
         if self._data1.ndim == 2:
             self._data1 = self._data1[np.newaxis, ...]
             self._data2 = self._data2[np.newaxis, ...]
 
         self._n_chan = self._data1.shape[1] 
-
-        if self._data1.ndim not in [2,3]:
-            raise ValueError(f"Unexpected number of dimensions in time-series data: {self._data1.ndim}. Expected 2 dimensions (channels, time_points) or 3 dimensions (epochs, channels, time_points).")
 
         if not isinstance(self._channel_names, list):
             raise ValueError("Channel names must be a list of strings or a list of lists of strings.")
@@ -449,7 +451,7 @@ class HyperIT:
         n_combo = self._n_chan if self._scale_of_organisation == 1 else self._soi_groups
 
         if self.measure == MeasureType.MI or self.measure == MeasureType.TE:
-            self.it_matrix_xy = np.zeros((self._n_freq_bands, self._n_epo, n_combo, n_combo, 4))
+            self.it_matrix_xy = np.zeros((self._n_epo, self._n_freq_bands, n_combo, n_combo, 4))
             
             if self.measure == MeasureType.TE and self._inter_brain:
                 # TE is assymetrical so will need to compute both X->Y and Y->X.
@@ -458,7 +460,7 @@ class HyperIT:
                 self.it_matrix_yx = self.it_matrix_xy.copy()
 
         elif self.measure == MeasureType.PhyID:
-            self.it_matrix_xy = [[[[{} for _ in range(n_combo)] for _ in range(n_combo)] for _ in range(self._n_epo)] for _ in range(self._n_freq_bands)]
+            self.it_matrix_xy = [[[[{} for _ in range(n_combo)] for _ in range(n_combo)] for _ in range(self._n_freq_bands)] for _ in range(self._n_epo)]
             if self._inter_brain:
                 self.it_matrix_yx = self.it_matrix_xy.copy() 
 
@@ -506,7 +508,7 @@ class HyperIT:
 
         return self.__estimate_it(s1, s2)
 
-    def __compute_pair_or_group(self, freq_band: int, epoch: int, i: int, j: int) -> None:
+    def __compute_pair_or_group(self, epoch: int, freq_band: int, i: int, j: int) -> None:
         """ Computes the Mutual Information or Transfer Entropy for a pair of channels or groups of channels. """
 
         if not (self._inter_brain or i != j):
@@ -517,22 +519,22 @@ class HyperIT:
         # data needs to be (samples, channels/groups) if not pointwise comparison 
         # (this is how both JIDT and phyid handle and expect incoming multivariate data)
         # (Note that .T does not affect pointwise comparison as it is already in the correct shape)
-        s1, s2 = self._data1[freq_band, epoch, channel_or_group_i, :].T, self._data2[freq_band, epoch, channel_or_group_j, :].T
+        s1, s2 = self._data1[epoch, freq_band, channel_or_group_i, :].T, self._data2[epoch, freq_band, channel_or_group_j, :].T
 
         if self.measure == MeasureType.PhyID:
-            self.it_matrix_xy[freq_band][epoch][i][j] = self.__filter_estimation(s1, s2)
+            self.it_matrix_xy[epoch][freq_band][i][j] = self.__filter_estimation(s1, s2)
             if self._inter_brain:
-                self.it_matrix_yx[freq_band][epoch][i][j] = self.__filter_estimation(s2, s1)
+                self.it_matrix_yx[epoch][freq_band][i][j] = self.__filter_estimation(s2, s1)
             return
         
 
-        self.it_matrix_xy[freq_band, epoch, i, j] = self.__filter_estimation(s1, s2)
+        self.it_matrix_xy[epoch, freq_band, i, j] = self.__filter_estimation(s1, s2)
 
         if self.measure == MeasureType.MI and not self._inter_brain:
-            self.it_matrix_xy[freq_band, epoch, j, i] = self.it_matrix_xy[freq_band, epoch, i, j]
+            self.it_matrix_xy[epoch, freq_band, j, i] = self.it_matrix_xy[epoch, freq_band, i, j]
 
         if self.measure == MeasureType.TE and self._inter_brain:
-            self.it_matrix_yx[freq_band, epoch, i, j] = self.__filter_estimation(s2, s1)
+            self.it_matrix_yx[epoch, freq_band, i, j] = self.__filter_estimation(s2, s1)
 
 
 
@@ -543,11 +545,11 @@ class HyperIT:
         # Set up it_matrix_xy (and it_matrix_yx if necessary) and store the number of channels/groups to loop through
         loop_range = self.__setup_matrices()
 
-        for freq_band in range(self._n_freq_bands):
-            for epoch in range(self._n_epo):
+        for epoch in range(self._n_epo):
+            for freq_band in range(self._n_freq_bands):
                 for i in tqdm(range(loop_range)):
                     for j in range(loop_range):
-                        self.__compute_pair_or_group(freq_band, epoch, i, j)
+                        self.__compute_pair_or_group(epoch, freq_band, i, j)
 
         if self.vis:
             self.__prepare_vis()
@@ -650,11 +652,11 @@ class HyperIT:
             else:
                 print("Invalid choice. Defaulting to un-epoched data.")
 
-        for freq_band in range(self._n_freq_bands):
-            for epo_i in epochs:
-                
-                highest = np.max(it_matrix[freq_band, epo_i, :, :, 0])
-                channel_pair_with_highest = np.unravel_index(np.argmax(it_matrix[freq_band, epo_i, :, :, 0]), it_matrix[freq_band, epo_i, :, :, 0].shape)
+        for epoch in epochs:
+            for freq_band in range(self._n_freq_bands):
+            
+                highest = np.max(it_matrix[epoch, freq_band, :, :, 0])
+                channel_pair_with_highest = np.unravel_index(np.argmax(it_matrix[epoch, freq_band, :, :, 0]), it_matrix[epoch, freq_band, :, :, 0].shape)
                 if self.verbose:
                     if self._scale_of_organisation == 1:
                         print(f"Strongest regions: (Source Channel {convert_indices_to_names(self._channel_names, self._channel_indices1, 0)[channel_pair_with_highest[0]]} --> " +
@@ -663,7 +665,7 @@ class HyperIT:
                         print(f"Strongest regions: (Source Group {source_channel_names[i]} --> Target Group {target_channel_names[i]}) = {highest}")
 
                 plt.figure(figsize=(12, 10))
-                plt.imshow(it_matrix[freq_band, epo_i, :, :, 0], cmap='BuPu', vmin=0, aspect='auto')
+                plt.imshow(it_matrix[epoch, freq_band, :, :, 0], cmap='BuPu', vmin=0, aspect='auto')
 
                 band_description = ""
                 if self._freq_bands:
@@ -673,9 +675,9 @@ class HyperIT:
                 # Check if epochs are involved and adjust the title accordingly
                 if self._n_epo > 1 and not choice == "3":
                     if band_description:
-                        plt.title(f'{title}; Frequency Band {band_description}, Epoch {epo_i+1}', pad=20)
+                        plt.title(f'{title}; Epoch {epoch+1}, Frequency Band {band_description}', pad=20)
                     else:
-                        plt.title(f'{title}; Epoch {epo_i+1}', pad=20)
+                        plt.title(f'{title}; Epoch {epoch+1}', pad=20)
                 else:
                     if band_description:
                         plt.title(f'{title}; Frequency Band {band_description}', pad=20)
@@ -685,9 +687,10 @@ class HyperIT:
                 if self.calc_sigstats and not choice == "3":
                     for i in range(it_matrix.shape[0]):
                         for j in range(it_matrix.shape[1]):
-                            p_val = float(it_matrix[freq_band, epo_i, i, j, 3])
+                            p_val = float(it_matrix[epoch, freq_band, i, j, 3])
                             if p_val < self.p_threshold and (not self._inter_brain and i != j):
-                                normalized_value = (it_matrix[freq_band, epo_i, i, j, 0] - np.min(it_matrix[freq_band, epo_i, :, :, 0])) / (np.max(it_matrix[freq_band, epo_i, :, :, 0]) - np.min(it_matrix[freq_band, epo_i, :, :, 0]))
+                                from_all = it_matrix[epoch, freq_band, :, :, 0]
+                                normalized_value = (it_matrix[epoch, freq_band, i, j, 0] - np.min(from_all)) / (np.max(from_all) - np.min(from_all))
                                 text_colour = 'white' if normalized_value > 0.5 else 'black'
                                 plt.text(j, i, f'p={p_val:.2f}', ha='center', va='center', color=text_colour, fontsize=8, fontweight='bold')
 

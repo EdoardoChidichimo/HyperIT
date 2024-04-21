@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="hyperit",
-    version="0.1.0",
+    version="v0.1.0",
     author="Edoardo Chidichimo",
     author_email="ec750@cam.ac.uk",
     description="Information-theoretic tools for social neuroscientific endeavours",
@@ -17,8 +17,11 @@ setup(
         'matplotlib',
         'Pillow',
         'tqdm',
-        'jpype',
-        'git+https://github.com/Imperial-MIND-lab/integrated-info-decomp.git'
+        'jpype1',  # Make sure to specify the correct package name here if jpype is meant
+        'integrated-info-decomp>=0.1'  # This should be the name of the package as expected to be imported in Python
+    ],
+    dependency_links=[
+        'https://github.com/Imperial-MIND-lab/integrated-info-decomp/tarball/master#egg=integrated-info-decomp-0.1'
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
