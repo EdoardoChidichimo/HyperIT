@@ -52,14 +52,14 @@ class HyperIT:
         - If data is 1 dimensional, data is assumed to be single channel time series with shape   (time_points).
 
     Args:
-        data1                   (np.ndarray): Time-series data for participant 1. Can take shape (n_epo, n_chan, n_samples) or (n_chan, n_samples) for epoched and unepoched data, respectively. 
-        data2                   (np.ndarray): Time-series data for participant 2. Must have the same shape as data1.
-        channel_names  (List[str], optional): A list of strings representing the channel names for each participant. [[channel_names_p1], [channel_names_p2]] or [[channel_names_p1]] for intra-brain.
-        sfreq              (float, optional): Sampling frequency of the data.
-        freq_bands          (dict, optional): Dictionary of frequency bands for bandpass filtering. {band_name: (low_freq, high_freq), ...}.
-        standardise_data    (bool, optional): Whether to standardise the data before analysis. Defaults to True.
-        verbose             (bool, optional): Whether constructor and analyses should output details and progress. Defaults to False.
-        **filter_options    (dict, optional): Additional keyword arguments for bandpass filtering.
+        - data1                   (np.ndarray): Time-series data for participant 1. Can take shape (n_epo, n_chan, n_samples) or (n_chan, n_samples) for epoched and unepoched data, respectively. 
+        - data2                   (np.ndarray): Time-series data for participant 2. Must have the same shape as data1.
+        - channel_names  (List[str], optional): A list of strings representing the channel names for each participant. [[channel_names_p1], [channel_names_p2]] or [[channel_names_p1]] for intra-brain.
+        - sfreq              (float, optional): Sampling frequency of the data.
+        - freq_bands          (dict, optional): Dictionary of frequency bands for bandpass filtering. {band_name: (low_freq, high_freq), ...}.
+        - standardise_data    (bool, optional): Whether to standardise the data before analysis. Defaults to True.
+        - verbose             (bool, optional): Whether constructor and analyses should output details and progress. Defaults to False.
+        - **filter_options    (dict, optional): Additional keyword arguments for bandpass filtering.
 
 """
 
