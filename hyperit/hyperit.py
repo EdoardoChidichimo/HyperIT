@@ -38,29 +38,33 @@ class HyperIT:
     and Integrated Information Decomposition (ΦID) for continuous time-series data. Compatible for both
     intra-brain and inter-brain analyses and for both epoched and unepoched data. Analyses can be conducted
     at specified frequency bands (via bandpass filtering) and option to standardise data before computing measures.
+    
     Multiple estimator choices and parameter customisations (via JIDT) are available, including KSG, Kernel, Gaussian,
-    Symbolic, and Histogram/Binning. Integrated statistical significance testing using permutation/boostrapping approach.
+    Symbolic, and Histogram/Binning. 
+    
+    Integrated statistical significance testing using permutation/boostrapping approach.
+    
     Visualisations of MI/TE matrices also provided.
 
     Args:
-        data1 (np.ndarray): Time-series data for participant 1. Can take shape (n_epo, n_chan, n_samples) or
-        (n_chan, n_samples) for epoched and unepoched data, respectively.
-        data2 (np.ndarray): Time-series data for participant 2. Must have the same shape as data1.
-        channel_names (List[str], optional): A list of strings representing the channel names for each participant.
-        [[channel_names_p1], [channel_names_p2]] or [[channel_names_p1]] for intra-brain.
-        sfreq (float, optional): Sampling frequency of the data.
-        freq_bands (dict, optional): Dictionary of frequency bands for bandpass filtering. {band_name: (low_freq, high_freq)}.
-        standardise_data (bool, optional): Whether to standardise the data before analysis. Defaults to True.
-        verbose (bool, optional): Whether constructor and analyses should output details and progress. Defaults to False.
-        **filter_options (dict, optional): Additional keyword arguments for bandpass filtering.
+        data1                       (np.ndarray): Time-series data for participant 1. Can take shape (n_epo, n_chan, n_samples) or (n_chan, n_samples) for epoched and unepoched data, respectively.
+        data2                       (np.ndarray): Time-series data for participant 2. Must have the same shape as data1. 
+        channel_names      (List[str], optional): A list of strings representing the channel names for each participant. [[channel_names_p1], [channel_names_p2]] or [[channel_names_p1]].
+        sfreq                  (float, optional): Sampling frequency of the data.
+        freq_bands              (dict, optional): Dictionary of frequency bands for bandpass filtering. {band_name: (low_freq, high_freq)}.
+        standardise_data        (bool, optional): Whether to standardise the data before analysis. Defaults to True.
+        verbose                 (bool, optional): Whether constructor and analyses should output details and progress. Defaults to False.
+        **filter_options        (dict, optional): Additional keyword arguments for bandpass filtering.
 
     Note:
         This class requires numpy, mne, matplotlib, PIL, jpype (with the local infodynamics.jar file), and phyid as dependencies.
         
         Before a HyperIT can be created, users must first call HyperIT.setup_JVM(jarLocation) to initialise the Java Virtual
         Machine (JVM) with the local directory location of the infodynamics.jar file. Users can then create multiple HyperIT
-        objects containing time-series data, later calling various functions for analysis. Automatic data checks for consistency
-        and dimensionality, identifying whether analysis is to be intra- or inter-brain. Determines whether epochality of data.
+        objects containing time-series data, later calling various functions for analysis. 
+        
+        Automatic data checks for consistency and dimensionality, identifying whether analysis is to be intra- or inter-brain 
+        and epochality of data.
             - If data is 3 dimensional, data is assumed to be epoched with shape (epochs, channels, time_points).
             - If data is 2 dimensional, data is assumed to be unepoched with shape (channels, time_points).
             - If data is 1 dimensional, data is assumed to be single channel time series with shape (time_points).
@@ -696,8 +700,8 @@ class HyperIT:
                             ## NEED TO FIX THIS FOR VARIOUS CONDITIONS
                             if p_val < self._p_threshold and (not self._hyper and i != j):
                                 from_all = self._it_matrix[epoch, freq_band, :, :, 0]
-                                normalized_value = (self._it_matrix[epoch, freq_band, i, j, 0] - np.min(results)) / (np.max(results) - np.min(results))
-                                text_colour = 'white' if normalized_value > 0.5 else 'black'
+                                normalised_value = (self._it_matrix[epoch, freq_band, i, j, 0] - np.min(results)) / (np.max(results) - np.min(results))
+                                text_colour = 'white' if normalised_value > 0.5 else 'black'
                                 plt.text(j, i, f'p={p_val:.2f}', ha='center', va='center', color=text_colour, fontsize=8, fontweight='bold')
 
                 plt.colorbar()
@@ -754,7 +758,8 @@ class HyperIT:
                 - `inter21`: matrix[:, :, n_chan:, :n_chan]
 
         Available Estimators and Their Parameters:
-            - histogram: Uses binning techniques.
+            - histogram: 
+                - None.
             - ksg1:
                 - kraskov_param (int, default=4).
                 - normalise (bool, default=True).
@@ -826,6 +831,7 @@ class HyperIT:
         self._measure = MeasureType.TE
         self._measure_title = 'Transfer Entropy'
         return self.__setup_mite_calc(estimator_type, include_intra, calc_sigstats, vis, plot_epochs, **kwargs)
+
 
     def compute_atoms(self, tau: int = 1, redundancy: str = 'MMI', include_intra: bool = False) -> Tuple[np.ndarray, np.ndarray]:
         """
