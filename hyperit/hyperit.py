@@ -43,19 +43,20 @@ class HyperIT:
     Visualisations of MI/TE matrices also provided.
 
     Args:
-        - data1 (np.ndarray): Time-series data for participant 1. Can take shape (n_epo, n_chan, n_samples) or
-          (n_chan, n_samples) for epoched and unepoched data, respectively.
-        - data2 (np.ndarray): Time-series data for participant 2. Must have the same shape as data1.
-        - channel_names (List[str], optional): A list of strings representing the channel names for each participant.
-          [[channel_names_p1], [channel_names_p2]] or [[channel_names_p1]] for intra-brain.
-        - sfreq (float, optional): Sampling frequency of the data.
-        - freq_bands (dict, optional): Dictionary of frequency bands for bandpass filtering. {band_name: (low_freq, high_freq)}.
-        - standardise_data (bool, optional): Whether to standardise the data before analysis. Defaults to True.
-        - verbose (bool, optional): Whether constructor and analyses should output details and progress. Defaults to False.
-        - **filter_options (dict, optional): Additional keyword arguments for bandpass filtering.
+        data1 (np.ndarray): Time-series data for participant 1. Can take shape (n_epo, n_chan, n_samples) or
+        (n_chan, n_samples) for epoched and unepoched data, respectively.
+        data2 (np.ndarray): Time-series data for participant 2. Must have the same shape as data1.
+        channel_names (List[str], optional): A list of strings representing the channel names for each participant.
+        [[channel_names_p1], [channel_names_p2]] or [[channel_names_p1]] for intra-brain.
+        sfreq (float, optional): Sampling frequency of the data.
+        freq_bands (dict, optional): Dictionary of frequency bands for bandpass filtering. {band_name: (low_freq, high_freq)}.
+        standardise_data (bool, optional): Whether to standardise the data before analysis. Defaults to True.
+        verbose (bool, optional): Whether constructor and analyses should output details and progress. Defaults to False.
+        **filter_options (dict, optional): Additional keyword arguments for bandpass filtering.
 
     Note:
         This class requires numpy, mne, matplotlib, PIL, jpype (with the local infodynamics.jar file), and phyid as dependencies.
+        
         Before a HyperIT can be created, users must first call HyperIT.setup_JVM(jarLocation) to initialise the Java Virtual
         Machine (JVM) with the local directory location of the infodynamics.jar file. Users can then create multiple HyperIT
         objects containing time-series data, later calling various functions for analysis. Automatic data checks for consistency
@@ -725,93 +726,102 @@ class HyperIT:
 
     ## HIGH-LEVEL INTERFACE FUNCTIONS
 
-    def compute_mi(self, estimator_type: str = 'kernel', include_intra: bool = False, calc_sigstats: bool = False, vis: bool = False, plot_epochs: List = None, **kwargs) -> np.ndarray:
+    def compute_mi(self, estimator_type: str = 'kernel', include_intra: bool = False, calc_sigstats: bool = False, vis: bool = False, plot_epochs: List[int] = None, **kwargs) -> np.ndarray:
         """
-        Function to compute Mutual Information between data (time-series signals) instantiated in the HyperIT object.
+        Computes Mutual Information (MI) between data (time-series signals) using specified estimator.
 
         Args:
-            estimator_type       (str, optional): Which mutual information estimator to use. Defaults to 'kernel'.
-            include_intra       (bool, optional): Whether to include intra-brain analyses. Defaults to False.
-            calc_sigstats       (bool, optional): Whether to conduct statistical signficance testing. Defaults to False.
-            vis                 (bool, optional): Whether to visualise. Defaults to False.
+            estimator_type          (str, optional): Specifies the MI estimator to use. Defaults to 'kernel'.
+            include_intra          (bool, optional): If True, includes intra-brain analyses. Defaults to False.
+            calc_sigstats          (bool, optional): If True, performs statistical significance testing. Defaults to False.
+            vis                    (bool, optional): If True, results will be visualised. Defaults to False.
+            plot_epochs       (List[int], optional): Specifies which epochs to plot. None plots all. Defaults to None.
+            **kwargs                               : Additional keyword arguments for the MI estimator.
 
         Returns:
-                                    (np.ndarray): Mutual information matrix (symmetric).
-                                                  If include_intra, the matrix will have shape (n_epo, n_freq_bands, 2*n_chan, 2*n_chan), otherwise (n_epo, n_freq_bands, n_chan, n_chan). 
-                                                  If include_intra, retrieve: 
-                                                    - intra1  = matrix[:, :, :n_chan, :n_chan]  
-                                                    - intra2  = matrix[:, :, n_chan:, n_chan:]  
-                                                    - inter12 = matrix[:, :, :n_chan, n_chan:]  
-                                                    - inter21 = matrix[:, :, n_chan:, :n_chan]
-                                                  If calc_sigstats, the matrix will have shape (n_epo, n_freq_bands, {2*}n_chan, {2*}n_chan, 4), where the last dimension represents the statistical signficance testing results: (local result, distribution mean, distribution standard deviation, p-value).
-                                                  If calc_sigstats is False, only the local mutual information result will be returned as a float.
-        
-        Parameter options for mutual information estimators (defaults in parentheses):
-        
-        - ``histogram``
-            - None
-        - ``ksg1``
-            - kraskov_param (4)
-            - normalise (True)
-        - ``ksg2``
-            - kraskov_param (4)
-            - normalise (True)
-        - ``kernel``
-            - kernel_width (0.25)
-            - normalise (True)
-        - ``gaussian``
-            - normalise (True)
-        - ``symbolic``
-            - k (3)
-            - delay (1)
+            np.ndarray: A symmetric mutual information matrix. The shape of the matrix is determined by
+            the `include_intra` and `calc_sigstats` flags:
+                - If `include_intra` is False, shape is (n_epo, n_freq_bands, n_chan, n_chan).
+                - If `include_intra` is True, shape is (n_epo, n_freq_bands, 2*n_chan, 2*n_chan).
+                - If `calc_sigstats` is True, an additional last dimension (size 4) contains statistical
+                significance results: [MI value, mean, standard deviation, p-value].
+
+        Note:
+            When `include_intra` is True, the matrix can be segmented accordingly:
+                - `intra1`: matrix[:, :, :n_chan, :n_chan]
+                - `intra2`: matrix[:, :, n_chan:, n_chan:]
+                - `inter12`: matrix[:, :, :n_chan, n_chan:]
+                - `inter21`: matrix[:, :, n_chan:, :n_chan]
+
+        Available Estimators and Their Parameters:
+            - histogram: Uses binning techniques.
+            - ksg1:
+                - kraskov_param (int, default=4).
+                - normalise (bool, default=True).
+            - ksg2:
+                - kraskov_param (int, default=4).
+                - normalise (bool, default=True).
+            - kernel:
+                - kernel_width (float, default=0.25).
+                - normalise (bool, default=True).
+            - gaussian:
+                - normalise (bool, default=True).
+            - symbolic:
+                - k (int, default=3): Embedding history or symbol length.
+                - delay (int, default=1).
         """
-        
         self._measure = MeasureType.MI
         self._measure_title = 'Mutual Information'
         return self.__setup_mite_calc(estimator_type, include_intra, calc_sigstats, vis, plot_epochs, **kwargs)
 
-    def compute_te(self, estimator_type: str = 'kernel', include_intra: bool = False, calc_sigstats: bool = False, vis: bool = False, plot_epochs: List = None, **kwargs) -> np.ndarray | Tuple[np.ndarray, np.ndarray]:
+
+    def compute_te(self, estimator_type: str = 'kernel', include_intra: bool = False, calc_sigstats: bool = False, vis: bool = False, plot_epochs: List[int] = None, **kwargs) -> np.ndarray:
         """
-        Function to compute Transfer Entropy between data (time-series signals) instantiated in the HyperIT object. 
-        data1 is taken to be the source and data2 the target (X -> Y).
+        Computes Transfer Entropy (TE) between time-series data using a specified estimator. This function allows for intra-brain and inter-brain analyses and includes optional statistical significance testing. Data1 is considered the source and Data2 the target.
 
         Args:
-            estimator_type       (str, optional): Which transfer entropy estimator to use. Defaults to 'kernel'.
-            include_intra       (bool, optional): Whether to include intra-brain analyses. Defaults to False.
-            calc_sigstats       (bool, optional): Whether to conduct statistical signficance testing. Defaults to False.
-            vis                 (bool, optional): Whether to visualise. Defaults to False.
+            estimator_type          (str, optional): Specifies the TE estimator to use. Defaults to 'kernel'.
+            include_intra          (bool, optional): Whether to include intra-brain comparisons in the output matrix. Defaults to False.
+            calc_sigstats          (bool, optional): Whether to calculate statistical significance of TE values. Defaults to False.
+            vis                    (bool, optional): Enables visualisation of the TE matrix if set to True. Defaults to False.
+            plot_epochs       (List[int], optional): Specifies which epochs to plot. If None, plots all epochs. Defaults to None.
+            **kwargs                               : Additional parameters for the TE estimator.
 
         Returns:
-                   Tuple(np.ndarray, np.ndarray): Transfer entropy matrix (non-symmetric, data1 -> data2 only).
-                                                  If include_intra, the matrix will have shape (n_epo, n_freq_bands, 2*n_chan, 2*n_chan), otherwise (n_epo, n_freq_bands, n_chan, n_chan). 
-                                                  If include_intra, retrieve: 
-                                                    - intra1  = matrix[:, :, :n_chan, :n_chan]  
-                                                    - intra2  = matrix[:, :, n_chan:, n_chan:]  
-                                                    - inter12 = matrix[:, :, :n_chan, n_chan:]  
-                                                    - inter21 = matrix[:, :, n_chan:, :n_chan]
-                                                  If calc_sigstats, the matrix will have shape (n_epo, n_freq_bands, {2*}n_chan, {2*}n_chan, 4), where the last dimension represents the statistical signficance testing results: (local result, distribution mean, distribution standard deviation, p-value).
-                                                  If calc_sigstats is False, only the local mutual information result will be returned as a float.
-        
-        Parameter options for transfer entropy estimators (defaults in parentheses):
-        
-        - ``ksg``
-            - k, k_tau, l, l_tau (all 1)
-            - delay (1) 
-            - kraskov_param (1)
-            - normalise (True)
-        - ``kernel``
-            - kernel_width (0.5)
-            - normalise (True)
-        - ``gaussian``
-            - k, k_tau, l, l_tau (all 1)
-            - delay (1)
-            - bias_correction (False)
-            - normalise (True)
-        - ``symbolic``
-            - k (1)
-            - normalise (True)
-        
+            np.ndarray: A transfer entropy matrix. The shape of the matrix is determined by
+            the `include_intra` and `calc_sigstats` flags:
+                - If `include_intra` is False, shape is (n_epo, n_freq_bands, n_chan, n_chan).
+                - If `include_intra` is True, shape is (n_epo, n_freq_bands, 2*n_chan, 2*n_chan).
+                - If `calc_sigstats` is True, an additional last dimension (size 4) contains statistical
+                significance results: [MI value, mean, standard deviation, p-value].
+        Note:
+            When `include_intra` is True, the matrix can be segmented accordingly:
+                - `intra1`: matrix[:, :, :n_chan, :n_chan]
+                - `intra2`: matrix[:, :, n_chan:, n_chan:]
+                - `inter12`: matrix[:, :, :n_chan, n_chan:]
+                - `inter21`: matrix[:, :, n_chan:, :n_chan]
+
+        Available Estimators and Their Parameters:
+            - `ksg`:
+                - k, k_tau (int, default=1): Target and source embedding history length.
+                - l, l_tau (int, default=1): Target and source embedding delay.
+                - delay (int, default=1): Delay parameter for temporal dependency.
+                - kraskov_param (int, default=1).
+                - normalise (bool, default=True).
+            - `kernel`:
+                - kernel_width (float, default=0.5).
+                - normalise (bool, default=True).
+            - `gaussian`:
+                - k, k_tau (int, default=1): Target and source embedding history length.
+                - l, l_tau (int, default=1): Target and source embedding delay.
+                - delay (int, default=1): Delay parameter for temporal dependency.
+                - bias_correction (bool, default=False).
+                - normalise (bool, default=True).
+            - `symbolic`:
+                - k (int, default=1): Embedding history length.
+                - normalise (bool, default=True).
         """
+
         
         self._measure = MeasureType.TE
         self._measure_title = 'Transfer Entropy'
@@ -822,21 +832,29 @@ class HyperIT:
         Function to compute Integrated Information Decomposition (ΦID) between data (time-series signals) instantiated in the HyperIT object.
 
         Args:
-            tau             (int, optional): Time-lag parameter. Defaults to 1.
-            redundancy      (str, optional): Redundancy function to use. Defaults to 'MMI' (Minimum Mutual Information).
-            include_intra  (bool, optional): Whether to include intra-brain analysis. Defaults to False.
-
+            tau                 (int, optional): Time-lag parameter. Defaults to 1.
+            redundancy          (str, optional): Redundancy function to use. Defaults to 'MMI' (Minimum Mutual Information).
+            include_intra      (bool, optional): Whether to include intra-brain analysis. Defaults to False.
             
         Returns:
-                               (np.ndarray): Matrix of Integrated Information Decomposition dictionaries.
-                                             If include_intra, the matrix will have shape (n_epo, n_freq_bands, 2*n_chan, 2*n_chan), otherwise (n_epo, n_freq_bands, n_chan, n_chan). 
-                                             If include_intra, retrieve: 
-                                             - intra1  = matrix[:, :, :n_chan, :n_chan]  
-                                             - intra2  = matrix[:, :, n_chan:, n_chan:]  
-                                             - inter12 = matrix[:, :, :n_chan, n_chan:]  
-                                             - inter21 = matrix[:, :, n_chan:, :n_chan]
-                                             If calc_sigstats, the matrix will have shape (n_epo, n_freq_bands, {2*}n_chan, {2*}n_chan, 4), where the last dimension represents the statistical signficance testing results: (local result, distribution mean, distribution standard deviation, p-value).
-                                             If calc_sigstats is False, only the local mutual information result will be returned as a float.
+            np.ndarray: A matrix integrated information decomposition atom dictionaries. The shape of the matrix is determined by
+            the `include_intra` and `calc_sigstats` flags:
+                - If `include_intra` is False, shape is (n_epo, n_freq_bands, n_chan, n_chan).
+                - If `include_intra` is True, shape is (n_epo, n_freq_bands, 2*n_chan, 2*n_chan).
+                - If `calc_sigstats` is True, an additional last dimension (size 4) contains statistical
+                significance results: [MI value, mean, standard deviation, p-value].
+        Note:
+            When `include_intra` is True, the matrix can be segmented accordingly:
+                - `intra1`: matrix[:, :, :n_chan, :n_chan]
+                - `intra2`: matrix[:, :, n_chan:, n_chan:]
+                - `inter12`: matrix[:, :, :n_chan, n_chan:]
+                - `inter21`: matrix[:, :, n_chan:, :n_chan]
+            Visualisation is not a possibility at the moment.
+
+        Available Redundancy Functions:
+            - 'MMI': Minimum Mutual Information
+            - 'CCS': Common Change in Surprisal
+
         """
         
         self._measure = MeasureType.PhyID
