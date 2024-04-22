@@ -23,7 +23,7 @@ project_root = os.path.abspath(os.path.join(docs_dir, '..'))
 # sys.path.insert(0, os.path.abspath('..'))
 
 sys.path.insert(0, project_root)
-sys.path.insert(0, os.path.join(project_root))
+sys.path.insert(0, os.path.join(project_root, 'hyperit'))
 
 
 from hyperit import HyperIT
