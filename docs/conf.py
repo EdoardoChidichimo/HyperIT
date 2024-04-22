@@ -43,9 +43,7 @@ author = 'Edoardo Chidichimo'
 
 # The full version, including alpha/beta/rc tags
 
-version = hyperit.__version__
-# The full version, including alpha/beta/rc tags
-release = hyperit.__version__
+version = 'v1.0.0'
 
 # -- General configuration ---------------------------------------------------
 
