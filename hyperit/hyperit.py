@@ -33,13 +33,34 @@ class MeasureType(Enum):
 class HyperIT:
     """ HyperIT: Hyperscanning Analyses using Information Theoretic Measures.
 
-        HyperIT is equipped to compute pairwise, multivariate Mutual Information (MI), Transfer Entropy (TE), and Integrated Information Decomposition (ΦID) for continuous time-series data. 
+        HyperIT is equipped to compute pairwise and multivariate Mutual Information (MI), Transfer Entropy (TE), and Integrated Information Decomposition (ΦID) for continuous time-series data. 
         Compatible for both intra-brain and inter-brain analyses and for both epoched and unepoched data. 
+        Analyses can be conducted at specified frequency bands (via bandpass filtering) and option to standardise data before computing measures.
         Multiple estimator choices and parameter customisations (via JIDT) are available, including KSG, Kernel, Gaussian, Symbolic, and Histogram/Binning. 
         Integrated statistical significance testing using permutation/boostrapping approach. 
-        Visualisations of MI/TE matrices and information atoms/lattices also provided.
+        Visualisations of MI/TE matrices also provided.
 
     Note: This class requires numpy, mne, matplotlib, PIL, jpype (with the local infodynamics.jar file), and phyid as dependencies.
+
+        Before a HyperIT can be created, users must first call HyperIT.setup_JVM(jarLocation) to initialise the Java Virtual Machine (JVM) with the local directory location of the infodynamics.jar file.
+        Users can then create multiple HyperIT objects containing time-series data, later calling various functions for analysis. 
+        Automatic data checks for consistency and dimensionality, identifying whether analysis is to be intra- or inter-brain.
+        Determines whether epochality of data.
+            - If data is 3 dimensional, data is assumed to be epoched with shape    (epochs, channels, time_points).
+            - If data is 2 dimensional, data is assumed to be unepoched with shape          (channels, time_points).
+            - If data is 1 dimensional, data is assumed to be single channel time series with shape   (time_points).
+
+
+        Args:
+            data1                   (np.ndarray): Time-series data for participant 1. Can take shape (n_epo, n_chan, n_samples) or (n_chan, n_samples) for epoched and unepoched data, respectively. 
+            data2                   (np.ndarray): Time-series data for participant 2. Must have the same shape as data1.
+            channel_names  (List[str], optional): A list of strings representing the channel names for each participant. [[channel_names_p1], [channel_names_p2]] or [[channel_names_p1]] for intra-brain.
+            sfreq              (float, optional): Sampling frequency of the data.
+            freq_bands          (dict, optional): Dictionary of frequency bands for bandpass filtering. {band_name: (low_freq, high_freq), ...}.
+            standardise_data    (bool, optional): Whether to standardise the data before analysis. Defaults to True.
+            verbose             (bool, optional): Whether constructor and analyses should output details and progress. Defaults to False.
+            **filter_options    (dict, optional): Additional keyword arguments for bandpass filtering.
+    
     """
 
     ## SETTING UP JVM
@@ -65,23 +86,6 @@ class HyperIT:
 
 
     def __init__(self, data1: np.ndarray, data2: np.ndarray, channel_names: List[str] = None, sfreq: float = None, freq_bands: dict = None, standardise_data: bool = False, verbose: bool = False, **filter_options) -> None:
-        """ Creates HyperIT object containing time-series data and channel names for analysis. 
-            Automatic data checks for consistency and dimensionality, identifying whether analysis is to be intra- or inter-brain.
-
-            Determines whether epochality of data.
-                - If data is 3 dimensional, data is assumed to be epoched with shape    (epochs, channels, time_points).
-                - If data is 2 dimensional, data is assumed to be unepoched with shape          (channels, time_points).
-
-        Args:
-            data1                   (np.ndarray): Time-series data for participant 1. Can take shape (n_epo, n_chan, n_samples) or (n_chan, n_samples) for epoched and unepoched data, respectively. 
-            data2                   (np.ndarray): Time-series data for participant 2. Must have the same shape as data1.
-            channel_names  (List[str], optional): A list of strings representing the channel names for each participant. [[channel_names_p1], [channel_names_p2]] or [[channel_names_p1]] for intra-brain.
-            sfreq              (float, optional): Sampling frequency of the data.
-            freq_bands          (dict, optional): Dictionary of frequency bands for bandpass filtering. {band_name: (low_freq, high_freq)}.
-            standardise_data    (bool, optional): Whether to standardise the data before analysis. Defaults to True.
-            verbose             (bool, optional): Whether constructor and analyses should output details and progress. Defaults to False.
-            **filter_options    (dict, optional): Additional keyword arguments for bandpass filtering.
-        """
 
         if not self.__class__._jvm_initialised:
             raise RuntimeError("JVM has not been started. Call setup_JVM() before creating any instances of HyperIT.")
@@ -150,6 +154,13 @@ class HyperIT:
 
     ## DATA, CHANNEL, & INITIALISATION CHECKING
 
+    @staticmethod
+    def __ensure_three_dims(data):
+        """Ensure the numpy array `data` has three dimensions."""
+        while data.ndim < 3:
+            data = np.expand_dims(data, axis=0)
+        return data
+
     def __check_data(self) -> None:
         """ Checks the consistency and dimensionality of the time-series data and channel names. Sets the number of epochs, channels, and time points as object variables.
 
@@ -176,14 +187,12 @@ class HyperIT:
         if self._data1.shape != self._data2.shape:
             raise ValueError("Time-series data must have the same shape for both participants.")
     
-        if self._data1.ndim not in [2,3]:
-            raise ValueError(f"Unexpected number of dimensions in time-series data: {self._data1.ndim}. Expected 2 dimensions (channels, time_points) or 3 dimensions (epochs, channels, time_points).")
+        if self._data1.ndim not in [1,2,3]:
+            raise ValueError(f"Unexpected number of dimensions in time-series data: {self._data1.ndim}. Expected 3 dimensions (epochs, channels, time_points) or 2 dimensions (channels, time_points) or 1 dimension (time_points).")
 
         # Ensure data is 3 dimensional and has shape (n_epochs, n_channels, n_samples). 
         # If freq_bands have been specified, this will become 4 dimensional: (n_epochs, n_freq_bands, n_channels, n_samples)
-        if self._data1.ndim == 2:
-            self._data1 = self._data1[np.newaxis, ...]
-            self._data2 = self._data2[np.newaxis, ...]
+        self._data1, self._data2 = map(self.__ensure_three_dims, (self._data1, self._data2))
 
     def __check_channel_names(self) -> None:
         """ Checks the consistency of the channel names provided. """
@@ -735,20 +744,21 @@ class HyperIT:
                                                   If calc_sigstats is False, only the local mutual information result will be returned as a float.
         
         Parameter options for mutual information estimators (defaults in parentheses):
-        - ``histogram``:
+        
+        - ``histogram``
             - None
-        - ``ksg1``:
+        - ``ksg1``
             - kraskov_param (4)
             - normalise (True)
-        - ``ksg2``:
+        - ``ksg2``
             - kraskov_param (4)
             - normalise (True)
-        - ``kernel``:
+        - ``kernel``
             - kernel_width (0.25)
             - normalise (True)
-        - ``gaussian``:
+        - ``gaussian``
             - normalise (True)
-        - ``symbolic``:
+        - ``symbolic``
             - k (3)
             - delay (1)
         """
@@ -780,20 +790,21 @@ class HyperIT:
                                                   If calc_sigstats is False, only the local mutual information result will be returned as a float.
         
         Parameter options for transfer entropy estimators (defaults in parentheses):
-        - ``ksg``:
+        
+        - ``ksg``
             - k, k_tau, l, l_tau (all 1)
             - delay (1) 
             - kraskov_param (1)
             - normalise (True)
-        - ``kernel``:
+        - ``kernel``
             - kernel_width (0.5)
             - normalise (True)
-        - ``gaussian``:
+        - ``gaussian``
             - k, k_tau, l, l_tau (all 1)
             - delay (1)
             - bias_correction (False)
             - normalise (True)
-        - ``symbolic``:
+        - ``symbolic``
             - k (1)
             - normalise (True)
         

@@ -18,16 +18,7 @@ sys.modules['jpype'] = Mock()
 sys.modules['org.jpype.javadoc'] = Mock()
 sys.modules['org.jpype.javadoc.JavadocExtractor'] = Mock()
 
-# docs_dir = os.path.abspath(os.path.dirname(__file__))
-# project_root = os.path.abspath(os.path.join(docs_dir, '..'))
-# # sys.path.insert(0, os.path.abspath('..'))
-
-# sys.path.insert(0, os.path.join(project_root))
-
-# sys.path.insert(0, os.path.abspath(os.path.pardir))
-
 sys.path.insert(0, os.path.abspath('..'))
-
 sys.path.insert(1, os.path.abspath('../hyperit'))
 
 from hyperit import hyperit as it
