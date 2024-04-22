@@ -37,7 +37,7 @@ class TestHyperIT(unittest.TestCase):
 
     def test_check_data_invalid_shape(self):
         """Test the data validation logic with incorrect input shapes."""
-        data_wrong = np.random.rand(5, 100)  # Wrong shape
+        data_wrong = np.random.rand(100)
         with self.assertRaises(ValueError):
             HyperIT(data_wrong, data_wrong, self.channels, self.sfreq, self.freq_bands)
 
@@ -59,31 +59,30 @@ class TestHyperIT(unittest.TestCase):
     def test_mi_computation(self):
         """Test Mutual Information computation."""
         newitmi = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
-        newitmi.compute_mi('histogram')
-        self.assertIsNotNone(newitmi.it_matrix_xy)
+        newitmi.compute_mi('histogram', include_intra=True)
+        self.assertIsNotNone(newitmi.it_matrix)
 
     def test_te_computation(self):
         """Test Transfer Entropy computation setup."""
         newitte = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
-        newitte.compute_te('gaussian')
-        self.assertIsNotNone(newitte.it_matrix_xy)
-        self.assertIsNotNone(newitte.it_matrix_yx)
+        newitte.compute_te('gaussian', include_intra=False)
+        self.assertIsNotNone(newitte.it_matrix)
 
     def test_compute_atoms_execution(self):
         """Test that compute_atoms executes and returns data."""
         try:
-            phi_xy, phi_yx = self.hyperit_instance.compute_atoms()
-            self.assertIsNotNone(phi_xy, "Phi_xy should not be None")
-            self.assertIsNotNone(phi_yx, "Phi_yx should not be None")
+            matrix = self.hyperit_instance.compute_atoms()
+            self.assertIsNotNone(matrix, "matrix should not be None")
             print("compute_atoms method executed successfully.")
         except Exception as e:
             self.fail(f"compute_atoms method failed with an exception {e}")
 
-    @patch('builtins.input', return_value='1')  # Simulates choosing "1. All epochs"
+    
+    @patch('matplotlib.pyplot.show')  
     def test_plotting(self, mock_plot_show):
         """Test the plotting function calls."""
         self.hyperit_instance.compute_mi('histogram', vis=True)
-        mock_plot_show.assert_called()
+        mock_plot_show.assert_called() 
 
     def tearDown(self):
         """Clean up any mock patches to prevent leaks between tests."""
