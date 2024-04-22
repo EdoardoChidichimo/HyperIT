@@ -13,10 +13,7 @@ Welcome to hyperit's documentation!
    introduction
    installation
    usage
-
-.. automodule:: hyperit
-   :members:
-
+   
 
 Indices and tables
 ==================

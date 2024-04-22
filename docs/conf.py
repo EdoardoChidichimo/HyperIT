@@ -18,14 +18,14 @@ sys.modules['jpype'] = Mock()
 sys.modules['org.jpype.javadoc'] = Mock()
 sys.modules['org.jpype.javadoc.JavadocExtractor'] = Mock()
 
-docs_dir = os.path.abspath(os.path.dirname(__file__))
-project_root = os.path.abspath(os.path.join(docs_dir, '..'))
-# sys.path.insert(0, os.path.abspath('..'))
+# docs_dir = os.path.abspath(os.path.dirname(__file__))
+# project_root = os.path.abspath(os.path.join(docs_dir, '..'))
+# # sys.path.insert(0, os.path.abspath('..'))
 
-sys.path.insert(0, project_root)
-sys.path.insert(0, os.path.join(project_root))
+# sys.path.insert(0, os.path.join(project_root))
 
-
+sys.path.insert(0, os.path.abspath(os.path.pardir))
+import hyperit
 from hyperit import HyperIT
 HyperIT.setup_JVM(jarLocation=os.path.join(os.path.dirname(os.path.dirname(__file__))))
 
@@ -42,8 +42,10 @@ copyright = '2024, Edoardo Chidichimo'
 author = 'Edoardo Chidichimo'
 
 # The full version, including alpha/beta/rc tags
-release = 'v1.0.0'
 
+version = hyperit.__version__
+# The full version, including alpha/beta/rc tags
+release = hyperit.__version__
 
 # -- General configuration ---------------------------------------------------
 
