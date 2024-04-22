@@ -92,20 +92,23 @@
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">hyperit.hyperit.</span></span><span class="sig-name descname"><span class="pre">HyperIT</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel_names</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sfreq</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">freq_bands</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">standardise_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">filter_options</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/hyperit/hyperit.html#HyperIT"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#hyperit.hyperit.HyperIT" title="Permalink to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>HyperIT: Hyperscanning Analyses using Information Theoretic Measures.</p>
-<p>HyperIT is equipped to compute pairwise and multivariate Mutual Information (MI), Transfer Entropy (TE), and Integrated Information Decomposition (ΦID) for continuous time-series data.
-Compatible for both intra-brain and inter-brain analyses and for both epoched and unepoched data.
-Analyses can be conducted at specified frequency bands (via bandpass filtering) and option to standardise data before computing measures.
-Multiple estimator choices and parameter customisations (via JIDT) are available, including KSG, Kernel, Gaussian, Symbolic, and Histogram/Binning.
-Integrated statistical significance testing using permutation/boostrapping approach.
+<p>HyperIT is equipped to compute pairwise and multivariate Mutual Information (MI), Transfer Entropy (TE),
+and Integrated Information Decomposition (ΦID) for continuous time-series data. Compatible for both
+intra-brain and inter-brain analyses and for both epoched and unepoched data. Analyses can be conducted
+at specified frequency bands (via bandpass filtering) and option to standardise data before computing measures.
+Multiple estimator choices and parameter customisations (via JIDT) are available, including KSG, Kernel, Gaussian,
+Symbolic, and Histogram/Binning. Integrated statistical significance testing using permutation/boostrapping approach.
 Visualisations of MI/TE matrices also provided.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>data1</strong> (<em>-</em>) -- Time-series data for participant 1. Can take shape (n_epo, n_chan, n_samples) or (n_chan, n_samples) for epoched and unepoched data, respectively.</p></li>
+<li><p><strong>data1</strong> (<em>-</em>) -- Time-series data for participant 1. Can take shape (n_epo, n_chan, n_samples) or
+(n_chan, n_samples) for epoched and unepoched data, respectively.</p></li>
 <li><p><strong>data2</strong> (<em>-</em>) -- Time-series data for participant 2. Must have the same shape as data1.</p></li>
-<li><p><strong>channel_names</strong> (<em>-</em>) -- A list of strings representing the channel names for each participant. [[channel_names_p1], [channel_names_p2]] or [[channel_names_p1]] for intra-brain.</p></li>
+<li><p><strong>channel_names</strong> (<em>-</em>) -- A list of strings representing the channel names for each participant.
+[[channel_names_p1], [channel_names_p2]] or [[channel_names_p1]] for intra-brain.</p></li>
 <li><p><strong>sfreq</strong> (<em>-</em>) -- Sampling frequency of the data.</p></li>
-<li><p><strong>freq_bands</strong> (<em>-</em>) -- Dictionary of frequency bands for bandpass filtering. {band_name: (low_freq, high_freq), ...}.</p></li>
+<li><p><strong>freq_bands</strong> (<em>-</em>) -- Dictionary of frequency bands for bandpass filtering. {band_name: (low_freq, high_freq)}.</p></li>
 <li><p><strong>standardise_data</strong> (<em>-</em>) -- Whether to standardise the data before analysis. Defaults to True.</p></li>
 <li><p><strong>verbose</strong> (<em>-</em>) -- Whether constructor and analyses should output details and progress. Defaults to False.</p></li>
 <li><p><strong>**filter_options</strong> (<em>-</em>) -- <p>Additional keyword arguments for bandpass filtering.</p>
@@ -113,18 +116,21 @@ Visualisations of MI/TE matrices also provided.</p>
 </ul>
 </dd>
 </dl>
-<p>Note: This class requires numpy, mne, matplotlib, PIL, jpype (with the local infodynamics.jar file), and phyid as dependencies.</p>
-<p>Before a HyperIT can be created, users must first call HyperIT.setup_JVM(jarLocation) to initialise the Java Virtual Machine (JVM) with the local directory location of the infodynamics.jar file.
-Users can then create multiple HyperIT objects containing time-series data, later calling various functions for analysis.
-Automatic data checks for consistency and dimensionality, identifying whether analysis is to be intra- or inter-brain.
-Determines whether epochality of data.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This class requires numpy, mne, matplotlib, PIL, jpype (with the local infodynamics.jar file), and phyid as dependencies.
+Before a HyperIT can be created, users must first call HyperIT.setup_JVM(jarLocation) to initialise the Java Virtual
+Machine (JVM) with the local directory location of the infodynamics.jar file. Users can then create multiple HyperIT
+objects containing time-series data, later calling various functions for analysis. Automatic data checks for consistency
+and dimensionality, identifying whether analysis is to be intra- or inter-brain. Determines whether epochality of data.</p>
 <blockquote>
 <div><ul class="simple">
-<li><p>If data is 3 dimensional, data is assumed to be epoched with shape    (epochs, channels, time_points).</p></li>
-<li><p>If data is 2 dimensional, data is assumed to be unepoched with shape          (channels, time_points).</p></li>
-<li><p>If data is 1 dimensional, data is assumed to be single channel time series with shape   (time_points).</p></li>
+<li><p>If data is 3 dimensional, data is assumed to be epoched with shape (epochs, channels, time_points).</p></li>
+<li><p>If data is 2 dimensional, data is assumed to be unepoched with shape (channels, time_points).</p></li>
+<li><p>If data is 1 dimensional, data is assumed to be single channel time series with shape (time_points).</p></li>
 </ul>
 </div></blockquote>
+</div>
 <dl class="py method">
 <dt class="sig sig-object py" id="hyperit.hyperit.HyperIT.compute_atoms">
 <span class="sig-name descname"><span class="pre">compute_atoms</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tau</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">redundancy</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'MMI'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_intra</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/hyperit/hyperit.html#HyperIT.compute_atoms"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#hyperit.hyperit.HyperIT.compute_atoms" title="Permalink to this definition"></a></dt>
