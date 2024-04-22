@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="English">
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welcome to hyperit&#39;s documentation! &mdash; hyperit  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="_static/doctools.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Introduction" href="introduction.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="#" class="icon icon-home">
+            hyperit
+          </a>
+              <div class="version">
+                v1.0.0
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">hyperit</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Welcome to hyperit's documentation!</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="welcome-to-hyperit-s-documentation">
+<h1>Welcome to hyperit's documentation!<a class="headerlink" href="#welcome-to-hyperit-s-documentation" title="Permalink to this heading"></a></h1>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+</ul>
+</div>
+<span class="target" id="module-hyperit.hyperit"></span><dl class="py class">
+<dt class="sig sig-object py" id="hyperit.hyperit.HyperIT">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">hyperit.hyperit.</span></span><span class="sig-name descname"><span class="pre">HyperIT</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel_names</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sfreq</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">freq_bands</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">standardise_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">filter_options</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/hyperit/hyperit.html#HyperIT"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#hyperit.hyperit.HyperIT" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>HyperIT: Hyperscanning Analyses using Information Theoretic Measures.</p>
+<p>HyperIT is equipped to compute pairwise and multivariate Mutual Information (MI), Transfer Entropy (TE), and Integrated Information Decomposition (ΦID) for continuous time-series data.
+Compatible for both intra-brain and inter-brain analyses and for both epoched and unepoched data.
+Analyses can be conducted at specified frequency bands (via bandpass filtering) and option to standardise data before computing measures.
+Multiple estimator choices and parameter customisations (via JIDT) are available, including KSG, Kernel, Gaussian, Symbolic, and Histogram/Binning.
+Integrated statistical significance testing using permutation/boostrapping approach.
+Visualisations of MI/TE matrices also provided.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data1</strong> (<em>-</em>) -- Time-series data for participant 1. Can take shape (n_epo, n_chan, n_samples) or (n_chan, n_samples) for epoched and unepoched data, respectively.</p></li>
+<li><p><strong>data2</strong> (<em>-</em>) -- Time-series data for participant 2. Must have the same shape as data1.</p></li>
+<li><p><strong>channel_names</strong> (<em>-</em>) -- A list of strings representing the channel names for each participant. [[channel_names_p1], [channel_names_p2]] or [[channel_names_p1]] for intra-brain.</p></li>
+<li><p><strong>sfreq</strong> (<em>-</em>) -- Sampling frequency of the data.</p></li>
+<li><p><strong>freq_bands</strong> (<em>-</em>) -- Dictionary of frequency bands for bandpass filtering. {band_name: (low_freq, high_freq), ...}.</p></li>
+<li><p><strong>standardise_data</strong> (<em>-</em>) -- Whether to standardise the data before analysis. Defaults to True.</p></li>
+<li><p><strong>verbose</strong> (<em>-</em>) -- Whether constructor and analyses should output details and progress. Defaults to False.</p></li>
+<li><p><strong>**filter_options</strong> (<em>-</em>) -- <p>Additional keyword arguments for bandpass filtering.</p>
+</p></li>
+</ul>
+</dd>
+</dl>
+<p>Note: This class requires numpy, mne, matplotlib, PIL, jpype (with the local infodynamics.jar file), and phyid as dependencies.</p>
+<p>Before a HyperIT can be created, users must first call HyperIT.setup_JVM(jarLocation) to initialise the Java Virtual Machine (JVM) with the local directory location of the infodynamics.jar file.
+Users can then create multiple HyperIT objects containing time-series data, later calling various functions for analysis.
+Automatic data checks for consistency and dimensionality, identifying whether analysis is to be intra- or inter-brain.
+Determines whether epochality of data.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>If data is 3 dimensional, data is assumed to be epoched with shape    (epochs, channels, time_points).</p></li>
+<li><p>If data is 2 dimensional, data is assumed to be unepoched with shape          (channels, time_points).</p></li>
+<li><p>If data is 1 dimensional, data is assumed to be single channel time series with shape   (time_points).</p></li>
+</ul>
+</div></blockquote>
+<dl class="py method">
+<dt class="sig sig-object py" id="hyperit.hyperit.HyperIT.compute_atoms">
+<span class="sig-name descname"><span class="pre">compute_atoms</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tau</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">redundancy</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'MMI'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_intra</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/hyperit/hyperit.html#HyperIT.compute_atoms"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#hyperit.hyperit.HyperIT.compute_atoms" title="Permalink to this definition"></a></dt>
+<dd><p>Function to compute Integrated Information Decomposition (ΦID) between data (time-series signals) instantiated in the HyperIT object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>tau</strong> (<em>int</em><em>, </em><em>optional</em>) -- Time-lag parameter. Defaults to 1.</p></li>
+<li><p><strong>redundancy</strong> (<em>str</em><em>, </em><em>optional</em>) -- Redundancy function to use. Defaults to 'MMI' (Minimum Mutual Information).</p></li>
+<li><p><strong>include_intra</strong> (<em>bool</em><em>, </em><em>optional</em>) -- Whether to include intra-brain analysis. Defaults to False.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>Matrix of Integrated Information Decomposition dictionaries.</dt><dd><p>If include_intra, the matrix will have shape (n_epo, n_freq_bands, 2*n_chan, 2*n_chan), otherwise (n_epo, n_freq_bands, n_chan, n_chan).
+If include_intra, retrieve:
+- intra1  = matrix[:, :, :n_chan, :n_chan]
+- intra2  = matrix[:, :, n_chan:, n_chan:]
+- inter12 = matrix[:, :, :n_chan, n_chan:]
+- inter21 = matrix[:, :, n_chan:, :n_chan]
+If calc_sigstats, the matrix will have shape (n_epo, n_freq_bands, {2*}n_chan, {2*}n_chan, 4), where the last dimension represents the statistical signficance testing results: (local result, distribution mean, distribution standard deviation, p-value).
+If calc_sigstats is False, only the local mutual information result will be returned as a float.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>(np.ndarray)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="hyperit.hyperit.HyperIT.compute_mi">
+<span class="sig-name descname"><span class="pre">compute_mi</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">estimator_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'kernel'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_intra</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calc_sigstats</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vis</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot_epochs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="_modules/hyperit/hyperit.html#HyperIT.compute_mi"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#hyperit.hyperit.HyperIT.compute_mi" title="Permalink to this definition"></a></dt>
+<dd><p>Function to compute Mutual Information between data (time-series signals) instantiated in the HyperIT object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>estimator_type</strong> (<em>str</em><em>, </em><em>optional</em>) -- Which mutual information estimator to use. Defaults to 'kernel'.</p></li>
+<li><p><strong>include_intra</strong> (<em>bool</em><em>, </em><em>optional</em>) -- Whether to include intra-brain analyses. Defaults to False.</p></li>
+<li><p><strong>calc_sigstats</strong> (<em>bool</em><em>, </em><em>optional</em>) -- Whether to conduct statistical signficance testing. Defaults to False.</p></li>
+<li><p><strong>vis</strong> (<em>bool</em><em>, </em><em>optional</em>) -- Whether to visualise. Defaults to False.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl>
+<dt>Mutual information matrix (symmetric).</dt><dd><p>If include_intra, the matrix will have shape (n_epo, n_freq_bands, 2*n_chan, 2*n_chan), otherwise (n_epo, n_freq_bands, n_chan, n_chan).
+If include_intra, retrieve:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>intra1  = matrix[:, :, :n_chan, :n_chan]</p></li>
+<li><p>intra2  = matrix[:, :, n_chan:, n_chan:]</p></li>
+<li><p>inter12 = matrix[:, :, :n_chan, n_chan:]</p></li>
+<li><p>inter21 = matrix[:, :, n_chan:, :n_chan]</p></li>
+</ul>
+</div></blockquote>
+<p>If calc_sigstats, the matrix will have shape (n_epo, n_freq_bands, {2*}n_chan, {2*}n_chan, 4), where the last dimension represents the statistical signficance testing results: (local result, distribution mean, distribution standard deviation, p-value).
+If calc_sigstats is False, only the local mutual information result will be returned as a float.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>(np.ndarray)</p>
+</dd>
+</dl>
+<p>Parameter options for mutual information estimators (defaults in parentheses):</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">histogram</span></code></dt><dd><ul>
+<li><p>None</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">ksg1</span></code></dt><dd><ul>
+<li><p>kraskov_param (4)</p></li>
+<li><p>normalise (True)</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">ksg2</span></code></dt><dd><ul>
+<li><p>kraskov_param (4)</p></li>
+<li><p>normalise (True)</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">kernel</span></code></dt><dd><ul>
+<li><p>kernel_width (0.25)</p></li>
+<li><p>normalise (True)</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">gaussian</span></code></dt><dd><ul>
+<li><p>normalise (True)</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">symbolic</span></code></dt><dd><ul>
+<li><p>k (3)</p></li>
+<li><p>delay (1)</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="hyperit.hyperit.HyperIT.compute_te">
+<span class="sig-name descname"><span class="pre">compute_te</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">estimator_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'kernel'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_intra</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calc_sigstats</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vis</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot_epochs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/hyperit/hyperit.html#HyperIT.compute_te"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#hyperit.hyperit.HyperIT.compute_te" title="Permalink to this definition"></a></dt>
+<dd><p>Function to compute Transfer Entropy between data (time-series signals) instantiated in the HyperIT object.
+data1 is taken to be the source and data2 the target (X -&gt; Y).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>estimator_type</strong> (<em>str</em><em>, </em><em>optional</em>) -- Which transfer entropy estimator to use. Defaults to 'kernel'.</p></li>
+<li><p><strong>include_intra</strong> (<em>bool</em><em>, </em><em>optional</em>) -- Whether to include intra-brain analyses. Defaults to False.</p></li>
+<li><p><strong>calc_sigstats</strong> (<em>bool</em><em>, </em><em>optional</em>) -- Whether to conduct statistical signficance testing. Defaults to False.</p></li>
+<li><p><strong>vis</strong> (<em>bool</em><em>, </em><em>optional</em>) -- Whether to visualise. Defaults to False.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl>
+<dt>Transfer entropy matrix (non-symmetric, data1 -&gt; data2 only).</dt><dd><p>If include_intra, the matrix will have shape (n_epo, n_freq_bands, 2*n_chan, 2*n_chan), otherwise (n_epo, n_freq_bands, n_chan, n_chan).
+If include_intra, retrieve:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>intra1  = matrix[:, :, :n_chan, :n_chan]</p></li>
+<li><p>intra2  = matrix[:, :, n_chan:, n_chan:]</p></li>
+<li><p>inter12 = matrix[:, :, :n_chan, n_chan:]</p></li>
+<li><p>inter21 = matrix[:, :, n_chan:, :n_chan]</p></li>
+</ul>
+</div></blockquote>
+<p>If calc_sigstats, the matrix will have shape (n_epo, n_freq_bands, {2*}n_chan, {2*}n_chan, 4), where the last dimension represents the statistical signficance testing results: (local result, distribution mean, distribution standard deviation, p-value).
+If calc_sigstats is False, only the local mutual information result will be returned as a float.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Tuple(np.ndarray, np.ndarray)</p>
+</dd>
+</dl>
+<p>Parameter options for transfer entropy estimators (defaults in parentheses):</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">ksg</span></code></dt><dd><ul>
+<li><p>k, k_tau, l, l_tau (all 1)</p></li>
+<li><p>delay (1)</p></li>
+<li><p>kraskov_param (1)</p></li>
+<li><p>normalise (True)</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">kernel</span></code></dt><dd><ul>
+<li><p>kernel_width (0.5)</p></li>
+<li><p>normalise (True)</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">gaussian</span></code></dt><dd><ul>
+<li><p>k, k_tau, l, l_tau (all 1)</p></li>
+<li><p>delay (1)</p></li>
+<li><p>bias_correction (False)</p></li>
+<li><p>normalise (True)</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">symbolic</span></code></dt><dd><ul>
+<li><p>k (1)</p></li>
+<li><p>normalise (True)</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="hyperit.hyperit.HyperIT.reset_roi">
+<span class="sig-name descname"><span class="pre">reset_roi</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/hyperit/hyperit.html#HyperIT.reset_roi"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#hyperit.hyperit.HyperIT.reset_roi" title="Permalink to this definition"></a></dt>
+<dd><p>Resets the region of interest for both data of the HyperIT object to all channels.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="hyperit.hyperit.HyperIT.roi">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">roi</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#hyperit.hyperit.HyperIT.roi" title="Permalink to this definition"></a></dt>
+<dd><p>Regions of interest for both data of the HyperIT object (defining spatial scale of organisation). To set this, call .roi(roi_list).</p>
+<p>HyperIT is defaulted to <strong>micro-scale</strong> analysis (individual channels) but specific channels can be specified for pointwise comparison: <code class="docutils literal notranslate"><span class="pre">roi_list</span> <span class="pre">=</span> <span class="pre">[['Fp1',</span> <span class="pre">'Fp2'],</span> <span class="pre">['F3',</span> <span class="pre">'F4']]</span></code>, for example.
+For <strong>meso-scale</strong> analysis (clusters of channels), equally-sized and equally-numbered clusters must be defined for both sets of data in the following way: <code class="docutils literal notranslate"><span class="pre">roi_list</span> <span class="pre">=</span> <span class="pre">[[[PP1_cluster_1],</span> <span class="pre">...,</span> <span class="pre">[PP1_cluster_n]],</span> <span class="pre">[[PP2_cluster_1],</span> <span class="pre">...,</span> <span class="pre">[PP2_cluster_n]]]</span></code>.
+Finally, for <strong>macro-scale</strong> analysis (all channels per person), the specification can be set as <code class="docutils literal notranslate"><span class="pre">roi_list</span> <span class="pre">=</span> <span class="pre">[[PP1_all_channels][PP2_all_channels]]</span></code> (note that PP1_all_channels and PP2_all_channels should be list themselves).
+Importantly, as long as the <code class="docutils literal notranslate"><span class="pre">channel_names</span></code> are instantiated properly in the initiation of the HyperIT object, the ROI can even be given as a lists of channel indices (integers).
+In any case, to set these scales of organisations, simply amend the <code class="docutils literal notranslate"><span class="pre">roi</span></code> property of the HyperIT object used.
+Call <code class="docutils literal notranslate"><span class="pre">roi.reset_roi()</span></code> to reset the ROI to all channels.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="hyperit.hyperit.HyperIT.setup_JVM">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">setup_JVM</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">jarLocation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/hyperit/hyperit.html#HyperIT.setup_JVM"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#hyperit.hyperit.HyperIT.setup_JVM" title="Permalink to this definition"></a></dt>
+<dd><p>Setup JVM if not already started. To be called once before creating any instances.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="hyperit.hyperit.MeasureType">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">hyperit.hyperit.</span></span><span class="sig-name descname"><span class="pre">MeasureType</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">module</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qualname</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/hyperit/hyperit.html#MeasureType"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#hyperit.hyperit.MeasureType" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="hyperit.hyperit.MeasureType.MI">
+<span class="sig-name descname"><span class="pre">MI</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'mi'</span></em><a class="headerlink" href="#hyperit.hyperit.MeasureType.MI" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="hyperit.hyperit.MeasureType.PhyID">
+<span class="sig-name descname"><span class="pre">PhyID</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'phyid'</span></em><a class="headerlink" href="#hyperit.hyperit.MeasureType.PhyID" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="hyperit.hyperit.MeasureType.TE">
+<span class="sig-name descname"><span class="pre">TE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'te'</span></em><a class="headerlink" href="#hyperit.hyperit.MeasureType.TE" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this heading"></a></h1>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="introduction.html" class="btn btn-neutral float-right" title="Introduction" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Edoardo Chidichimo.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
