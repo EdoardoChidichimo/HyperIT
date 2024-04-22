@@ -375,29 +375,24 @@ class HyperIT:
 
         return result
 
-    def __estimate_mi_symb(self, s1: np.ndarray, s2: np.ndarray, l: int = 1, k: int = 3) -> float:
-        """Calculates Mutual Information using Symbolic Estimator for time-series signals.
-
-            l: time delay or lag (i.e., how many time points to skip)
-            k: embedding dimension (i.e., how many time points to consider in each symbol)
-        
-        """
+    def __estimate_mi_symb(self, s1: np.ndarray, s2: np.ndarray, k: int = 3, delay: int = 1) -> float:
+        """Calculates Mutual Information using Symbolic Estimator for time-series signals."""
 
         symbol_weights = np.power(k, np.arange(k))
 
-        def symb_symbolise(X: np.ndarray, l: int, k: int) -> np.ndarray:
-            Y = np.empty((k, len(X) - (k - 1) * l))
+        def symb_symbolise(X: np.ndarray, k: int, delay: int) -> np.ndarray:
+            Y = np.empty((k, len(X) - (k - 1) * delay))
             for i in range(k):
-                Y[i] = X[i * l:i * l + Y.shape[1]]
+                Y[i] = X[i * delay:i * delay + Y.shape[1]]
             return Y.T
 
         def symb_normalise_counts(d) -> None:
             total = sum(d.values())        
             return {key: value / total for key, value in d.items()}
         
-        def symb_calc_mi(X, Y, l, k):
-            X = symb_symbolise(X, l, k).argsort(kind='quicksort')
-            Y = symb_symbolise(Y, l, k).argsort(kind='quicksort')
+        def symb_calc_mi(X: np.ndarray, Y: np.ndarray, k: int, delay: int) -> float:
+            X = symb_symbolise(X, delay, k).argsort(kind='quicksort')
+            Y = symb_symbolise(Y, delay, k).argsort(kind='quicksort')
 
             # multiply each symbol [1,0,3] by symbol_weights [1,3,9] => [1,0,27] and give a final array of the sum of each code ([.., .., 28, .. ])
             symbol_hash_X = (np.multiply(X, symbol_weights)).sum(1) 
@@ -423,14 +418,14 @@ class HyperIT:
             return entropy_X + entropy_Y - entropy_XY
 
 
-        result = symb_calc_mi(s1, s2, l, k)
+        result = symb_calc_mi(s1, s2, k, delay)
 
         if self._calc_sigstats:
             permuted_mi_values = []
 
             for _ in range(self._stat_sig_perm_num):
                 np.random.shuffle(s2)
-                permuted_mi = symb_calc_mi(s1, s2, l, k)
+                permuted_mi = symb_calc_mi(s1, s2, k, delay)
                 permuted_mi_values.append(permuted_mi)
 
             mean_permuted_mi = np.mean(permuted_mi_values)
@@ -522,7 +517,7 @@ class HyperIT:
                 case 'histogram':
                     return self.__estimate_mi_hist(s1, s2)
                 case 'symbolic':
-                    return self.__estimate_mi_symb(s1, s2)
+                    return self.__estimate_mi_symb(s1, s2, self._params.get('k', 3), self._params.get('delay', 1))
 
         elif self._measure == MeasureType.PhyID:
             return self.__estimate_atoms(s1, s2)
@@ -732,26 +727,30 @@ class HyperIT:
                                     (np.ndarray): Mutual information matrix (symmetric).
                                                   If include_intra, the matrix will have shape (n_epo, n_freq_bands, 2*n_chan, 2*n_chan), otherwise (n_epo, n_freq_bands, n_chan, n_chan). 
                                                   If include_intra, retrieve: 
-                                                        intra1  = matrix[:, :, :n_chan, :n_chan]  
-                                                        intra2  = matrix[:, :, n_chan:, n_chan:]  
-                                                        inter12 = matrix[:, :, :n_chan, n_chan:]  
-                                                        inter21 = matrix[:, :, n_chan:, :n_chan]
+                                                    - intra1  = matrix[:, :, :n_chan, :n_chan]  
+                                                    - intra2  = matrix[:, :, n_chan:, n_chan:]  
+                                                    - inter12 = matrix[:, :, :n_chan, n_chan:]  
+                                                    - inter21 = matrix[:, :, n_chan:, :n_chan]
                                                   If calc_sigstats, the matrix will have shape (n_epo, n_freq_bands, {2*}n_chan, {2*}n_chan, 4), where the last dimension represents the statistical signficance testing results: (local result, distribution mean, distribution standard deviation, p-value).
                                                   If calc_sigstats is False, only the local mutual information result will be returned as a float.
         
-        NOTE: Parameter options for mutual information estimators (defaults in parentheses):
-        - histogram:
-            None
-        - ksg1:
-            kraskov_param (4), normalise (True)
-        - ksg2:
-            kraskov_param (4), normalise (True)
-        - kernel:
-            kernel_width (0.25), normalise (True)
-        - gaussian:
-            normalise (True)
-        - symbolic:
-            l (1), m (3)
+        Parameter options for mutual information estimators (defaults in parentheses):
+        - ``histogram``:
+            - None
+        - ``ksg1``:
+            - kraskov_param (4)
+            - normalise (True)
+        - ``ksg2``:
+            - kraskov_param (4)
+            - normalise (True)
+        - ``kernel``:
+            - kernel_width (0.25)
+            - normalise (True)
+        - ``gaussian``:
+            - normalise (True)
+        - ``symbolic``:
+            - k (3)
+            - delay (1)
         """
         
         self._measure = MeasureType.MI
@@ -773,25 +772,28 @@ class HyperIT:
                    Tuple(np.ndarray, np.ndarray): Transfer entropy matrix (non-symmetric, data1 -> data2 only).
                                                   If include_intra, the matrix will have shape (n_epo, n_freq_bands, 2*n_chan, 2*n_chan), otherwise (n_epo, n_freq_bands, n_chan, n_chan). 
                                                   If include_intra, retrieve: 
-                                                        intra1  = matrix[:, :, :n_chan, :n_chan]  
-                                                        intra2  = matrix[:, :, n_chan:, n_chan:]  
-                                                        inter12 = matrix[:, :, :n_chan, n_chan:]  
-                                                        inter21 = matrix[:, :, n_chan:, :n_chan]
+                                                    - intra1  = matrix[:, :, :n_chan, :n_chan]  
+                                                    - intra2  = matrix[:, :, n_chan:, n_chan:]  
+                                                    - inter12 = matrix[:, :, :n_chan, n_chan:]  
+                                                    - inter21 = matrix[:, :, n_chan:, :n_chan]
                                                   If calc_sigstats, the matrix will have shape (n_epo, n_freq_bands, {2*}n_chan, {2*}n_chan, 4), where the last dimension represents the statistical signficance testing results: (local result, distribution mean, distribution standard deviation, p-value).
                                                   If calc_sigstats is False, only the local mutual information result will be returned as a float.
         
-        NOTE: Parameter options for transfer entropy estimators (defaults in parentheses):
-        - ksg:
-            - k, k_tau, l, l_tau, delay, kraskov_param (all 1)
+        Parameter options for transfer entropy estimators (defaults in parentheses):
+        - ``ksg``:
+            - k, k_tau, l, l_tau (all 1)
+            - delay (1) 
+            - kraskov_param (1)
             - normalise (True)
-        - kernel:
+        - ``kernel``:
             - kernel_width (0.5)
             - normalise (True)
-        - gaussian:
-            - k, k_tau, l, l_tau, delay (all 1)
+        - ``gaussian``:
+            - k, k_tau, l, l_tau (all 1)
+            - delay (1)
             - bias_correction (False)
             - normalise (True)
-        - symbolic:
+        - ``symbolic``:
             - k (1)
             - normalise (True)
         
@@ -810,10 +812,17 @@ class HyperIT:
             redundancy      (str, optional): Redundancy function to use. Defaults to 'MMI' (Minimum Mutual Information).
             include_intra  (bool, optional): Whether to include intra-brain analysis. Defaults to False.
 
-        NOTE: ``redundancy``: MMI (Minimum Mutual Information) or CCS (Common Change in Surprisal)
             
         Returns:
-              Tuple(np.ndarray, np.ndarray): Two matrices of Integrated Information Decomposition dictionaries (representing all atoms, both X->Y and Y->X), each with shape (n_chan, n_chan),
+                               (np.ndarray): Matrix of Integrated Information Decomposition dictionaries.
+                                             If include_intra, the matrix will have shape (n_epo, n_freq_bands, 2*n_chan, 2*n_chan), otherwise (n_epo, n_freq_bands, n_chan, n_chan). 
+                                             If include_intra, retrieve: 
+                                             - intra1  = matrix[:, :, :n_chan, :n_chan]  
+                                             - intra2  = matrix[:, :, n_chan:, n_chan:]  
+                                             - inter12 = matrix[:, :, :n_chan, n_chan:]  
+                                             - inter21 = matrix[:, :, n_chan:, :n_chan]
+                                             If calc_sigstats, the matrix will have shape (n_epo, n_freq_bands, {2*}n_chan, {2*}n_chan, 4), where the last dimension represents the statistical signficance testing results: (local result, distribution mean, distribution standard deviation, p-value).
+                                             If calc_sigstats is False, only the local mutual information result will be returned as a float.
         """
         
         self._measure = MeasureType.PhyID
