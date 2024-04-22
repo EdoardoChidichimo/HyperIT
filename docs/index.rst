@@ -13,7 +13,11 @@ Welcome to hyperit's documentation!
    introduction
    installation
    usage
-   
+
+.. automodule:: hyperit.hyperit
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 Indices and tables
 ==================
