@@ -25,7 +25,7 @@ sys.modules['org.jpype.javadoc.JavadocExtractor'] = Mock()
 # sys.path.insert(0, project_root)
 # sys.path.insert(0, os.path.join(project_root, 'hyperit'))
 
-sys.path.insert(0, os.path.abspath('.'))
+sys.path.insert(0, os.path.abspath('../..'))
 
 from hyperit.hyperit import HyperIT
 HyperIT.setup_JVM(jarLocation=os.path.join(os.path.dirname(os.path.dirname(__file__))))
