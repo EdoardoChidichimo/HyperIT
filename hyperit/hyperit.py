@@ -31,37 +31,37 @@ class MeasureType(Enum):
 
 
 class HyperIT:
-    """ HyperIT: Hyperscanning Analyses using Information Theoretic Measures.
+    """ 
+    HyperIT: Hyperscanning Analyses using Information Theoretic Measures.
 
-        HyperIT is equipped to compute pairwise and multivariate Mutual Information (MI), Transfer Entropy (TE), and Integrated Information Decomposition (ΦID) for continuous time-series data. 
-        Compatible for both intra-brain and inter-brain analyses and for both epoched and unepoched data. 
-        Analyses can be conducted at specified frequency bands (via bandpass filtering) and option to standardise data before computing measures.
-        Multiple estimator choices and parameter customisations (via JIDT) are available, including KSG, Kernel, Gaussian, Symbolic, and Histogram/Binning. 
-        Integrated statistical significance testing using permutation/boostrapping approach. 
-        Visualisations of MI/TE matrices also provided.
+    HyperIT is equipped to compute pairwise and multivariate Mutual Information (MI), Transfer Entropy (TE), and Integrated Information Decomposition (ΦID) for continuous time-series data. 
+    Compatible for both intra-brain and inter-brain analyses and for both epoched and unepoched data. 
+    Analyses can be conducted at specified frequency bands (via bandpass filtering) and option to standardise data before computing measures.
+    Multiple estimator choices and parameter customisations (via JIDT) are available, including KSG, Kernel, Gaussian, Symbolic, and Histogram/Binning. 
+    Integrated statistical significance testing using permutation/boostrapping approach. 
+    Visualisations of MI/TE matrices also provided.
 
     Note: This class requires numpy, mne, matplotlib, PIL, jpype (with the local infodynamics.jar file), and phyid as dependencies.
 
-        Before a HyperIT can be created, users must first call HyperIT.setup_JVM(jarLocation) to initialise the Java Virtual Machine (JVM) with the local directory location of the infodynamics.jar file.
-        Users can then create multiple HyperIT objects containing time-series data, later calling various functions for analysis. 
-        Automatic data checks for consistency and dimensionality, identifying whether analysis is to be intra- or inter-brain.
-        Determines whether epochality of data.
-            - If data is 3 dimensional, data is assumed to be epoched with shape    (epochs, channels, time_points).
-            - If data is 2 dimensional, data is assumed to be unepoched with shape          (channels, time_points).
-            - If data is 1 dimensional, data is assumed to be single channel time series with shape   (time_points).
+    Before a HyperIT can be created, users must first call HyperIT.setup_JVM(jarLocation) to initialise the Java Virtual Machine (JVM) with the local directory location of the infodynamics.jar file.
+    Users can then create multiple HyperIT objects containing time-series data, later calling various functions for analysis. 
+    Automatic data checks for consistency and dimensionality, identifying whether analysis is to be intra- or inter-brain.
+    Determines whether epochality of data.
+        - If data is 3 dimensional, data is assumed to be epoched with shape    (epochs, channels, time_points).
+        - If data is 2 dimensional, data is assumed to be unepoched with shape          (channels, time_points).
+        - If data is 1 dimensional, data is assumed to be single channel time series with shape   (time_points).
 
+    Args:
+        data1                   (np.ndarray): Time-series data for participant 1. Can take shape (n_epo, n_chan, n_samples) or (n_chan, n_samples) for epoched and unepoched data, respectively. 
+        data2                   (np.ndarray): Time-series data for participant 2. Must have the same shape as data1.
+        channel_names  (List[str], optional): A list of strings representing the channel names for each participant. [[channel_names_p1], [channel_names_p2]] or [[channel_names_p1]] for intra-brain.
+        sfreq              (float, optional): Sampling frequency of the data.
+        freq_bands          (dict, optional): Dictionary of frequency bands for bandpass filtering. {band_name: (low_freq, high_freq), ...}.
+        standardise_data    (bool, optional): Whether to standardise the data before analysis. Defaults to True.
+        verbose             (bool, optional): Whether constructor and analyses should output details and progress. Defaults to False.
+        **filter_options    (dict, optional): Additional keyword arguments for bandpass filtering.
 
-        Args:
-            data1                   (np.ndarray): Time-series data for participant 1. Can take shape (n_epo, n_chan, n_samples) or (n_chan, n_samples) for epoched and unepoched data, respectively. 
-            data2                   (np.ndarray): Time-series data for participant 2. Must have the same shape as data1.
-            channel_names  (List[str], optional): A list of strings representing the channel names for each participant. [[channel_names_p1], [channel_names_p2]] or [[channel_names_p1]] for intra-brain.
-            sfreq              (float, optional): Sampling frequency of the data.
-            freq_bands          (dict, optional): Dictionary of frequency bands for bandpass filtering. {band_name: (low_freq, high_freq), ...}.
-            standardise_data    (bool, optional): Whether to standardise the data before analysis. Defaults to True.
-            verbose             (bool, optional): Whether constructor and analyses should output details and progress. Defaults to False.
-            **filter_options    (dict, optional): Additional keyword arguments for bandpass filtering.
-    
-    """
+"""
 
     ## SETTING UP JVM
 
