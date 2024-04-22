@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="English">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>hyperit.hyperit &mdash; hyperit  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            hyperit
+          </a>
+              <div class="version">
+                v1.0.0
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">hyperit</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">hyperit.hyperit</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for hyperit.hyperit</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">stats</span>
+<span class="kn">from</span> <span class="nn">PIL</span> <span class="kn">import</span> <span class="n">Image</span><span class="p">,</span> <span class="n">ImageDraw</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Any</span>
+<span class="kn">from</span> <span class="nn">tqdm</span> <span class="kn">import</span> <span class="n">tqdm</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="kn">from</span> <span class="nn">jpype</span> <span class="kn">import</span> <span class="n">isJVMStarted</span><span class="p">,</span> <span class="n">startJVM</span><span class="p">,</span> <span class="n">getDefaultJVMPath</span>
+<span class="kn">from</span> <span class="nn">phyid.calculate</span> <span class="kn">import</span> <span class="n">calc_PhiID</span>
+<span class="kn">from</span> <span class="nn">phyid.utils</span> <span class="kn">import</span> <span class="n">PhiID_atoms_abbr</span>
+
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">setup_JArray</span><span class="p">,</span> 
+    <span class="n">bandpass_filter_data</span><span class="p">,</span> 
+    <span class="n">convert_names_to_indices</span><span class="p">,</span> 
+    <span class="n">convert_indices_to_names</span><span class="p">,</span> 
+    <span class="n">set_estimator</span>
+<span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span>
+
+<div class="viewcode-block" id="MeasureType"><a class="viewcode-back" href="../../index.html#hyperit.hyperit.MeasureType">[docs]</a><span class="k">class</span> <span class="nc">MeasureType</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+    <span class="n">MI</span> <span class="o">=</span> <span class="s1">&#39;mi&#39;</span> <span class="c1"># Mutual Information</span>
+    <span class="n">TE</span> <span class="o">=</span> <span class="s1">&#39;te&#39;</span> <span class="c1"># Transfer Entropy</span>
+    <span class="n">PhyID</span> <span class="o">=</span> <span class="s1">&#39;phyid&#39;</span> <span class="c1"># Integrated Information Decomposition</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span>  </div>
+
+
+<div class="viewcode-block" id="HyperIT"><a class="viewcode-back" href="../../index.html#hyperit.hyperit.HyperIT">[docs]</a><span class="k">class</span> <span class="nc">HyperIT</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    HyperIT: Hyperscanning Analyses using Information Theoretic Measures.</span>
+
+<span class="sd">    HyperIT is equipped to compute pairwise and multivariate Mutual Information (MI), Transfer Entropy (TE),</span>
+<span class="sd">    and Integrated Information Decomposition (ΦID) for continuous time-series data. Compatible for both</span>
+<span class="sd">    intra-brain and inter-brain analyses and for both epoched and unepoched data. Analyses can be conducted</span>
+<span class="sd">    at specified frequency bands (via bandpass filtering) and option to standardise data before computing measures.</span>
+<span class="sd">    </span>
+<span class="sd">    Multiple estimator choices and parameter customisations (via JIDT) are available, including KSG, Kernel, Gaussian,</span>
+<span class="sd">    Symbolic, and Histogram/Binning. </span>
+<span class="sd">    </span>
+<span class="sd">    Integrated statistical significance testing using permutation/boostrapping approach.</span>
+<span class="sd">    </span>
+<span class="sd">    Visualisations of MI/TE matrices also provided.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        data1                       (np.ndarray): Time-series data for participant 1. Can take shape (n_epo, n_chan, n_samples) or (n_chan, n_samples) for epoched and unepoched data, respectively.</span>
+<span class="sd">        data2                       (np.ndarray): Time-series data for participant 2. Must have the same shape as data1. </span>
+<span class="sd">        channel_names      (List[str], optional): A list of strings representing the channel names for each participant. [[channel_names_p1], [channel_names_p2]] or [[channel_names_p1]].</span>
+<span class="sd">        sfreq                  (float, optional): Sampling frequency of the data.</span>
+<span class="sd">        freq_bands              (dict, optional): Dictionary of frequency bands for bandpass filtering. {band_name: (low_freq, high_freq)}.</span>
+<span class="sd">        standardise_data        (bool, optional): Whether to standardise the data before analysis. Defaults to True.</span>
+<span class="sd">        verbose                 (bool, optional): Whether constructor and analyses should output details and progress. Defaults to False.</span>
+<span class="sd">        **filter_options        (dict, optional): Additional keyword arguments for bandpass filtering.</span>
+
+<span class="sd">    Note:</span>
+<span class="sd">        This class requires numpy, mne, matplotlib, PIL, jpype (with the local infodynamics.jar file), and phyid as dependencies.</span>
+<span class="sd">        </span>
+<span class="sd">        Before a HyperIT can be created, users must first call HyperIT.setup_JVM(jarLocation) to initialise the Java Virtual</span>
+<span class="sd">        Machine (JVM) with the local directory location of the infodynamics.jar file. Users can then create multiple HyperIT</span>
+<span class="sd">        objects containing time-series data, later calling various functions for analysis. </span>
+<span class="sd">        </span>
+<span class="sd">        Automatic data checks for consistency and dimensionality, identifying whether analysis is to be intra- or inter-brain </span>
+<span class="sd">        and epochality of data.</span>
+<span class="sd">            - If data is 3 dimensional, data is assumed to be epoched with shape (epochs, channels, time_points).</span>
+<span class="sd">            - If data is 2 dimensional, data is assumed to be unepoched with shape (channels, time_points).</span>
+<span class="sd">            - If data is 1 dimensional, data is assumed to be single channel time series with shape (time_points).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+
+    <span class="c1">## SETTING UP JVM</span>
+
+    <span class="n">_jvm_initialised</span> <span class="o">=</span> <span class="kc">False</span>
+
+<div class="viewcode-block" id="HyperIT.setup_JVM"><a class="viewcode-back" href="../../index.html#hyperit.hyperit.HyperIT.setup_JVM">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">setup_JVM</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">jarLocation</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Setup JVM if not already started. To be called once before creating any instances.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_jvm_initialised</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">isJVMStarted</span><span class="p">():</span>
+                <span class="n">startJVM</span><span class="p">(</span><span class="n">getDefaultJVMPath</span><span class="p">(),</span> <span class="s2">&quot;-ea&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;-Djava.class.path=</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">jarLocation</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;infodynamics.jar&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="bp">cls</span><span class="o">.</span><span class="n">_jvm_initialised</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;JVM started successfully.&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;JVM already started.&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;JVM setup already completed.&quot;</span><span class="p">)</span></div>
+
+
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data1</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">data2</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">channel_names</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">sfreq</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">freq_bands</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">standardise_data</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">filter_options</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_jvm_initialised</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;JVM has not been started. Call setup_JVM() before creating any instances of HyperIT.&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">verbose</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_channel_names</span> <span class="o">=</span> <span class="n">channel_names</span> <span class="ow">or</span> <span class="kc">None</span>   
+            
+        <span class="bp">self</span><span class="o">.</span><span class="n">_channel_indices1</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_channel_indices2</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sfreq</span> <span class="o">=</span> <span class="n">sfreq</span> <span class="ow">or</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_freq_bands</span> <span class="o">=</span> <span class="n">freq_bands</span> <span class="ow">or</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_filter_options</span> <span class="o">=</span> <span class="n">filter_options</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_standardise_data</span> <span class="o">=</span> <span class="n">standardise_data</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data1</span> <span class="o">=</span> <span class="n">data1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data2</span> <span class="o">=</span> <span class="n">data2</span> 
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">__check_data</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__check_channels</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__configure_data</span><span class="p">()</span>
+
+        <span class="n">_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_epo</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_freq_bands</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_chan</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_samples</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_all_data</span><span class="o">.</span><span class="n">shape</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_roi</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_roi_specified</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_scale_of_organisation</span> <span class="o">=</span> <span class="mi">1</span> <span class="c1"># 1 = micro organisation (single channel pairwise), n = meso- or n-scale organisation (n-sized groups of channels)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_initialise_parameter</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;HyperIT object created successfully.&quot;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_epo</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;Inter-Brain&#39;</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="bp">self</span><span class="o">.</span><span class="n">_hyper</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;Intra-Brain&#39;</span><span class="si">}</span><span class="s2"> analysis and epoched data detected. </span><span class="se">\n</span><span class="s2">Assuming data passed have shape (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_epo</span><span class="si">}</span><span class="s2"> epochs, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_chan</span><span class="si">}</span><span class="s2"> channels, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_samples</span><span class="si">}</span><span class="s2"> time points).&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;Inter-Brain&#39;</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="bp">self</span><span class="o">.</span><span class="n">_hyper</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;Intra-Brain&#39;</span><span class="si">}</span><span class="s2"> analysis and unepoched data detected. </span><span class="se">\n</span><span class="s2">Assuming data passed have shape (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_chan</span><span class="si">}</span><span class="s2"> channels, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_samples</span><span class="si">}</span><span class="s2"> time points).&quot;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_freq_bands</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Data has been bandpass filtered: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_freq_bands</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+
+
+    <span class="c1">## DUNDER METHODS</span>
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; String representation of HyperIT object. &quot;&quot;&quot;</span>
+        <span class="n">analysis_type</span> <span class="o">=</span> <span class="s1">&#39;Hyperscanning&#39;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hyper</span> <span class="k">else</span> <span class="s1">&#39;Intra-Brain&#39;</span>
+        <span class="n">channel_info</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_channel_names</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>  <span class="c1"># Assuming self._channel_names[0] is a list of channel names for the first data set</span>
+        
+        <span class="c1"># Adding second channel name if interbrain analysis is being conducted</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hyper</span><span class="p">:</span>
+            <span class="n">channel_info</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot; and </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_channel_names</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+
+        <span class="k">return</span> <span class="p">(</span><span class="sa">f</span><span class="s2">&quot;HyperIT Object: </span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">analysis_type</span><span class="si">}</span><span class="s2"> Analysis with </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_epo</span><span class="si">}</span><span class="s2"> epochs, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_chan</span><span class="si">}</span><span class="s2"> channels, &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;and </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_samples</span><span class="si">}</span><span class="s2"> time points. </span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Channel names passed: </span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">channel_info</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Returns the number of epochs in the HyperIT object. &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_all_data</span><span class="o">.</span><span class="n">shape</span>
+    
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; String representation of HyperIT object. &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="fm">__repr__</span><span class="p">()</span>
+    
+
+    <span class="c1">## DATA, CHANNEL, &amp; INITIALISATION CHECKING</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">__ensure_three_dims</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Ensure the numpy array `data` has three dimensions.&quot;&quot;&quot;</span>
+        <span class="k">while</span> <span class="n">data</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">data</span>
+
+    <span class="k">def</span> <span class="nf">__check_data</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Checks the consistency and dimensionality of the time-series data and channel names. Sets the number of epochs, channels, and time points as object variables.</span>
+
+<span class="sd">        Ensures:</span>
+<span class="sd">            - Whether an intra-brain analysis is expected (when no second data set is provided or when data1==data2).</span>
+<span class="sd">            - Data are numpy arrays.</span>
+<span class="sd">            - Data shapes are consistent.</span>
+<span class="sd">            - Data dimensions are either 2 or 3 dimensional.</span>
+<span class="sd">            - Channel names are in correct format and match number of channels in data.</span>
+<span class="sd">            - Data are bandpass filtered, if frequency bands are specified.</span>
+<span class="sd">            - Data are standardised, if specified.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data2</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">np</span><span class="o">.</span><span class="n">array_equal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data2</span><span class="p">)</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data2</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="mi">0</span><span class="p">,):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_data2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data1</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_hyper</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_include_intra</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_hyper</span> <span class="o">=</span> <span class="kc">True</span>
+            
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="k">for</span> <span class="n">data</span> <span class="ow">in</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_data1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data2</span><span class="p">]):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Time-series data must be numpy arrays.&quot;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data1</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data2</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Time-series data must have the same shape for both participants.&quot;</span><span class="p">)</span>
+    
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data1</span><span class="o">.</span><span class="n">ndim</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unexpected number of dimensions in time-series data: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_data1</span><span class="o">.</span><span class="n">ndim</span><span class="si">}</span><span class="s2">. Expected 3 dimensions (epochs, channels, time_points) or 2 dimensions (channels, time_points) or 1 dimension (time_points).&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Ensure data is 3 dimensional and has shape (n_epochs, n_channels, n_samples). </span>
+        <span class="c1"># If freq_bands have been specified, this will become 4 dimensional: (n_epochs, n_freq_bands, n_channels, n_samples)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data2</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__ensure_three_dims</span><span class="p">,</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data2</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">__check_channel_names</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Checks the consistency of the channel names provided. &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_channel_names</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Channel names must be a list of strings or a list of lists of strings.&quot;</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_channel_names</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_channel_names</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;All elements must be strings if the first element is a string.&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_channel_names</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_channel_names</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_channel_names</span><span class="o">.</span><span class="n">copy</span><span class="p">()]</span>
+
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_channel_names</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">sublist</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="k">for</span> <span class="n">sublist</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_channel_names</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;All elements must be lists of strings if the first element is a list.&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">sublist</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_channel_names</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">sublist</span><span class="p">):</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;All sublists must be lists of strings.&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_channel_names</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_channel_names</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_channel_names</span> <span class="o">*</span> <span class="mi">2</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Channel names must be either a list of strings or a list of lists of strings.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">names</span><span class="p">)</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_chan</span> <span class="k">for</span> <span class="n">names</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_channel_names</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The number of channels in time-series data does not match the length of channel_names.&quot;</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">__check_channels</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Checks the consistency of the channel names provided and sets the number of channels as an object variable. &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_n_chan</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data1</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">_channel_indices1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_channel_indices2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_chan</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_chan</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_channel_names</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__check_channel_names</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_channel_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_chan</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_chan</span><span class="p">)]</span>
+            
+    <span class="k">def</span> <span class="nf">__configure_data</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Configures the data for analysis by bandpass filtering and standardising. &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_freq_bands</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_data1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data2</span> <span class="o">=</span> <span class="n">bandpass_filter_data</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sfreq</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_freq_bands</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_filter_options</span><span class="p">),</span> <span class="n">bandpass_filter_data</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sfreq</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_freq_bands</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_filter_options</span><span class="p">)</span>
+                
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_data1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data1</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_standardise_data</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_data1</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data1</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data1</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data1</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_data2</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data2</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            
+        <span class="bp">self</span><span class="o">.</span><span class="n">_all_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">_data1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data2</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            
+        
+        
+        
+
+    
+
+    <span class="c1">## DEFINING REGIONS OF INTEREST</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">roi</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">]]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Regions of interest for both data of the HyperIT object (defining spatial scale of organisation). To set this, call .roi(roi_list). </span>
+<span class="sd">        </span>
+<span class="sd">        HyperIT is defaulted to **micro-scale** analysis (individual channels) but specific channels can be specified for pointwise comparison: ``roi_list = [[&#39;Fp1&#39;, &#39;Fp2&#39;], [&#39;F3&#39;, &#39;F4&#39;]]``, for example. </span>
+<span class="sd">        For **meso-scale** analysis (clusters of channels), equally-sized and equally-numbered clusters must be defined for both sets of data in the following way: ``roi_list = [[[PP1_cluster_1], ..., [PP1_cluster_n]], [[PP2_cluster_1], ..., [PP2_cluster_n]]]``. </span>
+<span class="sd">        Finally, for **macro-scale** analysis (all channels per person), the specification can be set as ``roi_list = [[PP1_all_channels][PP2_all_channels]]`` (note that PP1_all_channels and PP2_all_channels should be list themselves).</span>
+<span class="sd">        Importantly, as long as the ``channel_names`` are instantiated properly in the initiation of the HyperIT object, the ROI can even be given as a lists of channel indices (integers). </span>
+<span class="sd">        In any case, to set these scales of organisations, simply amend the ``roi`` property of the HyperIT object used.</span>
+<span class="sd">        Call ``roi.reset_roi()`` to reset the ROI to all channels.</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_roi</span>
+
+    <span class="nd">@roi</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">roi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">roi_list</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">]]])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Sets the region of interest for both data of the HyperIT object.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            roi_list: A list of lists, where each sublist is a ROI containing either strings of EEG channel names or integer indices or multiple ROIs formed as another list.</span>
+<span class="sd">        </span>
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If the value is not a list of lists, if elements of the sublists are not of type str or int, or if sublists do not have the same length.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_roi_specified</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="c1">## DETERMINE SCALE OF ORGANISATION</span>
+        <span class="c1"># 1: Micro organisation (specified channels, pairwise comparison)           e.g., roi_list = [[&#39;Fp1&#39;, &#39;Fp2&#39;], [&#39;F3&#39;, &#39;F4&#39;]]</span>
+
+        <span class="c1"># n: Meso- or n-scale organisation (n specified channels per ROI group)     e.g., roi_list = [[  [&#39;Fp1&#39;, &#39;Fp2&#39;], [&#39;CP1&#39;, &#39;CP2&#39;]   ],   n CHANNELS IN EACH GROUP FOR PARTICIPANT 1</span>
+                                                                                                    <span class="c1"># [    [&#39;F3&#39;, &#39;F4&#39;], [&#39;F7&#39;, &#39;F8&#39;]     ]]   n CHANNELS IN EACH GROUP FOR PARTICIPANT 2</span>
+
+        <span class="c1"># Check if roi_list is structured for pointwise channel comparison</span>
+        <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">sublist</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">sublist</span><span class="p">)</span> <span class="k">for</span> <span class="n">sublist</span> <span class="ow">in</span> <span class="n">roi_list</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_scale_of_organisation</span> <span class="o">=</span> <span class="mi">1</span> 
+
+        <span class="c1"># Check if roi_list is structured for grouped channel comparison</span>
+        <span class="k">elif</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">sublist</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">sublist</span><span class="p">)</span> <span class="k">for</span> <span class="n">sublist</span> <span class="ow">in</span> <span class="n">roi_list</span><span class="p">):</span>
+            <span class="c1"># Ensure uniformity in the number of groups across both halves</span>
+            <span class="n">num_groups_x</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">roi_list</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">num_groups_y</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">roi_list</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">num_groups_x</span> <span class="o">==</span> <span class="n">num_groups_y</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_soi_groups</span> <span class="o">=</span> <span class="n">num_groups_x</span> 
+
+                <span class="n">group_lengths</span> <span class="o">=</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">group</span><span class="p">)</span> <span class="k">for</span> <span class="n">half</span> <span class="ow">in</span> <span class="n">roi_list</span> <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">half</span><span class="p">]</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">group_lengths</span><span class="p">))</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_scale_of_organisation</span> <span class="o">=</span> <span class="n">group_lengths</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> 
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_initialise_parameter</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_scale_of_organisation</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale_of_organisation</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Not all groups have the same number of channels.&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;ROI halves do not have the same number of channel groups per participant.&quot;</span><span class="p">)</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;ROI structure is not recognised.&quot;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Scale of organisation: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_scale_of_organisation</span><span class="si">}</span><span class="s2"> channels.&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Groups of channels: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_soi_groups</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_channel_indices1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_channel_indices2</span> <span class="o">=</span> <span class="p">[</span><span class="n">convert_names_to_indices</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_channel_names</span><span class="p">,</span> <span class="n">part</span><span class="p">,</span> <span class="n">idx</span><span class="p">)</span> <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">part</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">roi_list</span><span class="p">)]</span> 
+       
+        <span class="c1"># POINTWISE CHANNEL COMPARISON</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale_of_organisation</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_data1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data1</span><span class="p">[:,</span> <span class="p">:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_channel_indices1</span><span class="p">,</span> <span class="p">:]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_data2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data2</span><span class="p">[:,</span> <span class="p">:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_channel_indices2</span><span class="p">,</span> <span class="p">:]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_n_chan</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_channel_indices1</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_roi</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_channel_indices1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_channel_indices2</span><span class="p">]</span>
+        
+<div class="viewcode-block" id="HyperIT.reset_roi"><a class="viewcode-back" href="../../index.html#hyperit.hyperit.HyperIT.reset_roi">[docs]</a>    <span class="k">def</span> <span class="nf">reset_roi</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Resets the region of interest for both data of the HyperIT object to all channels.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_roi_specified</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_scale_of_organisation</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_channel_indices1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_channel_names</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_channel_indices2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_channel_names</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_channel_names</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_channel_names</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_roi</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_channel_indices1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_channel_indices2</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_all_data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_n_chan</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_channel_indices1</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Region of interest has been reset to all channels.&quot;</span><span class="p">)</span></div>
+
+
+
+    <span class="c1">## HARD-CODED HISTOGRAM AND SYMBOLIC MI ESTIMATION FUNCTIONS</span>
+
+    <span class="k">def</span> <span class="nf">__estimate_mi_hist</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s1</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">s2</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculates Mutual Information using Histogram/Binning Estimator for time-series signals.&quot;&quot;&quot;</span>
+
+        <span class="k">def</span> <span class="nf">calc_fd_bins</span><span class="p">(</span><span class="n">X</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">Y</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">            </span><span class="sd">&quot;&quot;&quot;Calculates the optimal frequency-distribution bin size for histogram estimator using Freedman-Diaconis Rule.&quot;&quot;&quot;</span>
+
+            <span class="n">fd_bins_X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ptp</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">stats</span><span class="o">.</span><span class="n">iqr</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">X</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="o">/</span><span class="mi">3</span><span class="p">)))</span>
+            <span class="n">fd_bins_Y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ptp</span><span class="p">(</span><span class="n">Y</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">stats</span><span class="o">.</span><span class="n">iqr</span><span class="p">(</span><span class="n">Y</span><span class="p">)</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">Y</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="o">/</span><span class="mi">3</span><span class="p">)))</span>
+            <span class="n">fd_bins</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">((</span><span class="n">fd_bins_X</span><span class="o">+</span><span class="n">fd_bins_Y</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">))</span>
+            <span class="k">return</span> <span class="n">fd_bins</span>
+        
+        <span class="k">def</span> <span class="nf">hist_calc_mi</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">):</span>
+            <span class="c1"># Joint probability distribution</span>
+            <span class="n">j_hist</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">histogram2d</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="n">calc_fd_bins</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">))</span>
+            <span class="n">pxy</span> <span class="o">=</span> <span class="n">j_hist</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">j_hist</span><span class="p">)</span>  <span class="c1"># Joint probability distribution</span>
+
+            <span class="c1"># Marginals probability distribution</span>
+            <span class="n">px</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">pxy</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> 
+            <span class="n">py</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">pxy</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> 
+
+            <span class="c1"># Entropies</span>
+            <span class="n">Hx</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">px</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="n">px</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span><span class="p">))</span>
+            <span class="n">Hy</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">py</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="n">py</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span><span class="p">))</span>
+            <span class="n">Hxy</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">pxy</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="n">pxy</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span><span class="p">))</span>
+
+            <span class="k">return</span> <span class="n">Hx</span> <span class="o">+</span> <span class="n">Hy</span> <span class="o">-</span> <span class="n">Hxy</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="n">hist_calc_mi</span><span class="p">(</span><span class="n">s1</span><span class="p">,</span> <span class="n">s2</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc_sigstats</span><span class="p">:</span>
+            <span class="n">permuted_mi_values</span> <span class="o">=</span> <span class="p">[]</span>
+
+            <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_stat_sig_perm_num</span><span class="p">):</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">s2</span><span class="p">)</span>
+                <span class="n">permuted_mi</span> <span class="o">=</span> <span class="n">hist_calc_mi</span><span class="p">(</span><span class="n">s1</span><span class="p">,</span> <span class="n">s2</span><span class="p">)</span>
+                <span class="n">permuted_mi_values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">permuted_mi</span><span class="p">)</span>
+
+            <span class="n">mean_permuted_mi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">permuted_mi_values</span><span class="p">)</span>
+            <span class="n">std_permuted_mi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">permuted_mi_values</span><span class="p">)</span>
+            <span class="n">p_value</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">permuted_mi_values</span> <span class="o">&gt;=</span> <span class="n">result</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stat_sig_perm_num</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">result</span><span class="p">,</span> <span class="n">mean_permuted_mi</span><span class="p">,</span> <span class="n">std_permuted_mi</span><span class="p">,</span> <span class="n">p_value</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="n">result</span>
+
+    <span class="k">def</span> <span class="nf">__estimate_mi_symb</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s1</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">s2</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">k</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span> <span class="n">delay</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculates Mutual Information using Symbolic Estimator for time-series signals.&quot;&quot;&quot;</span>
+
+        <span class="n">symbol_weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">k</span><span class="p">))</span>
+
+        <span class="k">def</span> <span class="nf">symb_symbolise</span><span class="p">(</span><span class="n">X</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">k</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">delay</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+            <span class="n">Y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">k</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="n">k</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">delay</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">k</span><span class="p">):</span>
+                <span class="n">Y</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="n">i</span> <span class="o">*</span> <span class="n">delay</span><span class="p">:</span><span class="n">i</span> <span class="o">*</span> <span class="n">delay</span> <span class="o">+</span> <span class="n">Y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+            <span class="k">return</span> <span class="n">Y</span><span class="o">.</span><span class="n">T</span>
+
+        <span class="k">def</span> <span class="nf">symb_normalise_counts</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">total</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">d</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>        
+            <span class="k">return</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">value</span> <span class="o">/</span> <span class="n">total</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">d</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+        
+        <span class="k">def</span> <span class="nf">symb_calc_mi</span><span class="p">(</span><span class="n">X</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">Y</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">k</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">delay</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+            <span class="n">X</span> <span class="o">=</span> <span class="n">symb_symbolise</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">delay</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s1">&#39;quicksort&#39;</span><span class="p">)</span>
+            <span class="n">Y</span> <span class="o">=</span> <span class="n">symb_symbolise</span><span class="p">(</span><span class="n">Y</span><span class="p">,</span> <span class="n">delay</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s1">&#39;quicksort&#39;</span><span class="p">)</span>
+
+            <span class="c1"># multiply each symbol [1,0,3] by symbol_weights [1,3,9] =&gt; [1,0,27] and give a final array of the sum of each code ([.., .., 28, .. ])</span>
+            <span class="n">symbol_hash_X</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">symbol_weights</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> 
+            <span class="n">symbol_hash_Y</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="n">Y</span><span class="p">,</span> <span class="n">symbol_weights</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+            <span class="n">p_xy</span><span class="p">,</span> <span class="n">p_x</span><span class="p">,</span> <span class="n">p_y</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="n">symb_normalise_counts</span><span class="p">,</span> <span class="p">[</span><span class="nb">dict</span><span class="p">(),</span> <span class="nb">dict</span><span class="p">(),</span> <span class="nb">dict</span><span class="p">()])</span>
+            
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">symbol_hash_X</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+
+                <span class="n">xy</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">symbol_hash_X</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="si">}</span><span class="s2">,</span><span class="si">{</span><span class="n">symbol_hash_Y</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="n">x</span><span class="p">,</span><span class="n">y</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">symbol_hash_X</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span> <span class="nb">str</span><span class="p">(</span><span class="n">symbol_hash_Y</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+
+                <span class="k">for</span> <span class="n">dict_</span><span class="p">,</span> <span class="n">key</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">([</span><span class="n">p_xy</span><span class="p">,</span> <span class="n">p_x</span><span class="p">,</span> <span class="n">p_y</span><span class="p">],</span> <span class="p">[</span><span class="n">xy</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">]):</span>
+                    <span class="n">dict_</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">dict_</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+
+            <span class="c1"># Normalise counts directly into probabilities</span>
+            <span class="n">p_xy</span><span class="p">,</span> <span class="n">p_x</span><span class="p">,</span> <span class="n">p_y</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">symb_normalise_counts</span><span class="p">(</span><span class="n">d</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="p">[</span><span class="n">p_xy</span><span class="p">,</span> <span class="n">p_x</span><span class="p">,</span> <span class="n">p_y</span><span class="p">]]</span>
+            
+            <span class="n">entropy_X</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">p_x</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="n">p_x</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span><span class="p">))</span> 
+            <span class="n">entropy_Y</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">p_y</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="n">p_y</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span><span class="p">))</span>
+            <span class="n">entropy_XY</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">p_xy</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="n">p_xy</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span><span class="p">))</span>
+
+            <span class="k">return</span> <span class="n">entropy_X</span> <span class="o">+</span> <span class="n">entropy_Y</span> <span class="o">-</span> <span class="n">entropy_XY</span>
+
+
+        <span class="n">result</span> <span class="o">=</span> <span class="n">symb_calc_mi</span><span class="p">(</span><span class="n">s1</span><span class="p">,</span> <span class="n">s2</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">delay</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc_sigstats</span><span class="p">:</span>
+            <span class="n">permuted_mi_values</span> <span class="o">=</span> <span class="p">[]</span>
+
+            <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_stat_sig_perm_num</span><span class="p">):</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">s2</span><span class="p">)</span>
+                <span class="n">permuted_mi</span> <span class="o">=</span> <span class="n">symb_calc_mi</span><span class="p">(</span><span class="n">s1</span><span class="p">,</span> <span class="n">s2</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">delay</span><span class="p">)</span>
+                <span class="n">permuted_mi_values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">permuted_mi</span><span class="p">)</span>
+
+            <span class="n">mean_permuted_mi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">permuted_mi_values</span><span class="p">)</span>
+            <span class="n">std_permuted_mi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">permuted_mi_values</span><span class="p">)</span>
+            <span class="n">p_value</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">permuted_mi_values</span> <span class="o">&gt;=</span> <span class="n">result</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stat_sig_perm_num</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">result</span><span class="p">,</span> <span class="n">mean_permuted_mi</span><span class="p">,</span> <span class="n">std_permuted_mi</span><span class="p">,</span> <span class="n">p_value</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="n">result</span>
+
+
+
+    <span class="c1">## ESTIMATION AND HELPER FUNCTIONS</span>
+
+    <span class="k">def</span> <span class="nf">__which_estimator</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">measure</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Determines the estimator to use based on the measure type and sets the estimator, properties, and initialisation parameters.&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_estimator_name</span><span class="p">,</span> <span class="n">calculator</span><span class="p">,</span> <span class="n">properties</span><span class="p">,</span> <span class="n">initialise_parameter</span> <span class="o">=</span> <span class="n">set_estimator</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_estimator_type</span><span class="p">,</span> <span class="n">measure</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_params</span><span class="p">)</span> <span class="c1"># from utils.py function</span>
+
+        <span class="k">if</span> <span class="n">calculator</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_Calc</span> <span class="o">=</span> <span class="n">calculator</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">properties</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">properties</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_Calc</span><span class="o">.</span><span class="n">setProperty</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">initialise_parameter</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_initialise_parameter</span> <span class="o">=</span> <span class="n">initialise_parameter</span>
+
+    <span class="k">def</span> <span class="nf">__setup_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Sets up the matrices for Mutual Information, Transfer Entropy, or Integrated Information Decomposition. &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_loop_range</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_chan</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale_of_organisation</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_soi_groups</span>
+        
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hyper</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_include_intra</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_loop_range</span> <span class="o">*=</span> <span class="mi">2</span> 
+            <span class="c1"># Will give shape (n_epo, n_freq_bands, n_chan_or_group*2, n_samples)</span>
+            <span class="c1"># Note that data1 and data2 will be identical</span>
+            <span class="n">temp1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data1</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">temp2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data2</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_data1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">temp1</span><span class="p">,</span> <span class="n">temp2</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_data2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">temp1</span><span class="p">,</span> <span class="n">temp2</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale_of_organisation</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_roi</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_roi</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_roi</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_roi</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_roi</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_measure</span> <span class="o">==</span> <span class="n">MeasureType</span><span class="o">.</span><span class="n">MI</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_measure</span> <span class="o">==</span> <span class="n">MeasureType</span><span class="o">.</span><span class="n">TE</span><span class="p">:</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc_sigstats</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_it_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_epo</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_freq_bands</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_loop_range</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_loop_range</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+                <span class="k">return</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">_it_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_epo</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_freq_bands</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_loop_range</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_loop_range</span><span class="p">))</span>
+            <span class="k">return</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">_it_matrix</span> <span class="o">=</span> <span class="p">[[[[{}</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_loop_range</span><span class="p">)]</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_loop_range</span><span class="p">)]</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_freq_bands</span><span class="p">)]</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_epo</span><span class="p">)]</span>
+        
+
+    <span class="k">def</span> <span class="nf">__estimate_it</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s1</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">s2</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Estimates Mutual Information or Transfer Entropy for a pair of time-series signals using JIDT estimators. &quot;&quot;&quot;</span>
+
+        <span class="c1"># Initialise parameter describes the dimensions of the data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_Calc</span><span class="o">.</span><span class="n">initialise</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_initialise_parameter</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_initialise_parameter</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_Calc</span><span class="o">.</span><span class="n">initialise</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_Calc</span><span class="o">.</span><span class="n">setObservations</span><span class="p">(</span><span class="n">setup_JArray</span><span class="p">(</span><span class="n">s1</span><span class="p">),</span> <span class="n">setup_JArray</span><span class="p">(</span><span class="n">s2</span><span class="p">))</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_Calc</span><span class="o">.</span><span class="n">computeAverageLocalOfObservations</span><span class="p">()</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+
+        <span class="c1"># Conduct significance testing</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc_sigstats</span><span class="p">:</span>
+            <span class="n">stat_sig</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_Calc</span><span class="o">.</span><span class="n">computeSignificance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_stat_sig_perm_num</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">result</span><span class="p">,</span> <span class="n">stat_sig</span><span class="o">.</span><span class="n">getMeanOfDistribution</span><span class="p">(),</span> <span class="n">stat_sig</span><span class="o">.</span><span class="n">getStdOfDistribution</span><span class="p">(),</span> <span class="n">stat_sig</span><span class="o">.</span><span class="n">pValue</span><span class="p">])</span>
+            
+        <span class="k">return</span> <span class="n">result</span>
+    
+    <span class="k">def</span> <span class="nf">__estimate_atoms</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s1</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">s2</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+
+        <span class="n">atoms_results_xy</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">calc_PhiID</span><span class="p">(</span><span class="n">s1</span><span class="p">,</span> <span class="n">s2</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_tau</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;gaussian&#39;</span><span class="p">,</span> <span class="n">redundancy</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_redundancy</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">atoms_results_xy</span><span class="p">:</span>  
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Empty results from calc_PhiID, critical data processing cannot continue.&quot;</span><span class="p">)</span>
+
+        <span class="n">calc_atoms_xy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">atoms_results_xy</span><span class="p">[</span><span class="n">_</span><span class="p">]</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">PhiID_atoms_abbr</span><span class="p">]),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">value</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">atoms_results_xy</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="n">calc_atoms_xy</span><span class="p">)}</span>
+
+    <span class="k">def</span> <span class="nf">__filter_estimation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s1</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">s2</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Filters the estimation in case incompatible with JIDT. &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_measure</span> <span class="o">==</span> <span class="n">MeasureType</span><span class="o">.</span><span class="n">MI</span><span class="p">:</span>
+            <span class="k">match</span> <span class="bp">self</span><span class="o">.</span><span class="n">_estimator_type</span><span class="p">:</span>
+                <span class="k">case</span> <span class="s1">&#39;histogram&#39;</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__estimate_mi_hist</span><span class="p">(</span><span class="n">s1</span><span class="p">,</span> <span class="n">s2</span><span class="p">)</span>
+                <span class="k">case</span> <span class="s1">&#39;symbolic&#39;</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__estimate_mi_symb</span><span class="p">(</span><span class="n">s1</span><span class="p">,</span> <span class="n">s2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;delay&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_measure</span> <span class="o">==</span> <span class="n">MeasureType</span><span class="o">.</span><span class="n">PhyID</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__estimate_atoms</span><span class="p">(</span><span class="n">s1</span><span class="p">,</span> <span class="n">s2</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__estimate_it</span><span class="p">(</span><span class="n">s1</span><span class="p">,</span> <span class="n">s2</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__compute_pair_or_group</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">epoch</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">freq_band</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">i</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">j</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Computes the Mutual Information or Transfer Entropy for a pair of channels or groups of channels. &quot;&quot;&quot;</span>
+
+        <span class="n">channel_or_group_i</span> <span class="o">=</span> <span class="n">i</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale_of_organisation</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_roi</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">channel_or_group_j</span> <span class="o">=</span> <span class="n">j</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale_of_organisation</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_roi</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="p">]</span>    
+        <span class="c1"># data needs to be (samples, channels/groups) if not pointwise comparison </span>
+        <span class="c1"># (this is how both JIDT and phyid handle and expect incoming multivariate data)</span>
+        <span class="c1"># (Note that .T does not affect pointwise comparison as it is already in the correct shape)</span>
+        <span class="n">s1</span><span class="p">,</span> <span class="n">s2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data1</span><span class="p">[</span><span class="n">epoch</span><span class="p">,</span> <span class="n">freq_band</span><span class="p">,</span> <span class="n">channel_or_group_i</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data2</span><span class="p">[</span><span class="n">epoch</span><span class="p">,</span> <span class="n">freq_band</span><span class="p">,</span> <span class="n">channel_or_group_j</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">T</span>
+
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hyper</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_include_intra</span><span class="p">:</span>
+            
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_measure</span> <span class="o">==</span> <span class="n">MeasureType</span><span class="o">.</span><span class="n">MI</span> <span class="ow">and</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">i</span><span class="p">:</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__filter_estimation</span><span class="p">(</span><span class="n">s1</span><span class="p">,</span> <span class="n">s2</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_it_matrix</span><span class="p">[</span><span class="n">epoch</span><span class="p">,</span> <span class="n">freq_band</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">result</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_it_matrix</span><span class="p">[</span><span class="n">epoch</span><span class="p">,</span> <span class="n">freq_band</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">result</span>
+           
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_measure</span> <span class="o">==</span> <span class="n">MeasureType</span><span class="o">.</span><span class="n">TE</span> <span class="ow">and</span> <span class="n">i</span> <span class="o">!=</span> <span class="n">j</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_it_matrix</span><span class="p">[</span><span class="n">epoch</span><span class="p">,</span> <span class="n">freq_band</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__filter_estimation</span><span class="p">(</span><span class="n">s1</span><span class="p">,</span> <span class="n">s2</span><span class="p">)</span>
+
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_measure</span> <span class="o">==</span> <span class="n">MeasureType</span><span class="o">.</span><span class="n">PhyID</span> <span class="ow">and</span> <span class="n">i</span> <span class="o">!=</span> <span class="n">j</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_it_matrix</span><span class="p">[</span><span class="n">epoch</span><span class="p">][</span><span class="n">freq_band</span><span class="p">][</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__filter_estimation</span><span class="p">(</span><span class="n">s1</span><span class="p">,</span> <span class="n">s2</span><span class="p">)</span>
+
+        <span class="k">else</span><span class="p">:</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_measure</span> <span class="o">==</span> <span class="n">MeasureType</span><span class="o">.</span><span class="n">MI</span> <span class="ow">and</span> <span class="n">j</span> <span class="o">&lt;=</span> <span class="n">i</span><span class="p">:</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__filter_estimation</span><span class="p">(</span><span class="n">s1</span><span class="p">,</span> <span class="n">s2</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_it_matrix</span><span class="p">[</span><span class="n">epoch</span><span class="p">,</span> <span class="n">freq_band</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">result</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_it_matrix</span><span class="p">[</span><span class="n">epoch</span><span class="p">,</span> <span class="n">freq_band</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">result</span>
+            
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_measure</span> <span class="o">==</span> <span class="n">MeasureType</span><span class="o">.</span><span class="n">TE</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_it_matrix</span><span class="p">[</span><span class="n">epoch</span><span class="p">,</span> <span class="n">freq_band</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__filter_estimation</span><span class="p">(</span><span class="n">s1</span><span class="p">,</span> <span class="n">s2</span><span class="p">)</span>
+
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_measure</span> <span class="o">==</span> <span class="n">MeasureType</span><span class="o">.</span><span class="n">PhyID</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_it_matrix</span><span class="p">[</span><span class="n">epoch</span><span class="p">][</span><span class="n">freq_band</span><span class="p">][</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__filter_estimation</span><span class="p">(</span><span class="n">s1</span><span class="p">,</span> <span class="n">s2</span><span class="p">)</span>
+
+
+    <span class="c1">## MAIN CALCULATION FUNCTIONS         </span>
+
+    <span class="k">def</span> <span class="nf">__main_calc</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_include_intra</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hyper</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Intra-brain analyses are only available for hyperscanning set-ups. Identical data or only one set of data was detected.&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">__setup_matrix</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">epoch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_epo</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">freq_band</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_freq_bands</span><span class="p">)):</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_loop_range</span><span class="p">):</span>
+                    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_loop_range</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">__compute_pair_or_group</span><span class="p">(</span><span class="n">epoch</span><span class="p">,</span> <span class="n">freq_band</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_vis</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__prepare_vis</span><span class="p">()</span>
+            
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_it_matrix</span>
+
+    <span class="k">def</span> <span class="nf">__setup_mite_calc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">estimator_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">include_intra</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">calc_sigstats</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">vis</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">plot_epochs</span><span class="p">:</span> <span class="n">List</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; General function for computing Mutual Information or Transfer Entropy. &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_estimator_type</span> <span class="o">=</span> <span class="n">estimator_type</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_measure</span> <span class="o">==</span> <span class="n">MeasureType</span><span class="o">.</span><span class="n">MI</span> <span class="ow">and</span> <span class="n">estimator_type</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;ksg&#39;</span><span class="p">)</span> <span class="k">else</span> <span class="s1">&#39;ksg1&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_calc_sigstats</span> <span class="o">=</span> <span class="n">calc_sigstats</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_include_intra</span> <span class="o">=</span> <span class="n">include_intra</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_vis</span> <span class="o">=</span> <span class="n">vis</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_plot_epochs</span> <span class="o">=</span> <span class="p">(</span><span class="n">plot_epochs</span> <span class="ow">or</span> <span class="kc">None</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_vis</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_params</span> <span class="o">=</span> <span class="n">kwargs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_stat_sig_perm_num</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;stat_sig_perm_num&#39;</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_p_threshold</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;p_threshold&#39;</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">)</span>
+        
+        <span class="c1"># Set up the estimator and properties</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__which_estimator</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_measure</span><span class="p">))</span>
+        
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__main_calc</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">__setup_atom_calc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tau</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">redundancy</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">include_intra</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; General function for computing Integrated Information Decomposition. &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tau</span> <span class="o">=</span> <span class="n">tau</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_redundancy</span> <span class="o">=</span> <span class="n">redundancy</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_include_intra</span> <span class="o">=</span> <span class="n">include_intra</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_vis</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__main_calc</span><span class="p">()</span>
+
+
+
+    <span class="c1">## VISUALISATION FUNCTIONS</span>
+
+    <span class="k">def</span> <span class="nf">__prepare_vis</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Prepares the visualisation of Mutual Information, Transfer Entropy, or Integrated Information Decomposition matrix/matrices. &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_plot_epochs</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_plot_epochs</span> <span class="o">==</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_plot_epochs</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_epo</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_plot_epochs</span> <span class="o">=</span> <span class="p">[</span><span class="n">ep</span> <span class="o">-</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">ep</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_plot_epochs</span> <span class="k">if</span> <span class="n">ep</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_epo</span><span class="p">]</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_plot_epochs</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No valid epochs found in the input list.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Plotting </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_measure_title</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>
+    
+        <span class="bp">self</span><span class="o">.</span><span class="n">__plot_it</span><span class="p">()</span>
+
+
+    <span class="k">def</span> <span class="nf">__plot_it</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Plots the Mutual Information or Transfer Entropy matrix for visualisation. </span>
+<span class="sd">        Axes labelled with source and target channel names. </span>
+<span class="sd">        Choice to plot for all epochs, specific epoch(s), or average across epochs.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            it_matrix (np.ndarray): The Mutual Information or Transfer Entropy matrix to be plotted with shape (n_chan, n_chan, n_epo, 4), </span>
+<span class="sd">            where the last dimension represents the statistical signficance testing results: (local result, distribution mean, distribution standard deviation, p-value).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">title</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_measure_title</span><span class="si">}</span><span class="s1"> | </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_estimator_name</span><span class="si">}</span><span class="s1"> </span><span class="se">\n</span><span class="s1"> </span><span class="si">{</span><span class="s2">&quot;Inter-Brain&quot;</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="bp">self</span><span class="o">.</span><span class="n">_hyper</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s2">&quot;Intra-Brain&quot;</span><span class="si">}</span><span class="s1">&#39;</span>
+        <span class="n">source_channel_names</span> <span class="o">=</span> <span class="n">convert_indices_to_names</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_channel_names</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_channel_indices1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale_of_organisation</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_roi</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="n">target_channel_names</span> <span class="o">=</span> <span class="n">convert_indices_to_names</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_channel_names</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_channel_indices2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale_of_organisation</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_roi</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale_of_organisation</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Plotting for grouped channels.&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Source Groups:&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_soi_groups</span><span class="p">):</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">source_channel_names</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Target Groups:&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_soi_groups</span><span class="p">):</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">target_channel_names</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">epoch</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_plot_epochs</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">freq_band</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_freq_bands</span><span class="p">):</span>
+
+                <span class="n">results</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_it_matrix</span><span class="p">[</span><span class="n">epoch</span><span class="p">,</span> <span class="n">freq_band</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc_sigstats</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_it_matrix</span><span class="p">[</span><span class="n">epoch</span><span class="p">,</span> <span class="n">freq_band</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;BuPu&#39;</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">aspect</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">)</span>
+
+                <span class="n">band_description</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_freq_bands</span><span class="p">:</span>
+                    <span class="n">band_name</span><span class="p">,</span> <span class="n">band_range</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_freq_bands</span><span class="o">.</span><span class="n">items</span><span class="p">())[</span><span class="n">freq_band</span><span class="p">]</span>
+                    <span class="n">band_description</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">band_name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">band_range</span><span class="si">}</span><span class="s2">&quot;</span>
+
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_epo</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">band_description</span><span class="p">:</span>
+                        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">title</span><span class="si">}</span><span class="s1">; Epoch </span><span class="si">{</span><span class="n">epoch</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s1">, Frequency Band </span><span class="si">{</span><span class="n">band_description</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">pad</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">title</span><span class="si">}</span><span class="s1">; Epoch </span><span class="si">{</span><span class="n">epoch</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">pad</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">band_description</span><span class="p">:</span>
+                        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">title</span><span class="si">}</span><span class="s1">; Frequency Band </span><span class="si">{</span><span class="n">band_description</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">pad</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="n">title</span><span class="p">,</span> <span class="n">pad</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+                    
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc_sigstats</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_loop_range</span><span class="p">):</span>
+                        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_loop_range</span><span class="p">):</span>
+                            <span class="n">p_val</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_it_matrix</span><span class="p">[</span><span class="n">epoch</span><span class="p">,</span> <span class="n">freq_band</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+                            <span class="c1">## NEED TO FIX THIS FOR VARIOUS CONDITIONS</span>
+                            <span class="k">if</span> <span class="n">p_val</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_p_threshold</span> <span class="ow">and</span> <span class="p">(</span><span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hyper</span> <span class="ow">and</span> <span class="n">i</span> <span class="o">!=</span> <span class="n">j</span><span class="p">):</span>
+                                <span class="n">from_all</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_it_matrix</span><span class="p">[</span><span class="n">epoch</span><span class="p">,</span> <span class="n">freq_band</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">]</span>
+                                <span class="n">normalised_value</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_it_matrix</span><span class="p">[</span><span class="n">epoch</span><span class="p">,</span> <span class="n">freq_band</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">results</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">results</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">results</span><span class="p">))</span>
+                                <span class="n">text_colour</span> <span class="o">=</span> <span class="s1">&#39;white&#39;</span> <span class="k">if</span> <span class="n">normalised_value</span> <span class="o">&gt;</span> <span class="mf">0.5</span> <span class="k">else</span> <span class="s1">&#39;black&#39;</span>
+                                <span class="n">plt</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">j</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;p=</span><span class="si">{</span><span class="n">p_val</span><span class="si">:</span><span class="s1">.2f</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">text_colour</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">fontweight</span><span class="o">=</span><span class="s1">&#39;bold&#39;</span><span class="p">)</span>
+
+                <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">()</span>
+                
+
+                <span class="n">x_tick_label</span> <span class="o">=</span> <span class="n">convert_indices_to_names</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_channel_names</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_channel_indices2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="n">y_tick_label</span> <span class="o">=</span> <span class="n">convert_indices_to_names</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_channel_names</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_channel_indices1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="n">ticks</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_loop_range</span><span class="p">)</span>
+                <span class="n">rotate_x</span> <span class="o">=</span> <span class="mi">90</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale_of_organisation</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="mi">0</span>
+                <span class="n">rotate_y</span> <span class="o">=</span> <span class="mi">90</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale_of_organisation</span> <span class="o">!=</span> <span class="mi">1</span> <span class="k">else</span> <span class="mi">0</span>
+
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hyper</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_include_intra</span><span class="p">:</span>
+                    <span class="n">x_tick_label</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;X_&#39;</span> <span class="o">+</span> <span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">y_tick_label</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="s1">&#39;Y_&#39;</span> <span class="o">+</span> <span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">x_tick_label</span><span class="p">]</span>
+                    <span class="n">y_tick_label</span> <span class="o">=</span> <span class="n">x_tick_label</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Target&#39;</span><span class="p">)</span>
+                    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Source&#39;</span><span class="p">)</span>
+
+                <span class="n">plt</span><span class="o">.</span><span class="n">xticks</span><span class="p">(</span><span class="n">ticks</span><span class="p">,</span> <span class="n">x_tick_label</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="n">rotate_x</span><span class="p">)</span> 
+                <span class="n">plt</span><span class="o">.</span><span class="n">yticks</span><span class="p">(</span><span class="n">ticks</span><span class="p">,</span> <span class="n">y_tick_label</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="n">rotate_y</span><span class="p">)</span>
+
+                <span class="n">plt</span><span class="o">.</span><span class="n">tick_params</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s1">&#39;both&#39;</span><span class="p">,</span> <span class="n">bottom</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">top</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">labelbottom</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">labeltop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">tick_params</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s1">&#39;both&#39;</span><span class="p">,</span> <span class="n">right</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">left</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">labelleft</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+
+    <span class="c1">## HIGH-LEVEL INTERFACE FUNCTIONS</span>
+
+<div class="viewcode-block" id="HyperIT.compute_mi"><a class="viewcode-back" href="../../index.html#hyperit.hyperit.HyperIT.compute_mi">[docs]</a>    <span class="k">def</span> <span class="nf">compute_mi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">estimator_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;kernel&#39;</span><span class="p">,</span> <span class="n">include_intra</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">calc_sigstats</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">vis</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">plot_epochs</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Computes Mutual Information (MI) between data (time-series signals) using specified estimator.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            estimator_type          (str, optional): Specifies the MI estimator to use. Defaults to &#39;kernel&#39;.</span>
+<span class="sd">            include_intra          (bool, optional): If True, includes intra-brain analyses. Defaults to False.</span>
+<span class="sd">            calc_sigstats          (bool, optional): If True, performs statistical significance testing. Defaults to False.</span>
+<span class="sd">            vis                    (bool, optional): If True, results will be visualised. Defaults to False.</span>
+<span class="sd">            plot_epochs       (List[int], optional): Specifies which epochs to plot. None plots all. Defaults to None.</span>
+<span class="sd">            **kwargs                               : Additional keyword arguments for the MI estimator.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            np.ndarray: A symmetric mutual information matrix. The shape of the matrix is determined by</span>
+<span class="sd">            the `include_intra` and `calc_sigstats` flags:</span>
+<span class="sd">                - If `include_intra` is False, shape is (n_epo, n_freq_bands, n_chan, n_chan).</span>
+<span class="sd">                - If `include_intra` is True, shape is (n_epo, n_freq_bands, 2*n_chan, 2*n_chan).</span>
+<span class="sd">                - If `calc_sigstats` is True, an additional last dimension (size 4) contains statistical</span>
+<span class="sd">                significance results: [MI value, mean, standard deviation, p-value].</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            When `include_intra` is True, the matrix can be segmented accordingly:</span>
+<span class="sd">                - `intra1`: matrix[:, :, :n_chan, :n_chan]</span>
+<span class="sd">                - `intra2`: matrix[:, :, n_chan:, n_chan:]</span>
+<span class="sd">                - `inter12`: matrix[:, :, :n_chan, n_chan:]</span>
+<span class="sd">                - `inter21`: matrix[:, :, n_chan:, :n_chan]</span>
+
+<span class="sd">        Available Estimators and Their Parameters:</span>
+<span class="sd">            - histogram: </span>
+<span class="sd">                - None.</span>
+<span class="sd">            - ksg1:</span>
+<span class="sd">                - kraskov_param (int, default=4).</span>
+<span class="sd">                - normalise (bool, default=True).</span>
+<span class="sd">            - ksg2:</span>
+<span class="sd">                - kraskov_param (int, default=4).</span>
+<span class="sd">                - normalise (bool, default=True).</span>
+<span class="sd">            - kernel:</span>
+<span class="sd">                - kernel_width (float, default=0.25).</span>
+<span class="sd">                - normalise (bool, default=True).</span>
+<span class="sd">            - gaussian:</span>
+<span class="sd">                - normalise (bool, default=True).</span>
+<span class="sd">            - symbolic:</span>
+<span class="sd">                - k (int, default=3): Embedding history or symbol length.</span>
+<span class="sd">                - delay (int, default=1).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_measure</span> <span class="o">=</span> <span class="n">MeasureType</span><span class="o">.</span><span class="n">MI</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_measure_title</span> <span class="o">=</span> <span class="s1">&#39;Mutual Information&#39;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__setup_mite_calc</span><span class="p">(</span><span class="n">estimator_type</span><span class="p">,</span> <span class="n">include_intra</span><span class="p">,</span> <span class="n">calc_sigstats</span><span class="p">,</span> <span class="n">vis</span><span class="p">,</span> <span class="n">plot_epochs</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="HyperIT.compute_te"><a class="viewcode-back" href="../../index.html#hyperit.hyperit.HyperIT.compute_te">[docs]</a>    <span class="k">def</span> <span class="nf">compute_te</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">estimator_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;kernel&#39;</span><span class="p">,</span> <span class="n">include_intra</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">calc_sigstats</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">vis</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">plot_epochs</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Computes Transfer Entropy (TE) between time-series data using a specified estimator. This function allows for intra-brain and inter-brain analyses and includes optional statistical significance testing. Data1 is considered the source and Data2 the target.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            estimator_type          (str, optional): Specifies the TE estimator to use. Defaults to &#39;kernel&#39;.</span>
+<span class="sd">            include_intra          (bool, optional): Whether to include intra-brain comparisons in the output matrix. Defaults to False.</span>
+<span class="sd">            calc_sigstats          (bool, optional): Whether to calculate statistical significance of TE values. Defaults to False.</span>
+<span class="sd">            vis                    (bool, optional): Enables visualisation of the TE matrix if set to True. Defaults to False.</span>
+<span class="sd">            plot_epochs       (List[int], optional): Specifies which epochs to plot. If None, plots all epochs. Defaults to None.</span>
+<span class="sd">            **kwargs                               : Additional parameters for the TE estimator.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            np.ndarray: A transfer entropy matrix. The shape of the matrix is determined by</span>
+<span class="sd">            the `include_intra` and `calc_sigstats` flags:</span>
+<span class="sd">                - If `include_intra` is False, shape is (n_epo, n_freq_bands, n_chan, n_chan).</span>
+<span class="sd">                - If `include_intra` is True, shape is (n_epo, n_freq_bands, 2*n_chan, 2*n_chan).</span>
+<span class="sd">                - If `calc_sigstats` is True, an additional last dimension (size 4) contains statistical</span>
+<span class="sd">                significance results: [MI value, mean, standard deviation, p-value].</span>
+<span class="sd">        Note:</span>
+<span class="sd">            When `include_intra` is True, the matrix can be segmented accordingly:</span>
+<span class="sd">                - `intra1`: matrix[:, :, :n_chan, :n_chan]</span>
+<span class="sd">                - `intra2`: matrix[:, :, n_chan:, n_chan:]</span>
+<span class="sd">                - `inter12`: matrix[:, :, :n_chan, n_chan:]</span>
+<span class="sd">                - `inter21`: matrix[:, :, n_chan:, :n_chan]</span>
+
+<span class="sd">        Available Estimators and Their Parameters:</span>
+<span class="sd">            - `ksg`:</span>
+<span class="sd">                - k, k_tau (int, default=1): Target and source embedding history length.</span>
+<span class="sd">                - l, l_tau (int, default=1): Target and source embedding delay.</span>
+<span class="sd">                - delay (int, default=1): Delay parameter for temporal dependency.</span>
+<span class="sd">                - kraskov_param (int, default=1).</span>
+<span class="sd">                - normalise (bool, default=True).</span>
+<span class="sd">            - `kernel`:</span>
+<span class="sd">                - kernel_width (float, default=0.5).</span>
+<span class="sd">                - normalise (bool, default=True).</span>
+<span class="sd">            - `gaussian`:</span>
+<span class="sd">                - k, k_tau (int, default=1): Target and source embedding history length.</span>
+<span class="sd">                - l, l_tau (int, default=1): Target and source embedding delay.</span>
+<span class="sd">                - delay (int, default=1): Delay parameter for temporal dependency.</span>
+<span class="sd">                - bias_correction (bool, default=False).</span>
+<span class="sd">                - normalise (bool, default=True).</span>
+<span class="sd">            - `symbolic`:</span>
+<span class="sd">                - k (int, default=1): Embedding history length.</span>
+<span class="sd">                - normalise (bool, default=True).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">_measure</span> <span class="o">=</span> <span class="n">MeasureType</span><span class="o">.</span><span class="n">TE</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_measure_title</span> <span class="o">=</span> <span class="s1">&#39;Transfer Entropy&#39;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__setup_mite_calc</span><span class="p">(</span><span class="n">estimator_type</span><span class="p">,</span> <span class="n">include_intra</span><span class="p">,</span> <span class="n">calc_sigstats</span><span class="p">,</span> <span class="n">vis</span><span class="p">,</span> <span class="n">plot_epochs</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="HyperIT.compute_atoms"><a class="viewcode-back" href="../../index.html#hyperit.hyperit.HyperIT.compute_atoms">[docs]</a>    <span class="k">def</span> <span class="nf">compute_atoms</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tau</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">redundancy</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;MMI&#39;</span><span class="p">,</span> <span class="n">include_intra</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function to compute Integrated Information Decomposition (ΦID) between data (time-series signals) instantiated in the HyperIT object.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            tau                 (int, optional): Time-lag parameter. Defaults to 1.</span>
+<span class="sd">            redundancy          (str, optional): Redundancy function to use. Defaults to &#39;MMI&#39; (Minimum Mutual Information).</span>
+<span class="sd">            include_intra      (bool, optional): Whether to include intra-brain analysis. Defaults to False.</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            np.ndarray: A matrix integrated information decomposition atom dictionaries. The shape of the matrix is determined by</span>
+<span class="sd">            the `include_intra` and `calc_sigstats` flags:</span>
+<span class="sd">                - If `include_intra` is False, shape is (n_epo, n_freq_bands, n_chan, n_chan).</span>
+<span class="sd">                - If `include_intra` is True, shape is (n_epo, n_freq_bands, 2*n_chan, 2*n_chan).</span>
+<span class="sd">                - If `calc_sigstats` is True, an additional last dimension (size 4) contains statistical</span>
+<span class="sd">                significance results: [MI value, mean, standard deviation, p-value].</span>
+<span class="sd">        Note:</span>
+<span class="sd">            When `include_intra` is True, the matrix can be segmented accordingly:</span>
+<span class="sd">                - `intra1`: matrix[:, :, :n_chan, :n_chan]</span>
+<span class="sd">                - `intra2`: matrix[:, :, n_chan:, n_chan:]</span>
+<span class="sd">                - `inter12`: matrix[:, :, :n_chan, n_chan:]</span>
+<span class="sd">                - `inter21`: matrix[:, :, n_chan:, :n_chan]</span>
+<span class="sd">            Visualisation is not a possibility at the moment.</span>
+
+<span class="sd">        Available Redundancy Functions:</span>
+<span class="sd">            - &#39;MMI&#39;: Minimum Mutual Information</span>
+<span class="sd">            - &#39;CCS&#39;: Common Change in Surprisal</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">_measure</span> <span class="o">=</span> <span class="n">MeasureType</span><span class="o">.</span><span class="n">PhyID</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_measure_title</span> <span class="o">=</span> <span class="s1">&#39;Integrated Information Decomposition&#39;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__setup_atom_calc</span><span class="p">(</span><span class="n">tau</span><span class="p">,</span> <span class="n">redundancy</span><span class="p">,</span> <span class="n">include_intra</span><span class="p">)</span></div></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Edoardo Chidichimo.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
