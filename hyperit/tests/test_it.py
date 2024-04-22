@@ -60,13 +60,13 @@ class TestHyperIT(unittest.TestCase):
         """Test Mutual Information computation."""
         newitmi = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
         newitmi.compute_mi('histogram', include_intra=True)
-        self.assertIsNotNone(newitmi.it_matrix)
+        self.assertIsNotNone(newitmi._it_matrix)
 
     def test_te_computation(self):
         """Test Transfer Entropy computation setup."""
         newitte = HyperIT(self.data1, self.data2, self.channels, self.sfreq, self.freq_bands)
         newitte.compute_te('gaussian', include_intra=False)
-        self.assertIsNotNone(newitte.it_matrix)
+        self.assertIsNotNone(newitte._it_matrix)
 
     def test_compute_atoms_execution(self):
         """Test that compute_atoms executes and returns data."""
