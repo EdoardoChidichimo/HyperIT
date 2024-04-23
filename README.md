@@ -33,11 +33,22 @@ it.roi(roi_list)
 it.reset_roi()
 
 # Calculate Mutual Information and Transfer Entropy
-mi = it.compute_mi(estimator_type='kernel', include_intra=True, calc_sigstats=True, vis=True, plot_epochs=[1,6])
-te = it.compute_te(estimator_type='gaussian', include_intra=False, calc_sigstats=True, vis=True, plot_epochs=[-1])
+mi = it.compute_mi(estimator='kernel',
+                   include_intra=True,
+                   calc_sigstats=True,
+                   vis=True,
+                   plot_epochs=[1,6],
+                   kwargs) # Pass estimator-specific parameters here
+
+te = it.compute_te(estimator='gaussian',
+                   include_intra=False,
+                   calc_sigstats=True,
+                   vis=True,
+                   plot_epochs=[-1], # use -1 to plot all epochs
+                   kwargs) 
 
 # Calculate Integrated Information Decomposition
-atoms = it.compute_atoms(tau=5, redundancy='mmi', include_intra=True)
+atoms = it.compute_atoms(tau=5, redundancy='MMI', include_intra=True)
 ```
 
 For specific estimator types and general functionality, see Documentation and Tutorial.
