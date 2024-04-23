@@ -108,14 +108,14 @@ class HyperIT:
         self._filter_options = filter_options
         self._standardise_data = standardise_data
 
-        self._orig_data1 = data1
-        self._orig_data2 = data2 
         self._data1 = data1
         self._data2 = data2
 
-        self._orig_channel_names = channel_names
-
         self.__setup()
+
+        # Store original data (that has been checked and manipulated) for resetting
+        self._orig_channel_indices_1 = self._channel_indices1
+        self._orig_channel_indices_2 = self._channel_indices2
 
         if self._verbose:
             print("HyperIT object created successfully.")
@@ -128,12 +128,6 @@ class HyperIT:
             if self._freq_bands:
                 print(f"Data has been bandpass filtered: {self._freq_bands}.")
 
-    def __reset_data(self) -> None:
-        """Resets the HyperIT object to its initial state."""
-        self._data1 = self._orig_data1.copy()
-        self._data2 = self._orig_data2.copy()
-        self._channel_names = self._orig_channel_names
-        self.__setup()
 
     def __setup(self):
         self.__check_data()
@@ -143,10 +137,12 @@ class HyperIT:
         _, self._n_epo, self._n_freq_bands, self._n_chan, self._n_samples = self._all_data.shape
 
         self._it_matrix = None
+        self._initialise_parameter = None
 
+        # These are default when HyperIT object is instantiated. 
         self._roi = []
         self._scale_of_organisation = 1 # 1 = micro organisation (single channel pairwise), n = meso- or n-scale organisation (n-sized groups of channels)
-        self._initialise_parameter = None
+        
 
         
 
@@ -301,12 +297,9 @@ class HyperIT:
 
         ## DETERMINE SCALE OF ORGANISATION
         # 1: Micro organisation (specified channels, pairwise comparison)           e.g., roi_list = [['Fp1', 'Fp2'], ['F3', 'F4']]
-
         # n: Meso- or n-scale organisation (n specified channels per ROI group)     e.g., roi_list = [[  ['Fp1', 'Fp2'], ['CP1', 'CP2']   ],   n CHANNELS IN EACH GROUP FOR PARTICIPANT 1
-                                                                                                    # [    ['F3', 'F4'], ['F7', 'F8']     ]]   n CHANNELS IN EACH GROUP FOR PARTICIPANT 2
+        #                                                                                             [  ['Fp1', 'Fp2'], ['F3', 'F4']     ]].
 
-        self.reset_roi()
-        
         # Check if roi_list is structured for pointwise channel comparison
         if all(isinstance(sublist, list) and not any(isinstance(item, list) for item in sublist) for sublist in roi_list):
             self._scale_of_organisation = 1 
@@ -336,21 +329,15 @@ class HyperIT:
             print(f"Groups of channels: {self._soi_groups}")
 
         self._channel_indices1, self._channel_indices2 = [convert_names_to_indices(self._channel_names, part, idx) for idx, part in enumerate(roi_list)] 
-       
-        # POINTWISE CHANNEL COMPARISON
-        if self._scale_of_organisation == 1:
-            self._data1 = self._data1[:, :, self._channel_indices1, :]
-            self._data2 = self._data2[:, :, self._channel_indices2, :]
-            self._n_chan = len(self._channel_indices1)
 
         self._roi = [self._channel_indices1, self._channel_indices2]
         
     def reset_roi(self) -> None:
         """Resets the region of interest for both data of the HyperIT object to all channels."""
         self._scale_of_organisation = 1
-        self.__reset_data()
-        self._roi = [self._channel_indices1, self._channel_indices2]
-
+        self._initialise_parameter = None
+        self._channel_indices1, self._channel_indices2 = self._orig_channel_indices_1, self._orig_channel_indices_2
+        self._roi = []
 
 
     ## HARD-CODED HISTOGRAM AND SYMBOLIC MI ESTIMATION FUNCTIONS
@@ -466,7 +453,7 @@ class HyperIT:
     def __which_estimator(self, measure: str) -> None:
         """Determines the estimator to use based on the measure type and sets the estimator, properties, and initialisation parameters."""
 
-        self._estimator_name, calculator, properties, initialise_parameter = set_estimator(self._estimator_type, measure, self._params) # from utils.py function
+        self._estimator_name, calculator, properties, initialise_parameter = set_estimator(self._estimator, measure, self._params) # from utils.py function
 
         if calculator:
             self._Calc = calculator()
@@ -481,16 +468,26 @@ class HyperIT:
     def __setup_matrix(self) -> None:
         """ Sets up the matrices for Mutual Information, Transfer Entropy, or Integrated Information Decomposition. """
 
+        # POINTWISE CHANNEL COMPARISON (If ROI is selected, this will pick specific channels, otherwise data stays the same)
+        if self._scale_of_organisation == 1:
+            self._it_data1 = self._data1[:, :, self._channel_indices1, :]
+            self._it_data2 = self._data2[:, :, self._channel_indices2, :]
+            self._n_chan = len(self._channel_indices1)
+        else:
+            self._it_data1 = self._data1.copy()
+            self._it_data1 = self._data2.copy()
+
         self._loop_range = self._n_chan if self._scale_of_organisation == 1 else self._soi_groups
+        
 
         if self._hyper and self._include_intra:
             self._loop_range *= 2 
             # Will give shape (n_epo, n_freq_bands, n_chan_or_group*2, n_samples)
             # Note that data1 and data2 will be identical
-            temp1 = self._data1.copy()
-            temp2 = self._data2.copy()
-            self._data1 = np.concatenate((temp1, temp2), axis=2)
-            self._data2 = np.concatenate((temp1, temp2), axis=2)
+            temp1 = self._it_data1.copy()
+            temp2 = self._it_data2.copy()
+            self._it_data1 = np.concatenate((temp1, temp2), axis=2)
+            self._it_data2 = np.concatenate((temp1, temp2), axis=2)
 
             if self._scale_of_organisation != 1:
                 temp_list = [self._roi[0],[[item + self._n_chan for item in sublist] for sublist in self._roi[1]]]
@@ -537,7 +534,7 @@ class HyperIT:
         """ Filters the estimation in case incompatible with JIDT. """
 
         if self._measure == MeasureType.MI:
-            match self._estimator_type:
+            match self._estimator:
                 case 'histogram':
                     return self.__estimate_mi_hist(s1, s2)
                 case 'symbolic':
@@ -557,8 +554,7 @@ class HyperIT:
         # data needs to be (samples, channels/groups) if not pointwise comparison 
         # (this is how both JIDT and phyid handle and expect incoming multivariate data)
         # (Note that .T does not affect pointwise comparison as it is already in the correct shape)
-        s1, s2 = self._data1[epoch, freq_band, channel_or_group_i, :].T, self._data2[epoch, freq_band, channel_or_group_j, :].T
-
+        s1, s2 = self._it_data1[epoch, freq_band, channel_or_group_i, :].T, self._it_data2[epoch, freq_band, channel_or_group_j, :].T
 
         if not self._hyper or self._include_intra:
             
@@ -597,30 +593,21 @@ class HyperIT:
 
         self.__setup_matrix()
 
-        total_operations = self._n_epo * self._n_freq_bands * self._loop_range
-        pbar = tqdm(total=total_operations)
-        progress_counter = 0
-
         for epoch in range(self._n_epo):
-            for freq_band in range(self._n_freq_bands):
+            for freq_band in tqdm(range(self._n_freq_bands)):
                 for i in range(self._loop_range):
                     for j in range(self._loop_range):
                         self.__compute_pair_or_group(epoch, freq_band, i, j)
-                        
-                        progress_counter += 1
-                        if progress_counter % (self._n_epo * self._loop_range * self._loop_range) == 0: 
-                            pbar.update(self._loop_range)
-        pbar.close()
 
         if self._vis:
             self.__prepare_vis()
-            
+
         return self._it_matrix
 
-    def __setup_mite_calc(self, estimator_type: str, include_intra: bool, calc_sigstats: bool, vis: bool, plot_epochs: List, **kwargs) -> np.ndarray:
+    def __setup_mite_calc(self, estimator: str, include_intra: bool, calc_sigstats: bool, vis: bool, plot_epochs: List, **kwargs) -> np.ndarray:
         """ General function for computing Mutual Information or Transfer Entropy. """
 
-        self._estimator_type = estimator_type.lower() if not (self._measure == MeasureType.MI and estimator_type.lower() == 'ksg') else 'ksg1'
+        self._estimator = estimator.lower() if not (self._measure == MeasureType.MI and estimator.lower() == 'ksg') else 'ksg1'
         self._calc_sigstats = calc_sigstats
         self._include_intra = include_intra
         self._vis = vis
@@ -662,7 +649,6 @@ class HyperIT:
             print(f"Plotting {self._measure_title}...")
     
         self.__plot_it()
-
 
     def __plot_it(self) -> None:
         """Plots the Mutual Information or Transfer Entropy matrix for visualisation. 
@@ -750,12 +736,12 @@ class HyperIT:
 
     ## HIGH-LEVEL INTERFACE FUNCTIONS
 
-    def compute_mi(self, estimator_type: str = 'kernel', include_intra: bool = False, calc_sigstats: bool = False, vis: bool = False, plot_epochs: List[int] = None, **kwargs) -> np.ndarray:
+    def compute_mi(self, estimator: str = 'kernel', include_intra: bool = False, calc_sigstats: bool = False, vis: bool = False, plot_epochs: List[int] = None, **kwargs) -> np.ndarray:
         """
         Computes Mutual Information (MI) between data (time-series signals) using specified estimator.
 
         Args:
-            estimator_type          (str, optional): Specifies the MI estimator to use. Defaults to 'kernel'.
+            estimator               (str, optional): Specifies the MI estimator to use. Defaults to 'kernel'.
             include_intra          (bool, optional): If True, includes intra-brain analyses. Defaults to False.
             calc_sigstats          (bool, optional): If True, performs statistical significance testing. Defaults to False.
             vis                    (bool, optional): If True, results will be visualised. Defaults to False.
@@ -797,15 +783,14 @@ class HyperIT:
         """
         self._measure = MeasureType.MI
         self._measure_title = 'Mutual Information'
-        return self.__setup_mite_calc(estimator_type, include_intra, calc_sigstats, vis, plot_epochs, **kwargs)
+        return self.__setup_mite_calc(estimator, include_intra, calc_sigstats, vis, plot_epochs, **kwargs)
 
-
-    def compute_te(self, estimator_type: str = 'kernel', include_intra: bool = False, calc_sigstats: bool = False, vis: bool = False, plot_epochs: List[int] = None, **kwargs) -> np.ndarray:
+    def compute_te(self, estimator: str = 'kernel', include_intra: bool = False, calc_sigstats: bool = False, vis: bool = False, plot_epochs: List[int] = None, **kwargs) -> np.ndarray:
         """
         Computes Transfer Entropy (TE) between time-series data using a specified estimator. This function allows for intra-brain and inter-brain analyses and includes optional statistical significance testing. Data1 is considered the source and Data2 the target.
 
         Args:
-            estimator_type          (str, optional): Specifies the TE estimator to use. Defaults to 'kernel'.
+            estimator               (str, optional): Specifies the TE estimator to use. Defaults to 'kernel'.
             include_intra          (bool, optional): Whether to include intra-brain comparisons in the output matrix. Defaults to False.
             calc_sigstats          (bool, optional): Whether to calculate statistical significance of TE values. Defaults to False.
             vis                    (bool, optional): Enables visualisation of the TE matrix if set to True. Defaults to False.
@@ -846,11 +831,9 @@ class HyperIT:
                 - k (int, default=1): Embedding history length.
                 - normalise (bool, default=True).
         """
-
-        
         self._measure = MeasureType.TE
         self._measure_title = 'Transfer Entropy'
-        return self.__setup_mite_calc(estimator_type, include_intra, calc_sigstats, vis, plot_epochs, **kwargs)
+        return self.__setup_mite_calc(estimator, include_intra, calc_sigstats, vis, plot_epochs, **kwargs)
 
 
     def compute_atoms(self, tau: int = 1, redundancy: str = 'MMI', include_intra: bool = False) -> Tuple[np.ndarray, np.ndarray]:
@@ -907,7 +890,7 @@ def main():
             [['Fp1', 'Fp2', 'F7', 'F8',],['F3', 'F4', 'Fz', 'FT9'],['FT10', 'FC5', 'FC1', 'FC2'],
             ['T7', 'C3', 'Cz', 'C4'], ['T8', 'TP9', 'CP5', 'CP1'], ['CP2', 'CP6', 'TP10', 'P7']]]
     
-    mi = it.compute_mi(estimator_type = 'gaussian', 
+    mi = it.compute_mi(estimator = 'gaussian', 
                   include_intra = True, 
                   calc_sigstats = False, 
                   vis = True, 
