@@ -593,7 +593,7 @@ class HyperIT:
 
         self.__setup_matrix()
 
-        with tqdm(range(self._n_epo * self._n_freq_bands), desc=f"Epoch {epoch+1}") as tqdm_bar:
+        with tqdm(range(self._n_epo * self._n_freq_bands)) as tqdm_bar:
             for epoch in range(self._n_epo):
                 for freq_band in tqdm(range(self._n_freq_bands)):
                     tqdm_bar.set_description(f"Epoch {epoch+1} | Frequency Band {list(self._freq_bands.keys())[freq_band]}")
