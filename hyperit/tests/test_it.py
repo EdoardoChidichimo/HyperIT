@@ -51,7 +51,7 @@ class TestHyperIT(unittest.TestCase):
         """Test resetting ROI to all channels."""
         self.hyperit_instance.roi = [['C1', 'C2'], ['C2', 'C3']]
         self.hyperit_instance.reset_roi()
-        expected_roi = [np.arange(3), np.arange(3)]
+        expected_roi = []
         self.assertTrue(np.array_equal(self.hyperit_instance.roi[0], expected_roi[0]) and
                         np.array_equal(self.hyperit_instance.roi[1], expected_roi[1]))
 
