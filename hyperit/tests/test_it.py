@@ -37,7 +37,7 @@ class TestHyperIT(unittest.TestCase):
 
     def test_check_data_invalid_shape(self):
         """Test the data validation logic with incorrect input shapes."""
-        data_wrong = np.random.rand(100)
+        data_wrong = np.random.rand(2,2,2,100)
         with self.assertRaises(ValueError):
             HyperIT(data_wrong, data_wrong, self.channels, self.sfreq, self.freq_bands)
 
@@ -49,7 +49,6 @@ class TestHyperIT(unittest.TestCase):
 
     def test_reset_roi(self):
         """Test resetting ROI to all channels."""
-        
         self.hyperit_instance.roi = [['C1', 'C2'], ['C2', 'C3']]
         self.hyperit_instance.reset_roi()
         expected_roi = [np.arange(3), np.arange(3)]

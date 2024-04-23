@@ -11,7 +11,7 @@ from jpype import isJVMStarted, startJVM, getDefaultJVMPath
 from phyid.calculate import calc_PhiID
 from phyid.utils import PhiID_atoms_abbr
 
-from utils import (
+from .utils import (
     setup_JArray, 
     bandpass_filter_data, 
     convert_names_to_indices, 
@@ -142,6 +142,8 @@ class HyperIT:
 
         _, self._n_epo, self._n_freq_bands, self._n_chan, self._n_samples = self._all_data.shape
 
+        self._it_matrix = None
+
         self._roi = []
         self._scale_of_organisation = 1 # 1 = micro organisation (single channel pairwise), n = meso- or n-scale organisation (n-sized groups of channels)
         self._initialise_parameter = None
@@ -241,7 +243,6 @@ class HyperIT:
         if any(len(names) != self._n_chan for names in self._channel_names):
             raise ValueError("The number of channels in time-series data does not match the length of channel_names.")
 
-
     def __check_channels(self) -> None:
         """ Checks the consistency of the channel names provided and sets the number of channels as an object variable. """
 
@@ -270,9 +271,6 @@ class HyperIT:
             
         
         
-        
-
-    
 
     ## DEFINING REGIONS OF INTEREST
 
