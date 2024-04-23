@@ -11,7 +11,7 @@ from jpype import isJVMStarted, startJVM, getDefaultJVMPath
 from phyid.calculate import calc_PhiID
 from phyid.utils import PhiID_atoms_abbr
 
-from .utils import (
+from utils import (
     setup_JArray, 
     bandpass_filter_data, 
     convert_names_to_indices, 
@@ -108,19 +108,14 @@ class HyperIT:
         self._filter_options = filter_options
         self._standardise_data = standardise_data
 
+        self._orig_data1 = data1
+        self._orig_data2 = data2 
         self._data1 = data1
-        self._data2 = data2 
+        self._data2 = data2
 
-        self.__check_data()
-        self.__check_channels()
-        self.__configure_data()
+        self._orig_channel_names = channel_names
 
-        _, self._n_epo, self._n_freq_bands, self._n_chan, self._n_samples = self._all_data.shape
-
-        self._roi = []
-        self._roi_specified = False
-        self._scale_of_organisation = 1 # 1 = micro organisation (single channel pairwise), n = meso- or n-scale organisation (n-sized groups of channels)
-        self._initialise_parameter = None
+        self.__setup()
 
         if self._verbose:
             print("HyperIT object created successfully.")
@@ -133,6 +128,25 @@ class HyperIT:
             if self._freq_bands:
                 print(f"Data has been bandpass filtered: {self._freq_bands}.")
 
+    def __reset_data(self) -> None:
+        """Resets the HyperIT object to its initial state."""
+        self._data1 = self._orig_data1.copy()
+        self._data2 = self._orig_data2.copy()
+        self._channel_names = self._orig_channel_names
+        self.__setup()
+
+    def __setup(self):
+        self.__check_data()
+        self.__check_channels()
+        self.__configure_data()
+
+        _, self._n_epo, self._n_freq_bands, self._n_chan, self._n_samples = self._all_data.shape
+
+        self._roi = []
+        self._scale_of_organisation = 1 # 1 = micro organisation (single channel pairwise), n = meso- or n-scale organisation (n-sized groups of channels)
+        self._initialise_parameter = None
+
+        
 
     ## DUNDER METHODS
 
@@ -287,14 +301,14 @@ class HyperIT:
             ValueError: If the value is not a list of lists, if elements of the sublists are not of type str or int, or if sublists do not have the same length.
         """
 
-        self._roi_specified = True
-
         ## DETERMINE SCALE OF ORGANISATION
         # 1: Micro organisation (specified channels, pairwise comparison)           e.g., roi_list = [['Fp1', 'Fp2'], ['F3', 'F4']]
 
         # n: Meso- or n-scale organisation (n specified channels per ROI group)     e.g., roi_list = [[  ['Fp1', 'Fp2'], ['CP1', 'CP2']   ],   n CHANNELS IN EACH GROUP FOR PARTICIPANT 1
                                                                                                     # [    ['F3', 'F4'], ['F7', 'F8']     ]]   n CHANNELS IN EACH GROUP FOR PARTICIPANT 2
 
+        self.reset_roi()
+        
         # Check if roi_list is structured for pointwise channel comparison
         if all(isinstance(sublist, list) and not any(isinstance(item, list) for item in sublist) for sublist in roi_list):
             self._scale_of_organisation = 1 
@@ -306,8 +320,8 @@ class HyperIT:
             num_groups_y = len(roi_list[1])
             if num_groups_x == num_groups_y:
                 self._soi_groups = num_groups_x 
-
                 group_lengths = [len(group) for half in roi_list for group in half]
+
                 if len(set(group_lengths)) == 1:
                     self._scale_of_organisation = group_lengths[0] 
                     self._initialise_parameter = (self._scale_of_organisation, self._scale_of_organisation)
@@ -335,14 +349,9 @@ class HyperIT:
         
     def reset_roi(self) -> None:
         """Resets the region of interest for both data of the HyperIT object to all channels."""
-        self._roi_specified = False
         self._scale_of_organisation = 1
-        self._channel_indices1 = np.arange(len(self._channel_names[0]))
-        self._channel_indices2 = np.arange(len(self._channel_names[1]) if len(self._channel_names) > 1 else len(self._channel_names[0]))
+        self.__reset_data()
         self._roi = [self._channel_indices1, self._channel_indices2]
-        self._data1, self._data2 = self._all_data
-        self._n_chan = len(self._channel_indices1)
-        print("Region of interest has been reset to all channels.")
 
 
 
@@ -475,7 +484,6 @@ class HyperIT:
         """ Sets up the matrices for Mutual Information, Transfer Entropy, or Integrated Information Decomposition. """
 
         self._loop_range = self._n_chan if self._scale_of_organisation == 1 else self._soi_groups
-        
 
         if self._hyper and self._include_intra:
             self._loop_range *= 2 
@@ -487,7 +495,8 @@ class HyperIT:
             self._data2 = np.concatenate((temp1, temp2), axis=2)
 
             if self._scale_of_organisation != 1:
-                self._roi = [self._roi[0] + self._roi[1], self._roi[0] + self._roi[1]]
+                temp_list = [self._roi[0],[[item + self._n_chan for item in sublist] for sublist in self._roi[1]]]
+                self._roi = [sublist for outer_list in temp_list for sublist in outer_list]
 
         if self._measure == MeasureType.MI or self._measure == MeasureType.TE:
 
@@ -544,8 +553,9 @@ class HyperIT:
     def __compute_pair_or_group(self, epoch: int, freq_band: int, i: int, j: int) -> None:
         """ Computes the Mutual Information or Transfer Entropy for a pair of channels or groups of channels. """
 
-        channel_or_group_i = i if self._scale_of_organisation == 1 else self._roi[0][i]
-        channel_or_group_j = j if self._scale_of_organisation == 1 else self._roi[1][j]    
+        channel_or_group_i = i if self._scale_of_organisation == 1 else self._roi[i]
+        channel_or_group_j = j if self._scale_of_organisation == 1 else self._roi[j]    
+        
         # data needs to be (samples, channels/groups) if not pointwise comparison 
         # (this is how both JIDT and phyid handle and expect incoming multivariate data)
         # (Note that .T does not affect pointwise comparison as it is already in the correct shape)
@@ -555,6 +565,7 @@ class HyperIT:
         if not self._hyper or self._include_intra:
             
             if self._measure == MeasureType.MI and j < i:
+
                 result = self.__filter_estimation(s1, s2)
                 self._it_matrix[epoch, freq_band, i, j] = result
                 self._it_matrix[epoch, freq_band, j, i] = result
@@ -588,11 +599,20 @@ class HyperIT:
 
         self.__setup_matrix()
 
+        total_operations = self._n_epo * self._n_freq_bands * self._loop_range
+        pbar = tqdm(total=total_operations)
+        progress_counter = 0
+
         for epoch in range(self._n_epo):
-            for freq_band in tqdm(range(self._n_freq_bands)):
+            for freq_band in range(self._n_freq_bands):
                 for i in range(self._loop_range):
                     for j in range(self._loop_range):
                         self.__compute_pair_or_group(epoch, freq_band, i, j)
+                        
+                        progress_counter += 1
+                        if progress_counter % (self._n_epo * self._loop_range * self._loop_range) == 0: 
+                            pbar.update(self._loop_range)
+        pbar.close()
 
         if self._vis:
             self.__prepare_vis()
@@ -649,25 +669,25 @@ class HyperIT:
     def __plot_it(self) -> None:
         """Plots the Mutual Information or Transfer Entropy matrix for visualisation. 
         Axes labelled with source and target channel names. 
-        Choice to plot for all epochs, specific epoch(s), or average across epochs.
-
-        Args:
-            it_matrix (np.ndarray): The Mutual Information or Transfer Entropy matrix to be plotted with shape (n_chan, n_chan, n_epo, 4), 
-            where the last dimension represents the statistical signficance testing results: (local result, distribution mean, distribution standard deviation, p-value).
         """
 
-        title = f'{self._measure_title} | {self._estimator_name} \n {"Inter-Brain" if self._hyper else "Intra-Brain"}'
-        source_channel_names = convert_indices_to_names(self._channel_names, self._channel_indices1, 0) if self._scale_of_organisation == 1 else np.arange(len(self._roi[0]))
-        target_channel_names = convert_indices_to_names(self._channel_names, self._channel_indices2, 1) if self._scale_of_organisation == 1 else np.arange(len(self._roi[1]))
+        title = f'{self._measure_title} | {self._estimator_name} \n'
+        source_channel_names = convert_indices_to_names(self._channel_names, self._channel_indices1, 0) 
+        target_channel_names = convert_indices_to_names(self._channel_names, self._channel_indices2, 1)
 
         if self._scale_of_organisation > 1:
             
             print("Plotting for grouped channels.")
             print("Source Groups:")
+            source_str = []
             for i in range(self._soi_groups):
+                source_str.append(f'X{i+1}_{source_channel_names[i]}')
                 print(f"{i+1}: {source_channel_names[i]}")
+
             print("\nTarget Groups:")
+            target_str = []
             for i in range(self._soi_groups):
+                target_str.append(f'Y{i+1}_{target_channel_names[i]}')
                 print(f"{i+1}: {target_channel_names[i]}")
 
         for epoch in self._plot_epochs:
@@ -684,9 +704,9 @@ class HyperIT:
 
                 if self._n_epo > 1:
                     if band_description:
-                        plt.title(f'{title}; Epoch {epoch+1}, Frequency Band {band_description}', pad=20)
+                        plt.title(f'{title} Epoch {epoch+1}, Frequency Band {band_description}', pad=20)
                     else:
-                        plt.title(f'{title}; Epoch {epoch+1}', pad=20)
+                        plt.title(f'{title} Epoch {epoch+1}', pad=20)
                 else:
                     if band_description:
                         plt.title(f'{title}; Frequency Band {band_description}', pad=20)
@@ -699,22 +719,24 @@ class HyperIT:
                             p_val = float(self._it_matrix[epoch, freq_band, i, j, 3])
                             ## NEED TO FIX THIS FOR VARIOUS CONDITIONS
                             if p_val < self._p_threshold and (not self._hyper and i != j):
-                                from_all = self._it_matrix[epoch, freq_band, :, :, 0]
                                 normalised_value = (self._it_matrix[epoch, freq_band, i, j, 0] - np.min(results)) / (np.max(results) - np.min(results))
                                 text_colour = 'white' if normalised_value > 0.5 else 'black'
                                 plt.text(j, i, f'p={p_val:.2f}', ha='center', va='center', color=text_colour, fontsize=8, fontweight='bold')
 
                 plt.colorbar()
-                
 
-                x_tick_label = convert_indices_to_names(self._channel_names, self._channel_indices2, 1)
-                y_tick_label = convert_indices_to_names(self._channel_names, self._channel_indices1, 0)
+                x_tick_label = target_channel_names.copy()
+                y_tick_label = source_channel_names.copy()
                 ticks = range(self._loop_range)
-                rotate_x = 90 if self._scale_of_organisation == 1 else 0
-                rotate_y = 90 if self._scale_of_organisation != 1 else 0
+                rotate_x = 90 
+                rotate_y = 0 
 
                 if self._hyper and self._include_intra:
-                    x_tick_label = ['X_' + s for s in y_tick_label] + ['Y_' + s for s in x_tick_label]
+                    if self._scale_of_organisation != 1:
+                        x_tick_label = source_str + target_str
+                    else:
+                        x_tick_label = ['X_' + s for s in y_tick_label] + ['Y_' + s for s in x_tick_label]
+                    
                     y_tick_label = x_tick_label
                 else:
                     plt.xlabel('Target')
@@ -866,3 +888,34 @@ class HyperIT:
         self._measure = MeasureType.PhyID
         self._measure_title = 'Integrated Information Decomposition'
         return self.__setup_atom_calc(tau, redundancy, include_intra)
+    
+
+
+def main():
+
+    HyperIT.setup_JVM()
+
+    data1 = np.random.rand(3, 32, 1000)
+    data2 = np.random.rand(3, 32, 1000)
+    fs = 250
+    freq_bands = {'alpha': (8, 12), 'beta': (12, 30)}
+    channel_names = [['Fp1', 'Fp2', 'F7', 'F8', 'F3', 'F4', 'Fz', 'FT9', 'FT10', 'FC5', 'FC1', 'FC2', 'T7', 'C3', 'Cz', 'C4', 'T8', 'TP9', 'CP5', 'CP1', 'CP2', 'CP6', 'TP10', 'P7', 'P3', 'Pz', 'P4', 'P8', 'PO9', 'O1', 'Oz', 'O2'],
+                    ['Fp1', 'Fp2', 'F7', 'F8', 'F3', 'F4', 'Fz', 'FT9', 'FT10', 'FC5', 'FC1', 'FC2', 'T7', 'C3', 'Cz', 'C4', 'T8', 'TP9', 'CP5', 'CP1', 'CP2', 'CP6', 'TP10', 'P7', 'P3', 'Pz', 'P4', 'P8', 'PO9', 'O1', 'Oz', 'O2']]
+
+    it = HyperIT(data1, data2, channel_names, fs, freq_bands, False, True)
+    
+    it.roi = [[['Fp1', 'Fp2', 'F7', 'F8',],['F3', 'F4', 'Fz', 'FT9'],['FT10', 'FC5', 'FC1', 'FC2'],
+            ['T7', 'C3', 'Cz', 'C4'], ['T8', 'TP9', 'CP5', 'CP1'], ['CP2', 'CP6', 'TP10', 'P7']], 
+            [['Fp1', 'Fp2', 'F7', 'F8',],['F3', 'F4', 'Fz', 'FT9'],['FT10', 'FC5', 'FC1', 'FC2'],
+            ['T7', 'C3', 'Cz', 'C4'], ['T8', 'TP9', 'CP5', 'CP1'], ['CP2', 'CP6', 'TP10', 'P7']]]
+    
+    mi = it.compute_mi(estimator_type = 'gaussian', 
+                  include_intra = True, 
+                  calc_sigstats = False, 
+                  vis = True, 
+                  plot_epoch=[1])
+    
+    print(mi.shape)
+
+if __name__ == "__main__":
+    main()

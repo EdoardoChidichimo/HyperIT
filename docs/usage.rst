@@ -20,8 +20,8 @@ HyperIT uses a Class/OOP framework, allowing multiple instances of HyperIT objec
     it.reset_roi()
 
     # Calculate Mutual Information and Transfer Entropy
-    mi = it.compute_mi(estimator_type='kernel', calc_sigstats=True, vis=True)
-    te_xy, te_yx = it.compute_te(estimator_type='gaussian', calc_sigstats=True, vis=True)
+    mi = it.compute_mi(estimator_type='kernel', include_intra=True, calc_sigstats=True, vis=True, plot_epochs=[1,6])
+    te = it.compute_te(estimator_type='gaussian', include_intra=False, calc_sigstats=True, vis=True, plot_epochs=[-1])
 
     # Calculate Integrated Information Decomposition
-    atoms = it.compute_atoms(tau=5, redundancy='mmi', vis=True)
+    atoms = it.compute_atoms(tau=5, redundancy='mmi', include_intra=True)
