@@ -518,7 +518,7 @@ class HyperIT:
             stat_sig = self._Calc.computeSignificance(self._stat_sig_perm_num)
             return np.array([result, stat_sig.getMeanOfDistribution(), stat_sig.getStdOfDistribution(), stat_sig.pValue])
             
-        return result
+        return float(result)
     
     def __estimate_atoms(self, s1: np.ndarray, s2: np.ndarray) -> None:
 
@@ -551,7 +551,7 @@ class HyperIT:
         channel_or_group_i = i if self._scale_of_organisation == 1 else self._roi[i]
         channel_or_group_j = j if self._scale_of_organisation == 1 else self._roi[j]    
         
-        # data needs to be (samples, channels/groups) if not pointwise comparison 
+        # Data needs to have shape (samples, channels/groups), if not pointwise comparison 
         # (this is how both JIDT and phyid handle and expect incoming multivariate data)
         # (Note that .T does not affect pointwise comparison as it is already in the correct shape)
         s1, s2 = self._it_data1[epoch, freq_band, channel_or_group_i, :].T, self._it_data2[epoch, freq_band, channel_or_group_j, :].T
@@ -593,12 +593,14 @@ class HyperIT:
 
         self.__setup_matrix()
 
-        for epoch in range(self._n_epo):
-            for freq_band in tqdm(range(self._n_freq_bands)):
-                for i in range(self._loop_range):
-                    for j in range(self._loop_range):
-                        self.__compute_pair_or_group(epoch, freq_band, i, j)
-
+        with tqdm(range(self._n_epo * self._n_freq_bands), desc=f"Epoch {epoch+1}") as tqdm_bar:
+            for epoch in range(self._n_epo):
+                for freq_band in tqdm(range(self._n_freq_bands)):
+                    tqdm_bar.set_description(f"Epoch {epoch+1} | Frequency Band {list(self._freq_bands.keys())[freq_band]}")
+                    for i in range(self._loop_range):
+                        for j in range(self._loop_range):
+                            self.__compute_pair_or_group(epoch, freq_band, i, j)
+                
         if self._vis:
             self.__prepare_vis()
 
