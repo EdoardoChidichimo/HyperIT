@@ -593,13 +593,14 @@ class HyperIT:
 
         self.__setup_matrix()
 
-        with tqdm(range(self._n_epo * self._n_freq_bands)) as tqdm_bar:
+        with tqdm(total=self._n_epo * self._n_freq_bands * self._loop_range) as tqdm_bar:
             for epoch in range(self._n_epo):
-                for freq_band in tqdm(range(self._n_freq_bands)):
+                for freq_band in range(self._n_freq_bands):
                     tqdm_bar.set_description(f"Epoch {epoch+1} | Frequency Band {list(self._freq_bands.keys())[freq_band]}")
                     for i in range(self._loop_range):
                         for j in range(self._loop_range):
                             self.__compute_pair_or_group(epoch, freq_band, i, j)
+                        tqdm_bar.update(1)
                 
         if self._vis:
             self.__prepare_vis()
