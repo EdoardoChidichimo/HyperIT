@@ -13,6 +13,7 @@ from phyid.utils import PhiID_atoms_abbr
 
 from .utils import (
     setup_JArray, 
+    ensure_three_dims,
     bandpass_filter_data, 
     convert_names_to_indices, 
     convert_indices_to_names, 
@@ -174,13 +175,6 @@ class HyperIT:
 
     ## DATA, CHANNEL, & INITIALISATION CHECKING
 
-    @staticmethod
-    def __ensure_three_dims(data):
-        """Ensure the numpy array `data` has three dimensions."""
-        while data.ndim < 3:
-            data = np.expand_dims(data, axis=0)
-        return data
-
     def __check_data(self) -> None:
         """ Checks the consistency and dimensionality of the time-series data and channel names. Sets the number of epochs, channels, and time points as object variables.
 
@@ -212,7 +206,7 @@ class HyperIT:
 
         # Ensure data is 3 dimensional and has shape (n_epochs, n_channels, n_samples). 
         # If freq_bands have been specified, this will become 4 dimensional: (n_epochs, n_freq_bands, n_channels, n_samples)
-        self._data1, self._data2 = map(self.__ensure_three_dims, (self._data1, self._data2))
+        self._data1, self._data2 = map(ensure_three_dims, (self._data1, self._data2))
 
     def __check_channel_names(self) -> None:
         """ Checks the consistency of the channel names provided. """
@@ -371,7 +365,7 @@ class HyperIT:
 
         result = hist_calc_mi(s1, s2)
 
-        if self._calc_sigstats:
+        if self._calc_statsig:
             permuted_mi_values = []
 
             for _ in range(self._stat_sig_perm_num):
@@ -431,7 +425,7 @@ class HyperIT:
 
         result = symb_calc_mi(s1, s2, k, delay)
 
-        if self._calc_sigstats:
+        if self._calc_statsig:
             permuted_mi_values = []
 
             for _ in range(self._stat_sig_perm_num):
@@ -495,7 +489,7 @@ class HyperIT:
 
         if self._measure == MeasureType.MI or self._measure == MeasureType.TE:
 
-            if self._calc_sigstats:
+            if self._calc_statsig:
                 self._it_matrix = np.zeros((self._n_epo, self._n_freq_bands, self._loop_range, self._loop_range, 4))
                 return
             
@@ -514,7 +508,7 @@ class HyperIT:
         result = self._Calc.computeAverageLocalOfObservations() * np.log(2)
 
         # Conduct significance testing
-        if self._calc_sigstats:
+        if self._calc_statsig:
             stat_sig = self._Calc.computeSignificance(self._stat_sig_perm_num)
             return np.array([result, stat_sig.getMeanOfDistribution(), stat_sig.getStdOfDistribution(), stat_sig.pValue])
             
@@ -596,7 +590,7 @@ class HyperIT:
         with tqdm(total=self._n_epo * self._n_freq_bands * self._loop_range) as tqdm_bar:
             for epoch in range(self._n_epo):
                 for freq_band in range(self._n_freq_bands):
-                    tqdm_bar.set_description(f"Epoch {epoch+1} | Frequency Band {list(self._freq_bands.keys())[freq_band]}")
+                    tqdm_bar.set_description(f"Computing Epoch {epoch+1}/{self._n_epo} | Frequency Band {list(self._freq_bands.keys())[freq_band]}")
                     for i in range(self._loop_range):
                         for j in range(self._loop_range):
                             self.__compute_pair_or_group(epoch, freq_band, i, j)
@@ -607,17 +601,17 @@ class HyperIT:
 
         return self._it_matrix
 
-    def __setup_mite_calc(self, estimator: str, include_intra: bool, calc_sigstats: bool, vis: bool, plot_epochs: List, **kwargs) -> np.ndarray:
+    def __setup_mite_calc(self, estimator: str, include_intra: bool, calc_statsig: bool, stat_sig_perm_num: int, p_threshold: float, vis: bool, plot_epochs: List, **kwargs) -> np.ndarray:
         """ General function for computing Mutual Information or Transfer Entropy. """
 
         self._estimator = estimator.lower() if not (self._measure == MeasureType.MI and estimator.lower() == 'ksg') else 'ksg1'
-        self._calc_sigstats = calc_sigstats
+        self._calc_statsig = calc_statsig
         self._include_intra = include_intra
         self._vis = vis
         self._plot_epochs = (plot_epochs or None) if self._vis else None
         self._params = kwargs
-        self._stat_sig_perm_num = self._params.get('stat_sig_perm_num', 100)
-        self._p_threshold = self._params.get('p_threshold', 0.05)
+        self._stat_sig_perm_num = stat_sig_perm_num
+        self._p_threshold = p_threshold
         
         # Set up the estimator and properties
         self.__which_estimator(str(self._measure))
@@ -680,7 +674,7 @@ class HyperIT:
         for epoch in self._plot_epochs:
             for freq_band in range(self._n_freq_bands):
 
-                results = self._it_matrix[epoch, freq_band, :, :, 0] if self._calc_sigstats else self._it_matrix[epoch, freq_band, :, :]
+                results = self._it_matrix[epoch, freq_band, :, :, 0] if self._calc_statsig else self._it_matrix[epoch, freq_band, :, :]
                 plt.figure(figsize=(12, 10))
                 plt.imshow(results, cmap='BuPu', vmin=0, aspect='auto')
 
@@ -700,12 +694,13 @@ class HyperIT:
                     else:
                         plt.title(title, pad=20)
                     
-                if self._calc_sigstats:
+                if self._calc_statsig:
                     for i in range(self._loop_range):
                         for j in range(self._loop_range):
+                            if i == j:
+                                continue
                             p_val = float(self._it_matrix[epoch, freq_band, i, j, 3])
-                            ## NEED TO FIX THIS FOR VARIOUS CONDITIONS
-                            if p_val < self._p_threshold and (not self._hyper and i != j):
+                            if p_val < self._p_threshold:
                                 normalised_value = (self._it_matrix[epoch, freq_band, i, j, 0] - np.min(results)) / (np.max(results) - np.min(results))
                                 text_colour = 'white' if normalised_value > 0.5 else 'black'
                                 plt.text(j, i, f'p={p_val:.2f}', ha='center', va='center', color=text_colour, fontsize=8, fontweight='bold')
@@ -739,24 +734,24 @@ class HyperIT:
 
     ## HIGH-LEVEL INTERFACE FUNCTIONS
 
-    def compute_mi(self, estimator: str = 'kernel', include_intra: bool = False, calc_sigstats: bool = False, vis: bool = False, plot_epochs: List[int] = None, **kwargs) -> np.ndarray:
+    def compute_mi(self, estimator: str = 'kernel', include_intra: bool = False, calc_statsig: bool = False, stat_sig_perm_num: int = 100, p_threshold: float = 0.05, vis: bool = False, plot_epochs: List[int] = None, **kwargs) -> np.ndarray:
         """
         Computes Mutual Information (MI) between data (time-series signals) using specified estimator.
 
         Args:
             estimator               (str, optional): Specifies the MI estimator to use. Defaults to 'kernel'.
             include_intra          (bool, optional): If True, includes intra-brain analyses. Defaults to False.
-            calc_sigstats          (bool, optional): If True, performs statistical significance testing. Defaults to False.
+            calc_statsig          (bool, optional): If True, performs statistical significance testing. Defaults to False.
             vis                    (bool, optional): If True, results will be visualised. Defaults to False.
             plot_epochs       (List[int], optional): Specifies which epochs to plot. None plots all. Defaults to None.
             **kwargs                               : Additional keyword arguments for the MI estimator.
 
         Returns:
             np.ndarray: A symmetric mutual information matrix. The shape of the matrix is determined by
-            the `include_intra` and `calc_sigstats` flags:
+            the `include_intra` and `calc_statsig` flags:
                 - If `include_intra` is False, shape is (n_epo, n_freq_bands, n_chan, n_chan).
                 - If `include_intra` is True, shape is (n_epo, n_freq_bands, 2*n_chan, 2*n_chan).
-                - If `calc_sigstats` is True, an additional last dimension (size 4) contains statistical
+                - If `calc_statsig` is True, an additional last dimension (size 4) contains statistical
                 significance results: [MI value, mean, standard deviation, p-value].
 
         Note:
@@ -786,26 +781,26 @@ class HyperIT:
         """
         self._measure = MeasureType.MI
         self._measure_title = 'Mutual Information'
-        return self.__setup_mite_calc(estimator, include_intra, calc_sigstats, vis, plot_epochs, **kwargs)
+        return self.__setup_mite_calc(estimator, include_intra, calc_statsig, stat_sig_perm_num, p_threshold, vis, plot_epochs, **kwargs)
 
-    def compute_te(self, estimator: str = 'kernel', include_intra: bool = False, calc_sigstats: bool = False, vis: bool = False, plot_epochs: List[int] = None, **kwargs) -> np.ndarray:
+    def compute_te(self, estimator: str = 'kernel', include_intra: bool = False, calc_statsig: bool = False, stat_sig_perm_num: int = 100, p_threshold: float = 0.05, vis: bool = False, plot_epochs: List[int] = None, **kwargs) -> np.ndarray:
         """
         Computes Transfer Entropy (TE) between time-series data using a specified estimator. This function allows for intra-brain and inter-brain analyses and includes optional statistical significance testing. Data1 is considered the source and Data2 the target.
 
         Args:
             estimator               (str, optional): Specifies the TE estimator to use. Defaults to 'kernel'.
             include_intra          (bool, optional): Whether to include intra-brain comparisons in the output matrix. Defaults to False.
-            calc_sigstats          (bool, optional): Whether to calculate statistical significance of TE values. Defaults to False.
+            calc_statsig          (bool, optional): Whether to calculate statistical significance of TE values. Defaults to False.
             vis                    (bool, optional): Enables visualisation of the TE matrix if set to True. Defaults to False.
             plot_epochs       (List[int], optional): Specifies which epochs to plot. If None, plots all epochs. Defaults to None.
             **kwargs                               : Additional parameters for the TE estimator.
 
         Returns:
             np.ndarray: A transfer entropy matrix. The shape of the matrix is determined by
-            the `include_intra` and `calc_sigstats` flags:
+            the `include_intra` and `calc_statsig` flags:
                 - If `include_intra` is False, shape is (n_epo, n_freq_bands, n_chan, n_chan).
                 - If `include_intra` is True, shape is (n_epo, n_freq_bands, 2*n_chan, 2*n_chan).
-                - If `calc_sigstats` is True, an additional last dimension (size 4) contains statistical
+                - If `calc_statsig` is True, an additional last dimension (size 4) contains statistical
                 significance results: [MI value, mean, standard deviation, p-value].
         Note:
             When `include_intra` is True, the matrix can be segmented accordingly:
@@ -836,7 +831,7 @@ class HyperIT:
         """
         self._measure = MeasureType.TE
         self._measure_title = 'Transfer Entropy'
-        return self.__setup_mite_calc(estimator, include_intra, calc_sigstats, vis, plot_epochs, **kwargs)
+        return self.__setup_mite_calc(estimator, include_intra, calc_statsig, stat_sig_perm_num, p_threshold, vis, plot_epochs, **kwargs)
 
 
     def compute_atoms(self, tau: int = 1, redundancy: str = 'MMI', include_intra: bool = False) -> Tuple[np.ndarray, np.ndarray]:
@@ -850,10 +845,10 @@ class HyperIT:
             
         Returns:
             np.ndarray: A matrix integrated information decomposition atom dictionaries. The shape of the matrix is determined by
-            the `include_intra` and `calc_sigstats` flags:
+            the `include_intra` and `calc_statsig` flags:
                 - If `include_intra` is False, shape is (n_epo, n_freq_bands, n_chan, n_chan).
                 - If `include_intra` is True, shape is (n_epo, n_freq_bands, 2*n_chan, 2*n_chan).
-                - If `calc_sigstats` is True, an additional last dimension (size 4) contains statistical
+                - If `calc_statsig` is True, an additional last dimension (size 4) contains statistical
                 significance results: [MI value, mean, standard deviation, p-value].
         Note:
             When `include_intra` is True, the matrix can be segmented accordingly:
@@ -872,34 +867,3 @@ class HyperIT:
         self._measure = MeasureType.PhyID
         self._measure_title = 'Integrated Information Decomposition'
         return self.__setup_atom_calc(tau, redundancy, include_intra)
-    
-
-
-def main():
-
-    HyperIT.setup_JVM()
-
-    data1 = np.random.rand(3, 32, 1000)
-    data2 = np.random.rand(3, 32, 1000)
-    fs = 250
-    freq_bands = {'alpha': (8, 12), 'beta': (12, 30)}
-    channel_names = [['Fp1', 'Fp2', 'F7', 'F8', 'F3', 'F4', 'Fz', 'FT9', 'FT10', 'FC5', 'FC1', 'FC2', 'T7', 'C3', 'Cz', 'C4', 'T8', 'TP9', 'CP5', 'CP1', 'CP2', 'CP6', 'TP10', 'P7', 'P3', 'Pz', 'P4', 'P8', 'PO9', 'O1', 'Oz', 'O2'],
-                    ['Fp1', 'Fp2', 'F7', 'F8', 'F3', 'F4', 'Fz', 'FT9', 'FT10', 'FC5', 'FC1', 'FC2', 'T7', 'C3', 'Cz', 'C4', 'T8', 'TP9', 'CP5', 'CP1', 'CP2', 'CP6', 'TP10', 'P7', 'P3', 'Pz', 'P4', 'P8', 'PO9', 'O1', 'Oz', 'O2']]
-
-    it = HyperIT(data1, data2, channel_names, fs, freq_bands, False, True)
-    
-    it.roi = [[['Fp1', 'Fp2', 'F7', 'F8',],['F3', 'F4', 'Fz', 'FT9'],['FT10', 'FC5', 'FC1', 'FC2'],
-            ['T7', 'C3', 'Cz', 'C4'], ['T8', 'TP9', 'CP5', 'CP1'], ['CP2', 'CP6', 'TP10', 'P7']], 
-            [['Fp1', 'Fp2', 'F7', 'F8',],['F3', 'F4', 'Fz', 'FT9'],['FT10', 'FC5', 'FC1', 'FC2'],
-            ['T7', 'C3', 'Cz', 'C4'], ['T8', 'TP9', 'CP5', 'CP1'], ['CP2', 'CP6', 'TP10', 'P7']]]
-    
-    mi = it.compute_mi(estimator = 'gaussian', 
-                  include_intra = True, 
-                  calc_sigstats = False, 
-                  vis = True, 
-                  plot_epoch=[1])
-    
-    print(mi.shape)
-
-if __name__ == "__main__":
-    main()

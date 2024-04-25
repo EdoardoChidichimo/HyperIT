@@ -2,19 +2,23 @@
 title: 'HyperIT: A Python toolbox for an information-theoretic social neuroscience'
 tags:
   - Python
-  - social neuroscience
-  - hyperscanning
-  - Shannon information theory
-  - mutual information
-  - transfer entropy
-  - integrated information decomposition
+  - Social Neuroscience
+  - Hyperscanning
+  - Information Theory
 authors:
   - name: Edoardo Chidichimo
     orcid: 0000-0002-1179-9757
     affiliation: "1" 
+    corresponding: true
+  - name: Richard A. I. Bethlehem
+    orcid: 0000-0002-0714-0685
+    affiliation: "1,2"
 affiliations:
- - name: Department of Psychology, University of Cambridge, UK
-   index: 1
+  - name: Department of Psychology, University of Cambridge, Cambridge, UK
+    index: 1
+  - name: Brain Mapping Unit, Department of Psychiatry, University of Cambridge, Cambridge, UK
+    index: 2
+
 date: 21 April 2024
 bibliography: paper.bib
 header-includes:
@@ -36,13 +40,13 @@ header-includes:
 
 # Statement of need
 
-For the past two decades, social neuroscience has addressed the interpersonal neural dynamics of interacting persons through the hyperscanning paradigm [@dumas_inter-brain_2010]. Synchrony and other statistical properties have been prioritised in these analyses, although most measures remain of the parametric type despite neural activity and coordination dynamics often being distinctly nonlinear. `HyperIT` presents the first principled and unified analysis framework for hyperscanning data using nonparametric measures.
+For the past two decades, social neuroscience has addressed the interpersonal neural dynamics of interacting persons through the hyperscanning paradigm [@dumas_inter-brain_2010]. Synchrony and other statistical properties have been prioritised in these analyses, although most measures remain of the parametric type despite neural activity and coordination dynamics often being distinctly nonlinear. `HyperIT` presents the first principled and unified analysis framework for hyperscanning data using nonparametric measures. More than this, for the first time it combines and offers canonical measures of dependency and causality with the most recent measures of information dynamics. 
 
 Between interacting persons, we observe coordination and communication on various scales of organisation whose unit of transfer we can loosely describe as \textit{information}. Whilst the idea of interpersonal information transfer may appear intuitive \textit{prima facie}, it is not exactly clear how to define information, let alone measure its content, distribution, transfer, storage, modification, and other informational dynamics. Thus, an elegant definition and quantification of information that is \textit{mathematically precise and consistent} is essential, particularly one that is \textit{content-invariant} and \textit{model-free}; i.e., making no assumptions on the information content itself nor the statistical distributions or relationship model between random variables.
 
 Information theory, lauded as \textit{the} mathematical theory of communication [@shannon_mathematical_1948], lends itself well to this cause, proffering domain-generality and information as its common currency. Originally birthed for the development of communications engineering, various information-theoretic measures have found vast applicability in computer science (e.g., Kolmogorov complexity), economics (e.g., portfolio theory and Kelly gambling), statistics (e.g., Fisher information and hypothesis testing), and probability theory (e.g., limit theorems and large derivations; @cover_elements_2006). Information theory has recently earned a notable place in neuroscience, too [@timme_tutorial_2018].  
 
-Of relevance for neuroscientific endeavours, information theory provides measures that can detect linear \textit{and} nonlinear dependencies between continuous time-series signals, allowing researchers to analyse both the correlation and causation between two or more random variables. In all, whilst standard measures of correlation and prediction are only sensitive to linear dependencies and only describe the variable's overall relationship, information-theoretic analyses and measures can quantify and more comprehensively describe the dynamics of complex systems that may demonstrate nonlinear dependencies whilst maintaining a particular robustness to noise. `HyperIT` computes well-recognised and validated information-theoretic measures that, for the first time, can be simultaneously applied to both hyperscanning and intra-brain analyses for various neural recordings. Usefully, and unlike other libraries, `HyperIT` is equipped to handle epoched and event-based data as well as specifying both frequency bands and the level of organisation by comparing channels pairwise or by regions of interest. These measures include \textit{(I) mutual information}, \textit{(II) transfer entropy}, and \textit{(III) integrated information decomposition}, described below. 
+Of relevance for neuroscientific endeavours, information theory provides measures that can detect linear \textit{and} nonlinear dependencies between continuous time-series signals, allowing researchers to analyse both the correlation and causation between two or more random variables. In all, whilst standard measures of correlation and prediction are only sensitive to linear dependencies and only describe the variable's overall relationship, information-theoretic analyses and measures can quantify and more comprehensively describe the dynamics of complex systems that may demonstrate nonlinear dependencies whilst maintaining a particular robustness to noise. `HyperIT` computes well-recognised and validated information-theoretic measures that, for the first time, can be simultaneously applied to both hyperscanning and intra-brain analyses for various neural recordings whilst uniquely including the most recent measures, decomposing these datasets into their constituent informational dynamics. Usefully, and unlike other libraries, `HyperIT` is equipped to handle epoched and event-based data as well as specifying both frequency bands and the level of organisation by comparing channels pairwise or by regions of interest. These measures include \textit{(I) mutual information}, \textit{(II) transfer entropy}, and \textit{(III) integrated information decomposition}, described below. 
 
 
 # Measures
@@ -78,7 +82,7 @@ A recent development, termed \textit{integrated information decomposition}, exte
 
 # Functionality
 
-`HyperIT`, then, addresses these approaches and offers a user-friendly, class-based toolbox where users can create a `HyperIT` object passing two multivariate sets of continuous time-series signals (dimensions including epochality and multiple channels). As mentioned, users can choose to bandpass filter their signals at specified frequency bands as well as specify the scale of organisation by setting the "regions of interest" property; namely, specifying whether (and which) channels are computed pairwise or as clusters with one another for all measures, making micro-, meso-, and macro-scale analysis readily available. From here, users can call mutual information, transfer entropy, and integrated information decomposition functions specifying estimation type and estimation-specific parameters (outlined in documentation). Estimators include (a) histogram/binning, (b) box kernel, (c) Gaussian, (d) k-nearest neighbour, and (e) symbolic approaches. Users may also choose to conduct statistical significance testing via permutation testing for each calculation and optionally visualise the measure matrices. Importantly, the toolbox relies upon the Java Information Dynamics Toolkit for computing mutual information and transfer entropy with various estimators [@lizier_jidt_2014], although `HyperIT` makes this Java-oriented toolbox accessible and compatible for Python coders who may in turn enjoy a diverse ecosystem of other scientific libraries, most notably MNE and HyPyP [@ayrolles_hypyp_2021]. Users will need to store the `infodynamics.jar` file locally in their working directory as well as ensuring the `jpype` dependency is installed. Finally, `HyperIT` employs the `phyid` package to compute integrated information atoms [@luppi_synergistic_2022; @mediano_towards_2021]. Thus, `HyperIT` offers a distinct interoperability and compatibility with other Python libraries whilst providing unique features of handling hyperscanning data, and versatility with epochality, frequency resolutions, and spatial scales of organisation.
+`HyperIT`, then, addresses these approaches and offers a user-friendly, class-based toolbox where users can create a `HyperIT` object passing two multivariate sets of continuous time-series signals (dimensions including epochality and multiple channels). As mentioned, users can choose to bandpass filter their signals at specified frequency bands as well as specify the scale of organisation by setting the "regions of interest" property; namely, specifying whether (and which) channels are computed pairwise or as clusters with one another for all measures, making micro-, meso-, and macro-scale analysis readily available. From here, users can call mutual information, transfer entropy, and integrated information decomposition functions specifying estimation type and estimation-specific parameters (outlined in documentation). Estimators include (a) histogram/binning, (b) box kernel, (c) Gaussian, (d) k-nearest neighbour, and (e) symbolic approaches. Users may also choose to conduct statistical significance testing via permutation testing for each calculation and optionally visualise the measure matrices. Importantly, the toolbox relies upon the Java Information Dynamics Toolkit for computing mutual information and transfer entropy with various estimators [@lizier_jidt_2014], although `HyperIT` makes this Java-oriented toolbox accessible and compatible for Python coders who may in turn enjoy a diverse ecosystem of other scientific libraries, most notably MNE and HyPyP [@ayrolles_hypyp_2021]. Moreover, `HyperIT` offers its own histogram and symbolic mutual information estimators that are unavailable in JIDT. Users will need to download and store the `infodynamics.jar` file locally as well as ensuring the `jpype` dependency is installed. Finally, `HyperIT` uniquely intgrates the `phyid` package to compute integrated information atoms [@luppi_synergistic_2022; @mediano_towards_2021] and offer users to compare between standard measures and the more precise informational decomposition of their data. Thus, `HyperIT` offers a distinct interoperability and compatibility with other Python libraries whilst providing unique features of handling hyperscanning data and information dynamics, and versatility with epochality, frequency resolutions, and spatial scales of organisation.
 
 In all, social neuroscience researchers working with continuous time-series signals (including fMRI, EEG, MEG, and fNIRS), particularly in the context of hyperscanning, will be, for the first time, able to comfortably compute common and powerful information-theoretic measures using our `HyperIT` toolbox.
 

@@ -23,6 +23,11 @@ warnings.filterwarnings("ignore", message="filter_length .* is longer than the s
 #                   'sts': (485, 41)   
 #                 }
 
+def ensure_three_dims(data: np.ndarray) -> np.ndarray:
+    """Ensure the numpy array `data` has three dimensions."""
+    while data.ndim < 3:
+        data = np.expand_dims(data, axis=0)
+    return data
 
 def bandpass_filter_data(data: np.ndarray, sfreq: float, freq_bands: dict, **filter_options) -> np.ndarray:
 

@@ -1,7 +1,5 @@
 /.DS_Store
-/infodynamics-dist-1.6.1
-cuda/
-java/
 __pycache__/
 .DS_Store
 HyperIT/testing.ipynb
+accuracy_tests.py
