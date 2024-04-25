@@ -13,11 +13,18 @@ authors:
   - name: Richard A. I. Bethlehem
     orcid: 0000-0002-0714-0685
     affiliation: "1,2"
+  - name: Guillaume Dumas
+    orcid: 0000-0002-2253-1844
+    affiliation: "3,4"
 affiliations:
   - name: Department of Psychology, University of Cambridge, Cambridge, UK
     index: 1
   - name: Brain Mapping Unit, Department of Psychiatry, University of Cambridge, Cambridge, UK
     index: 2
+  - name: CHU Sainte-Justine Research Centre, Department of Psychiatry, Université de Montréal, Montréal, QC, Canada 
+    index: 3
+  - name: Mila–Quebec AI institute, Montréal, QC, Canada
+    index: 4
 
 date: 21 April 2024
 bibliography: paper.bib
