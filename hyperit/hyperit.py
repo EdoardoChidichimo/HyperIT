@@ -679,10 +679,10 @@ class HyperIT:
 
         for epoch in self._plot_epochs:
             for freq_band in range(self._n_freq_bands):
-
                 results = self._it_matrix[epoch, freq_band, :, :, 0] if self._calc_statsig else self._it_matrix[epoch, freq_band, :, :]
+                
                 plt.figure(figsize=(12, 10))
-                plt.imshow(results, cmap='BuPu', vmin=0, vmax=global_max, aspect='auto')
+                img = plt.imshow(results, cmap='BuPu', vmin=0, vmax=global_max, aspect='auto')
 
                 band_description = ""
                 if self._freq_bands:
@@ -711,7 +711,15 @@ class HyperIT:
                                 text_colour = 'white' if normalised_value > 0.5 else 'black'
                                 plt.text(j, i, f'p={p_val:.2f}', ha='center', va='center', color=text_colour, fontsize=8, fontweight='bold')
 
-                plt.colorbar()
+
+                cbar = plt.colorbar(img)
+                cbar.set_label(self._measure_title, rotation=270, labelpad=20)
+                ticks = list(cbar.get_ticks())
+                if global_max not in ticks:
+                    ticks.append(global_max)
+                ticks = sorted(set(ticks))
+                cbar.set_ticks(ticks)
+                cbar.set_ticklabels([f"{tick:.2f}" if tick != global_max else f"{tick:.2f} (max)" for tick in ticks])
 
                 x_tick_label = target_channel_names.copy()
                 y_tick_label = source_channel_names.copy()
