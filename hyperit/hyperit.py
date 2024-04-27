@@ -714,10 +714,12 @@ class HyperIT:
 
                 cbar = plt.colorbar(img)
                 cbar.set_label(self._measure_title, rotation=270, labelpad=20)
-                ticks = list(cbar.get_ticks())
-                if global_max not in ticks:
-                    ticks.append(global_max)
-                ticks = sorted(set(ticks))
+                n_ticks = 8
+                ticks = np.linspace(0, global_max, n_ticks)
+                # ticks = list(cbar.get_ticks())
+                # if global_max not in ticks:
+                #     ticks.append(global_max)
+                # ticks = sorted(set(ticks))
                 cbar.set_ticks(ticks)
                 cbar.set_ticklabels([f"{tick:.2f}" if tick != global_max else f"{tick:.2f} (max)" for tick in ticks])
 
