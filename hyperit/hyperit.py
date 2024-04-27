@@ -696,7 +696,7 @@ class HyperIT:
                         plt.title(f'{title} Epoch {epoch+1}', pad=20)
                 else:
                     if band_description:
-                        plt.title(f'{title}; Frequency Band {band_description}', pad=20)
+                        plt.title(f'{title} Frequency Band {band_description}', pad=20)
                     else:
                         plt.title(title, pad=20)
                     
