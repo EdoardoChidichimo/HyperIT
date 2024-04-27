@@ -641,6 +641,10 @@ class HyperIT:
             self._plot_epochs = [ep - 1 for ep in self._plot_epochs if ep < self._n_epo]
             if not self._plot_epochs:
                 raise ValueError("No valid epochs found in the input list.")
+            
+        if self._n_chan == 1:
+            print("Single channel detected. No visualisation possible.")
+            return
 
         if self._verbose:
             print(f"Plotting {self._measure_title}...")
@@ -655,6 +659,8 @@ class HyperIT:
         title = f'{self._measure_title} | {self._estimator_name} \n'
         source_channel_names = convert_indices_to_names(self._channel_names, self._channel_indices1, 0) 
         target_channel_names = convert_indices_to_names(self._channel_names, self._channel_indices2, 1)
+
+        global_max = np.max(self._it_matrix[..., 0]) if self._calc_statsig else np.max(self._it_matrix)
 
         if self._scale_of_organisation > 1:
             
@@ -676,7 +682,7 @@ class HyperIT:
 
                 results = self._it_matrix[epoch, freq_band, :, :, 0] if self._calc_statsig else self._it_matrix[epoch, freq_band, :, :]
                 plt.figure(figsize=(12, 10))
-                plt.imshow(results, cmap='BuPu', vmin=0, aspect='auto')
+                plt.imshow(results, cmap='BuPu', vmin=0, vmax=global_max, aspect='auto')
 
                 band_description = ""
                 if self._freq_bands:
