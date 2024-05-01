@@ -84,7 +84,7 @@ class HyperIT:
             if not isJVMStarted():
                 # jar_path = pkg_resources.resource_filename('hyperit', 'infodynamics.jar')
                 jarLocation = resource_filename(__name__, 'infodynamics.jar')
-                startJVM(getDefaultJVMPath(), "-ea", f"-Djava.class.path={os.path.join(jarLocation, 'infodynamics.jar')}")
+                startJVM(getDefaultJVMPath(), "-ea", ('-Djava.class.path=' + jarLocation))
                 cls._jvm_initialised = True
                 if verbose:
                     print("JVM started successfully.")
