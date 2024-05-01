@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.abspath('..'))
 sys.path.insert(1, os.path.abspath('../hyperit'))
 
 from hyperit import hyperit as it
-it.HyperIT.setup_JVM(jarLocation=os.path.join(os.path.dirname(os.path.dirname(__file__))))
+it.HyperIT.setup_JVM()
 
 import mock
 
