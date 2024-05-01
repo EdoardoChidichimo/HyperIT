@@ -731,9 +731,9 @@ class HyperIT:
 
                 if self._hyper and self._include_intra:
                     if self._scale_of_organisation != 1:
-                        x_tick_label = source_str + target_str
+                        x_tick_label = str(source_str) + str(target_str)
                     else:
-                        x_tick_label = ['X_' + s for s in y_tick_label] + ['Y_' + s for s in x_tick_label]
+                        x_tick_label = ['X_' + str(s) for s in y_tick_label] + ['Y_' + str(s) for s in x_tick_label]
                     
                     y_tick_label = x_tick_label
                 else:
