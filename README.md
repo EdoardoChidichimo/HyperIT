@@ -20,7 +20,7 @@ HyperIT uses a Class/OOP framework, allowing multiple instances of HyperIT objec
 ```python
 from hyperit import HyperIT
 
-# Only needs to be called once, pass file location of local infodynamics.jar
+# Only needs to be called once
 HyperIT.setup_JVM()
 
 # Gather your data here ...
