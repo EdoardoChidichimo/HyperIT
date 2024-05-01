@@ -9,8 +9,7 @@ class TestHyperIT(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        cls.jarLocation = os.path.join(os.path.dirname(os.path.dirname(__file__)))
-        HyperIT.setup_JVM(cls.jarLocation, verbose=True)
+        HyperIT.setup_JVM(verbose=True)
 
     def setUp(self):
         """Set up test variables used in the tests."""
