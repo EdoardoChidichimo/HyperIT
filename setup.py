@@ -1,15 +1,16 @@
-from setuptools import setup, find_packages
+from setuptools import setup
 
 setup(
     name="hyperit",
     version="v1.0.0",
     author="Edoardo Chidichimo",
     author_email="ec750@cam.ac.uk",
-    description="Information-theoretic tools for social neuroscientific endeavours",
+    description="Information-Theoretic Tools for Social Neuroscience",
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
     url="https://github.com/EdoardoChidichimo/HyperIT",
-    packages=find_packages(),
+    packages=["hyperit"],
+    include_package_data=True,  
     install_requires=[
         'numpy',
         'scipy',
@@ -24,7 +25,7 @@ setup(
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: MIT License",
+        "License :: BSD-3-Clause License",
         "Operating System :: OS Independent",
     ],
     python_requires='>=3.10',

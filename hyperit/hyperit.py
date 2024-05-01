@@ -6,6 +6,7 @@ from typing import Tuple, List, Union, Any
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import os
+from pkg_resources import resource_filename
 
 from jpype import isJVMStarted, startJVM, getDefaultJVMPath
 from phyid.calculate import calc_PhiID
@@ -81,6 +82,8 @@ class HyperIT:
         """Setup JVM if not already started. To be called once before creating any instances."""
         if not cls._jvm_initialised:
             if not isJVMStarted():
+                # jar_path = pkg_resources.resource_filename('hyperit', 'infodynamics.jar')
+                jarLocation = resource_filename(__name__, 'infodynamics.jar')
                 startJVM(getDefaultJVMPath(), "-ea", f"-Djava.class.path={os.path.join(jarLocation, 'infodynamics.jar')}")
                 cls._jvm_initialised = True
                 if verbose:
