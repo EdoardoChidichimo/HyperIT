@@ -78,7 +78,7 @@ class HyperIT:
     _jvm_initialised = False
 
     @classmethod
-    def setup_JVM(cls, jarLocation: str = '', verbose: bool = False) -> None:
+    def setup_JVM(cls, verbose: bool = False) -> None:
         """Setup JVM if not already started. To be called once before creating any instances."""
         if not cls._jvm_initialised:
             if not isJVMStarted():
