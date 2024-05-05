@@ -3,3 +3,6 @@ __pycache__/
 .DS_Store
 HyperIT/testing.ipynb
 accuracy_tests.py
+hyperit.egg-info
+build
+dist

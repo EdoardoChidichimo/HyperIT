@@ -19,6 +19,7 @@ setup(
         'Pillow',
         'tqdm',
         'jpype1',
+        'phyid @ git+https://github.com/Imperial-MIND-lab/integrated-info-decomp.git'
     ],
     dependency_links=[
         'https://github.com/EdoardoChidichimo/HyperIT/tarball/master#egg=hyperit-v1.0.0'
