@@ -251,8 +251,10 @@ class HyperIT:
         """ Configures the data for analysis by bandpass filtering and standardising. """
 
         if self._freq_bands:
+            print(self._data1.shape)
             self._data1, self._data2 = bandpass_filter_data(self._data1, self._sfreq, self._freq_bands, **self._filter_options), bandpass_filter_data(self._data2, self._sfreq, self._freq_bands, **self._filter_options)
-                
+            print(self._data1.shape)
+        
         else:
             self._data1, self._data2 = np.expand_dims(self._data1, axis=1), np.expand_dims(self._data2, axis=1)
 
