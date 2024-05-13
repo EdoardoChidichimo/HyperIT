@@ -5,6 +5,7 @@ from typing import Tuple, List, Union, Any
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import os
+from pkg_resources import resource_filename
 
 from jpype import isJVMStarted, startJVM, getDefaultJVMPath
 from phyid.calculate import calc_PhiID
