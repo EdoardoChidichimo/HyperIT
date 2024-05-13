@@ -6,7 +6,6 @@ from typing import Tuple, List, Union, Any
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import os
-from pkg_resources import resource_filename
 
 from jpype import isJVMStarted, startJVM, getDefaultJVMPath
 from phyid.calculate import calc_PhiID
@@ -61,7 +60,7 @@ class HyperIT:
     Note:
         This class requires numpy, mne, matplotlib, PIL, jpype (with the local infodynamics.jar file), and phyid as dependencies.
         
-        Before a HyperIT can be created, users must first call HyperIT.setup_JVM(jarLocation) to initialise the Java Virtual
+        Before a HyperIT can be created, users must first call HyperIT.setup_JVM() to initialise the Java Virtual
         Machine (JVM) with the local directory location of the infodynamics.jar file. Users can then create multiple HyperIT
         objects containing time-series data, later calling various functions for analysis. 
         
@@ -82,7 +81,6 @@ class HyperIT:
         """Setup JVM if not already started. To be called once before creating any instances."""
         if not cls._jvm_initialised:
             if not isJVMStarted():
-                # jar_path = pkg_resources.resource_filename('hyperit', 'infodynamics.jar')
                 jarLocation = resource_filename(__name__, 'infodynamics.jar')
                 startJVM(getDefaultJVMPath(), "-ea", ('-Djava.class.path=' + jarLocation))
                 cls._jvm_initialised = True
