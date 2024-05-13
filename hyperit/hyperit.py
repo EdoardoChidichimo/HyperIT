@@ -1,7 +1,6 @@
 import numpy as np
 from abc import ABC, abstractmethod
 from scipy import stats
-from PIL import Image, ImageDraw
 from typing import Tuple, List, Union, Any
 from tqdm import tqdm
 import matplotlib.pyplot as plt
@@ -58,7 +57,7 @@ class HyperIT:
         **filter_options        (dict, optional): Additional keyword arguments for bandpass filtering.
 
     Note:
-        This class requires numpy, mne, matplotlib, PIL, jpype (with the local infodynamics.jar file), and phyid as dependencies.
+        This class requires numpy, mne, matplotlib, jpype (with the local infodynamics.jar file), and phyid as dependencies.
         
         Before a HyperIT can be created, users must first call HyperIT.setup_JVM() to initialise the Java Virtual
         Machine (JVM) with the local directory location of the infodynamics.jar file. Users can then create multiple HyperIT
