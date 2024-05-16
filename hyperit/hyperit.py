@@ -866,8 +866,7 @@ class HyperIT:
             the `include_intra` and `calc_statsig` flags:
                 - If `include_intra` is False, shape is (n_epo, n_freq_bands, n_chan, n_chan).
                 - If `include_intra` is True, shape is (n_epo, n_freq_bands, 2*n_chan, 2*n_chan).
-                - If `calc_statsig` is True, an additional last dimension (size 4) contains statistical
-                significance results: [MI value, mean, standard deviation, p-value].
+                
         Note:
             When `include_intra` is True, the matrix can be segmented accordingly:
                 - `intra1`: matrix[:, :, :n_chan, :n_chan]
