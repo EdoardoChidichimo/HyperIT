@@ -95,7 +95,7 @@ class HyperIT:
 
 
 
-    def __init__(self, data1: np.ndarray, data2: np.ndarray, channel_names: List[str] = None, sfreq: float = None, freq_bands: dict = None, standardise_data: bool = False, verbose: bool = False, **filter_options) -> None:
+    def __init__(self, data1: np.ndarray, data2: np.ndarray, channel_names: List[str] = None, sfreq: float = None, freq_bands: dict = None, standardise_data: bool = False, verbose: bool = False, show_tqdm = True, **filter_options) -> None:
 
         if not self.__class__._jvm_initialised:
             raise RuntimeError("JVM has not been started. Call setup_JVM() before creating any instances of HyperIT.")
@@ -109,6 +109,7 @@ class HyperIT:
         self._freq_bands = freq_bands or None
         self._filter_options = filter_options
         self._standardise_data = standardise_data
+        self._show_tqdm = show_tqdm
 
         self._data1 = data1
         self._data2 = data2
@@ -587,7 +588,7 @@ class HyperIT:
 
         self.__setup_matrix()
 
-        with tqdm(total=self._n_epo * self._n_freq_bands * self._loop_range) as tqdm_bar:
+        with tqdm(total=self._n_epo * self._n_freq_bands * self._loop_range, disable=not self._show_tqdm) as tqdm_bar:
             for epoch in range(self._n_epo):
                 for freq_band in range(self._n_freq_bands):
                     tqdm_bar.set_description(f"Computing Epoch {epoch+1}/{self._n_epo} | Frequency Band {list(self._freq_bands.keys())[freq_band]}")
