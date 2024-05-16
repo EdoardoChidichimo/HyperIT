@@ -55,6 +55,7 @@ class HyperIT:
         freq_bands              (dict, optional): Dictionary of frequency bands for bandpass filtering. {band_name: (low_freq, high_freq)}.
         standardise_data        (bool, optional): Whether to standardise the data before analysis. Defaults to True.
         verbose                 (bool, optional): Whether constructor and analyses should output details and progress. Defaults to False.
+        show_tqdm               (bool, optional): Whether to output the tqdm progress bar in the console output. Defaults to True (recommended).
         **filter_options        (dict, optional): Additional keyword arguments for bandpass filtering.
 
     Note:
