@@ -498,7 +498,7 @@ class HyperIT:
             self._it_matrix = np.zeros((self._n_epo, self._n_freq_bands, self._loop_range, self._loop_range))
             return
         
-        self._it_matrix = [[[[{} for _ in range(self._loop_range)] for _ in range(self._loop_range)] for _ in range(self._n_freq_bands)] for _ in range(self._n_epo)]
+        self._it_matrix = np.zeros((self._n_epo, self._n_freq_bands, self._loop_range, self._loop_range, 16))
         
 
     def __estimate_it(self, s1: np.ndarray, s2: np.ndarray) -> float | np.ndarray:
@@ -516,7 +516,7 @@ class HyperIT:
             
         return float(result)
     
-    def __estimate_atoms(self, s1: np.ndarray, s2: np.ndarray) -> None:
+    def __estimate_atoms(self, s1: np.ndarray, s2: np.ndarray) -> np.ndarray:
 
         atoms_results_xy, _ = calc_PhiID(s1, s2, tau=self._tau, kind='gaussian', redundancy=self._redundancy)
 
@@ -524,7 +524,10 @@ class HyperIT:
             raise ValueError("Empty results from calc_PhiID, critical data processing cannot continue.")
 
         calc_atoms_xy = np.mean(np.array([atoms_results_xy[_] for _ in PhiID_atoms_abbr]), axis=1)
-        return {key: value for key, value in zip(atoms_results_xy.keys(), calc_atoms_xy)}
+        return calc_atoms_xy
+        
+        # To see which value corresponds to which decomposition, you can use the following code:
+        # {key: value for key, value in zip(PhiID_atoms_abbr, calc_atoms_xy)}
 
     def __filter_estimation(self, s1: np.ndarray, s2: np.ndarray) -> float | np.ndarray:
         """ Filters the estimation in case incompatible with JIDT. """
@@ -560,11 +563,8 @@ class HyperIT:
                 self._it_matrix[epoch, freq_band, i, j] = result
                 self._it_matrix[epoch, freq_band, j, i] = result
            
-            elif self._measure == MeasureType.TE and i != j:
+            elif (self._measure == MeasureType.TE or self._measure == MeasureType.PhyID) and i != j:
                 self._it_matrix[epoch, freq_band, i, j] = self.__filter_estimation(s1, s2)
-
-            elif self._measure == MeasureType.PhyID and i != j:
-                self._it_matrix[epoch][freq_band][i][j] = self.__filter_estimation(s1, s2)
 
         else:
 
@@ -573,11 +573,8 @@ class HyperIT:
                 self._it_matrix[epoch, freq_band, i, j] = result
                 self._it_matrix[epoch, freq_band, j, i] = result
             
-            elif self._measure == MeasureType.TE:
+            else:
                 self._it_matrix[epoch, freq_band, i, j] = self.__filter_estimation(s1, s2)
-
-            elif self._measure == MeasureType.PhyID:
-                self._it_matrix[epoch][freq_band][i][j] = self.__filter_estimation(s1, s2)
 
 
     ## MAIN CALCULATION FUNCTIONS         
@@ -862,10 +859,10 @@ class HyperIT:
             include_intra      (bool, optional): Whether to include intra-brain analysis. Defaults to False.
             
         Returns:
-            np.ndarray: A matrix integrated information decomposition atom dictionaries. The shape of the matrix is determined by
+            np.ndarray: A matrix of integrated information decomposition atoms. The shape of the matrix is determined by
             the `include_intra` and `calc_statsig` flags:
-                - If `include_intra` is False, shape is (n_epo, n_freq_bands, n_chan, n_chan).
-                - If `include_intra` is True, shape is (n_epo, n_freq_bands, 2*n_chan, 2*n_chan).
+                - If `include_intra` is False, shape is (n_epo, n_freq_bands, n_chan, n_chan, 16).
+                - If `include_intra` is True, shape is (n_epo, n_freq_bands, 2*n_chan, 2*n_chan, 16).
                 
         Note:
             When `include_intra` is True, the matrix can be segmented accordingly:
