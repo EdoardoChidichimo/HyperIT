@@ -19,6 +19,7 @@ HyperIT uses a Class/OOP framework, allowing multiple instances of HyperIT objec
 
 ```python
 from hyperit import HyperIT
+from phyid.utils import PhiID_atoms_abbr
 
 # Only needs to be called once
 HyperIT.setup_JVM()
@@ -49,6 +50,7 @@ te = it.compute_te(estimator='gaussian',
 
 # Calculate Integrated Information Decomposition
 atoms = it.compute_atoms(tau=5, redundancy='MMI', include_intra=True)
+print({key: value for key, value in zip(PhiID_atoms_abbr, atoms)})
 ```
 
 For specific estimator types and general functionality, see Documentation and Tutorial.
