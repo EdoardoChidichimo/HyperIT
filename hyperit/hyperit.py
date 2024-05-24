@@ -555,7 +555,7 @@ class HyperIT:
         # (Note that .T does not affect pointwise comparison as it is already in the correct shape)
         s1, s2 = self._it_data1[epoch, freq_band, channel_or_group_i, :].T, self._it_data2[epoch, freq_band, channel_or_group_j, :].T
 
-        if not self._hyper or self._include_intra:
+        if (not self._hyper) or self._include_intra:
             
             if self._measure == MeasureType.MI and j < i:
 
@@ -565,6 +565,9 @@ class HyperIT:
            
             elif (self._measure == MeasureType.TE or self._measure == MeasureType.PhyID) and i != j:
                 self._it_matrix[epoch, freq_band, i, j] = self.__filter_estimation(s1, s2)
+
+            else:
+                return
 
         else:
 
