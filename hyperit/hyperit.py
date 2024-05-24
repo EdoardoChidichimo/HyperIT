@@ -522,7 +522,7 @@ class HyperIT:
         print(s1, flush=True)
         print(s2, flush=True)
 
-        atoms_results_xy, _ = calc_PhiID(s1_s, s2_s, tau=self._tau, kind='gaussian', redundancy=self._redundancy)
+        atoms_results_xy, _ = calc_PhiID(s1, s2, tau=self._tau, kind='gaussian', redundancy=self._redundancy)
 
         if not atoms_results_xy:  
             raise ValueError("Empty results from calc_PhiID, critical data processing cannot continue.")
