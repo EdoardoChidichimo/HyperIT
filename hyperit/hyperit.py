@@ -518,8 +518,9 @@ class HyperIT:
     
     def __estimate_atoms(self, s1: np.ndarray, s2: np.ndarray) -> np.ndarray:
 
-        print(s1.shape, flush=True)
-        print(s2.shape, flush=True)
+        # standardise signals
+        s1_s = (s1 - np.mean(s1)) / np.std(s1)
+        s2_s = (s2 - np.mean(s2)) / np.std(s2)
 
         atoms_results_xy, _ = calc_PhiID(s1, s2, tau=self._tau, kind='gaussian', redundancy=self._redundancy)
 
