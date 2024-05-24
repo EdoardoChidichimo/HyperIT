@@ -562,8 +562,13 @@ class HyperIT:
                 result = self.__filter_estimation(s1, s2)
                 self._it_matrix[epoch, freq_band, i, j] = result
                 self._it_matrix[epoch, freq_band, j, i] = result
+                return
+
+            if i == j:
+                return
            
             elif (self._measure == MeasureType.TE or self._measure == MeasureType.PhyID) and i != j:
+                print(f'{i},{j}', flush = True)
                 self._it_matrix[epoch, freq_band, i, j] = self.__filter_estimation(s1, s2)
 
             else:
