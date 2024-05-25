@@ -566,7 +566,7 @@ class HyperIT:
             try:
                 result = self.__filter_estimation(s1, s2)
             except Exception as e:
-                result = np.zeros(16)
+                result = np.zeros(16) if self._measure == MeasureType.PhyID else 0
                 if self._verbose:
                     print(f'Warning, error computing epoch {epoch}, frequency band {freq_band}, channel_X {i}, channel_Y {j}. It is likely the signals are the same. Results set to 0. Error: {e}', flush=True)
             
