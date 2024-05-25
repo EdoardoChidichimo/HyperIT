@@ -522,7 +522,8 @@ class HyperIT:
         try:
             atoms_results_xy, _ = calc_PhiID(s1, s2, tau=self._tau, kind='gaussian', redundancy=self._redundancy)
         except Exception as e:
-            print(f'Warning: error handling timeseries. They are likely identical or similar timeseries. Setting results to 0. Error: {e}', flush=True)
+            if self._verbose:
+                print(f'Warning: error handling timeseries. They are likely identical or similar timeseries. Setting results to 0. Error: {e}', flush=True)
             return np.zeros(16)
             
         calc_atoms_xy = np.mean(np.array([atoms_results_xy[_] for _ in PhiID_atoms_abbr]), axis=1)
