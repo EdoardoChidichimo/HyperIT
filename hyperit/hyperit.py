@@ -517,17 +517,17 @@ class HyperIT:
         return float(result)
     
     def __estimate_atoms(self, s1: np.ndarray, s2: np.ndarray) -> np.ndarray:
-
-        atoms_results_xy, _ = calc_PhiID(s1, s2, tau=self._tau, kind='gaussian', redundancy=self._redundancy)
-
-        if not atoms_results_xy:  
-            raise ValueError("Empty results from calc_PhiID, critical data processing cannot continue.")
-
+        """ Estimates Integrated Information Decomposition for a pair of time-series signals using phyid package. """
+        
+        try:
+            atoms_results_xy, _ = calc_PhiID(s1, s2, tau=self._tau, kind='gaussian', redundancy=self._redundancy)
+        except Exception as e:
+            print(f'Warning: error handling timeseries. They are likely identical or similar timeseries. Setting results to 0. Error: {e}', flush=True)
+            return np.zeros(16)
+            
         calc_atoms_xy = np.mean(np.array([atoms_results_xy[_] for _ in PhiID_atoms_abbr]), axis=1)
         return calc_atoms_xy
         
-        # To see which value corresponds to which decomposition, you can use the following code:
-        # {key: value for key, value in zip(PhiID_atoms_abbr, calc_atoms_xy)}
 
     def __filter_estimation(self, s1: np.ndarray, s2: np.ndarray) -> float | np.ndarray:
         """ Filters the estimation in case incompatible with JIDT. """
@@ -562,15 +562,8 @@ class HyperIT:
                 self._it_matrix[epoch, freq_band, i, j] = result
                 self._it_matrix[epoch, freq_band, j, i] = result
                 return
-
-            try:
-                result = self.__filter_estimation(s1, s2)
-            except Exception as e:
-                result = np.zeros(16) if self._measure == MeasureType.PhyID else 0
-                if self._verbose:
-                    print(f'Warning, error computing epoch {epoch}, frequency band {freq_band}, channel_X {i}, channel_Y {j}. It is likely the signals are the same. Results set to 0. Error: {e}', flush=True)
-            
-            self._it_matrix[epoch, freq_band, i, j] = result
+                
+            self._it_matrix[epoch, freq_band, i, j] = self.__filter_estimation(s1, s2)
             return
 
         if self._measure == MeasureType.MI and j <= i:
