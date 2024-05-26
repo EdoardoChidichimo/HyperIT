@@ -386,60 +386,57 @@ class HyperIT:
         """Calculates Mutual Information using Symbolic Estimator for time-series signals."""
 
         symbol_weights = np.power(k, np.arange(k))
-
+    
         def symb_symbolise(X: np.ndarray, k: int, delay: int) -> np.ndarray:
             Y = np.empty((k, len(X) - (k - 1) * delay))
             for i in range(k):
                 Y[i] = X[i * delay:i * delay + Y.shape[1]]
             return Y.T
-
+        
         def symb_normalise_counts(d) -> None:
-            total = sum(d.values())        
-            return {key: value / total for key, value in d.items()}
+            total = sum(d.values())
+            return {key: value / total for key, value in d.items()} if total > 0 else d
         
         def symb_calc_mi(X: np.ndarray, Y: np.ndarray, k: int, delay: int) -> float:
-            X = symb_symbolise(X, delay, k).argsort(kind='quicksort')
-            Y = symb_symbolise(Y, delay, k).argsort(kind='quicksort')
-
-            # multiply each symbol [1,0,3] by symbol_weights [1,3,9] => [1,0,27] and give a final array of the sum of each code ([.., .., 28, .. ])
-            symbol_hash_X = (np.multiply(X, symbol_weights)).sum(1) 
-            symbol_hash_Y = (np.multiply(Y, symbol_weights)).sum(1)
-
-            p_xy, p_x, p_y = map(symb_normalise_counts, [dict(), dict(), dict()])
+            X_symb = symb_symbolise(X, k, delay).argsort(kind='quicksort')
+            Y_symb = symb_symbolise(Y, k, delay).argsort(kind='quicksort')
             
-            for i in range(len(symbol_hash_X)-1):
-
-                xy = f"{symbol_hash_X[i]},{symbol_hash_Y[i]}"
-                x,y = str(symbol_hash_X[i]), str(symbol_hash_Y[i])
-
-                for dict_, key in zip([p_xy, p_x, p_y], [xy, x, y]):
-                    dict_[key] = dict_.get(key, 0) + 1
-
-            # Normalise counts directly into probabilities
+            symbol_hash_X = (np.multiply(X_symb, symbol_weights)).sum(axis=1)
+            symbol_hash_Y = (np.multiply(Y_symb, symbol_weights)).sum(axis=1)
+            
+            p_xy, p_x, p_y = [dict() for _ in range(3)]
+            
+            for i in range(len(symbol_hash_X)):
+                xy = (symbol_hash_X[i], symbol_hash_Y[i])
+                x, y = symbol_hash_X[i], symbol_hash_Y[i]
+                
+                p_xy[xy] = p_xy.get(xy, 0) + 1
+                p_x[x] = p_x.get(x, 0) + 1
+                p_y[y] = p_y.get(y, 0) + 1
+            
             p_xy, p_x, p_y = [np.array(list(symb_normalise_counts(d).values())) for d in [p_xy, p_x, p_y]]
             
-            entropy_X = -np.sum(p_x * np.log2(p_x + np.finfo(float).eps)) 
+            entropy_X = -np.sum(p_x * np.log2(p_x + np.finfo(float).eps))
             entropy_Y = -np.sum(p_y * np.log2(p_y + np.finfo(float).eps))
             entropy_XY = -np.sum(p_xy * np.log2(p_xy + np.finfo(float).eps))
-
+            
             return entropy_X + entropy_Y - entropy_XY
-
-
+        
         result = symb_calc_mi(s1, s2, k, delay)
-
+        
         if self._calc_statsig:
             permuted_mi_values = []
-
+            
             for _ in range(self._stat_sig_perm_num):
-                np.random.shuffle(s2)
-                permuted_mi = symb_calc_mi(s1, s2, k, delay)
+                s2_permuted = np.random.permutation(s2)  # Use permutation to avoid modifying s2 in place
+                permuted_mi = symb_calc_mi(s1, s2_permuted, k, delay)
                 permuted_mi_values.append(permuted_mi)
-
+            
             mean_permuted_mi = np.mean(permuted_mi_values)
             std_permuted_mi = np.std(permuted_mi_values)
-            p_value = np.sum(permuted_mi_values >= result) / self._stat_sig_perm_num
+            p_value = np.sum(np.array(permuted_mi_values) >= result) / self._stat_sig_perm_num
             return np.array([result, mean_permuted_mi, std_permuted_mi, p_value])
-
+        
         return result
 
 
