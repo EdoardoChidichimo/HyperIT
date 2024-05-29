@@ -386,60 +386,57 @@ class HyperIT:
         """Calculates Mutual Information using Symbolic Estimator for time-series signals."""
 
         symbol_weights = np.power(k, np.arange(k))
-
+    
         def symb_symbolise(X: np.ndarray, k: int, delay: int) -> np.ndarray:
             Y = np.empty((k, len(X) - (k - 1) * delay))
             for i in range(k):
                 Y[i] = X[i * delay:i * delay + Y.shape[1]]
             return Y.T
-
+        
         def symb_normalise_counts(d) -> None:
-            total = sum(d.values())        
-            return {key: value / total for key, value in d.items()}
+            total = sum(d.values())
+            return {key: value / total for key, value in d.items()} if total > 0 else d
         
         def symb_calc_mi(X: np.ndarray, Y: np.ndarray, k: int, delay: int) -> float:
-            X = symb_symbolise(X, delay, k).argsort(kind='quicksort')
-            Y = symb_symbolise(Y, delay, k).argsort(kind='quicksort')
-
-            # multiply each symbol [1,0,3] by symbol_weights [1,3,9] => [1,0,27] and give a final array of the sum of each code ([.., .., 28, .. ])
-            symbol_hash_X = (np.multiply(X, symbol_weights)).sum(1) 
-            symbol_hash_Y = (np.multiply(Y, symbol_weights)).sum(1)
-
-            p_xy, p_x, p_y = map(symb_normalise_counts, [dict(), dict(), dict()])
+            X_symb = symb_symbolise(X, k, delay).argsort(kind='quicksort')
+            Y_symb = symb_symbolise(Y, k, delay).argsort(kind='quicksort')
             
-            for i in range(len(symbol_hash_X)-1):
-
-                xy = f"{symbol_hash_X[i]},{symbol_hash_Y[i]}"
-                x,y = str(symbol_hash_X[i]), str(symbol_hash_Y[i])
-
-                for dict_, key in zip([p_xy, p_x, p_y], [xy, x, y]):
-                    dict_[key] = dict_.get(key, 0) + 1
-
-            # Normalise counts directly into probabilities
+            symbol_hash_X = (np.multiply(X_symb, symbol_weights)).sum(axis=1)
+            symbol_hash_Y = (np.multiply(Y_symb, symbol_weights)).sum(axis=1)
+            
+            p_xy, p_x, p_y = [dict() for _ in range(3)]
+            
+            for i in range(len(symbol_hash_X)):
+                xy = (symbol_hash_X[i], symbol_hash_Y[i])
+                x, y = symbol_hash_X[i], symbol_hash_Y[i]
+                
+                p_xy[xy] = p_xy.get(xy, 0) + 1
+                p_x[x] = p_x.get(x, 0) + 1
+                p_y[y] = p_y.get(y, 0) + 1
+            
             p_xy, p_x, p_y = [np.array(list(symb_normalise_counts(d).values())) for d in [p_xy, p_x, p_y]]
             
-            entropy_X = -np.sum(p_x * np.log2(p_x + np.finfo(float).eps)) 
+            entropy_X = -np.sum(p_x * np.log2(p_x + np.finfo(float).eps))
             entropy_Y = -np.sum(p_y * np.log2(p_y + np.finfo(float).eps))
             entropy_XY = -np.sum(p_xy * np.log2(p_xy + np.finfo(float).eps))
-
+            
             return entropy_X + entropy_Y - entropy_XY
-
-
+        
         result = symb_calc_mi(s1, s2, k, delay)
-
+        
         if self._calc_statsig:
             permuted_mi_values = []
-
+            
             for _ in range(self._stat_sig_perm_num):
-                np.random.shuffle(s2)
-                permuted_mi = symb_calc_mi(s1, s2, k, delay)
+                s2_permuted = np.random.permutation(s2)  # Use permutation to avoid modifying s2 in place
+                permuted_mi = symb_calc_mi(s1, s2_permuted, k, delay)
                 permuted_mi_values.append(permuted_mi)
-
+            
             mean_permuted_mi = np.mean(permuted_mi_values)
             std_permuted_mi = np.std(permuted_mi_values)
-            p_value = np.sum(permuted_mi_values >= result) / self._stat_sig_perm_num
+            p_value = np.sum(np.array(permuted_mi_values) >= result) / self._stat_sig_perm_num
             return np.array([result, mean_permuted_mi, std_permuted_mi, p_value])
-
+        
         return result
 
 
@@ -498,7 +495,7 @@ class HyperIT:
             self._it_matrix = np.zeros((self._n_epo, self._n_freq_bands, self._loop_range, self._loop_range))
             return
         
-        self._it_matrix = [[[[{} for _ in range(self._loop_range)] for _ in range(self._loop_range)] for _ in range(self._n_freq_bands)] for _ in range(self._n_epo)]
+        self._it_matrix = np.zeros((self._n_epo, self._n_freq_bands, self._loop_range, self._loop_range, 16))
         
 
     def __estimate_it(self, s1: np.ndarray, s2: np.ndarray) -> float | np.ndarray:
@@ -516,15 +513,19 @@ class HyperIT:
             
         return float(result)
     
-    def __estimate_atoms(self, s1: np.ndarray, s2: np.ndarray) -> None:
-
-        atoms_results_xy, _ = calc_PhiID(s1, s2, tau=self._tau, kind='gaussian', redundancy=self._redundancy)
-
-        if not atoms_results_xy:  
-            raise ValueError("Empty results from calc_PhiID, critical data processing cannot continue.")
-
+    def __estimate_atoms(self, s1: np.ndarray, s2: np.ndarray) -> np.ndarray:
+        """ Estimates Integrated Information Decomposition for a pair of time-series signals using phyid package. """
+        
+        try:
+            atoms_results_xy, _ = calc_PhiID(s1, s2, tau=self._tau, kind='gaussian', redundancy=self._redundancy)
+        except Exception as e:
+            if self._verbose:
+                print(f'Warning: error handling timeseries. They are likely identical or similar timeseries. Setting results to 0. Error: {e}', flush=True)
+            return np.zeros(16)
+            
         calc_atoms_xy = np.mean(np.array([atoms_results_xy[_] for _ in PhiID_atoms_abbr]), axis=1)
-        return {key: value for key, value in zip(atoms_results_xy.keys(), calc_atoms_xy)}
+        return calc_atoms_xy
+        
 
     def __filter_estimation(self, s1: np.ndarray, s2: np.ndarray) -> float | np.ndarray:
         """ Filters the estimation in case incompatible with JIDT. """
@@ -552,32 +553,25 @@ class HyperIT:
         # (Note that .T does not affect pointwise comparison as it is already in the correct shape)
         s1, s2 = self._it_data1[epoch, freq_band, channel_or_group_i, :].T, self._it_data2[epoch, freq_band, channel_or_group_j, :].T
 
-        if not self._hyper or self._include_intra:
+        if ((not self._hyper) or self._include_intra) and not i==j:
             
             if self._measure == MeasureType.MI and j < i:
-
                 result = self.__filter_estimation(s1, s2)
                 self._it_matrix[epoch, freq_band, i, j] = result
                 self._it_matrix[epoch, freq_band, j, i] = result
-           
-            elif self._measure == MeasureType.TE and i != j:
-                self._it_matrix[epoch, freq_band, i, j] = self.__filter_estimation(s1, s2)
+                return
+                
+            self._it_matrix[epoch, freq_band, i, j] = self.__filter_estimation(s1, s2)
+            return
 
-            elif self._measure == MeasureType.PhyID and i != j:
-                self._it_matrix[epoch][freq_band][i][j] = self.__filter_estimation(s1, s2)
-
-        else:
-
-            if self._measure == MeasureType.MI and j <= i:
-                result = self.__filter_estimation(s1, s2)
-                self._it_matrix[epoch, freq_band, i, j] = result
-                self._it_matrix[epoch, freq_band, j, i] = result
+        if self._measure == MeasureType.MI and j <= i:
+            result = self.__filter_estimation(s1, s2)
+            self._it_matrix[epoch, freq_band, i, j] = result
+            self._it_matrix[epoch, freq_band, j, i] = result
+            return
             
-            elif self._measure == MeasureType.TE:
-                self._it_matrix[epoch, freq_band, i, j] = self.__filter_estimation(s1, s2)
-
-            elif self._measure == MeasureType.PhyID:
-                self._it_matrix[epoch][freq_band][i][j] = self.__filter_estimation(s1, s2)
+        self._it_matrix[epoch, freq_band, i, j] = self.__filter_estimation(s1, s2)
+        return
 
 
     ## MAIN CALCULATION FUNCTIONS         
@@ -862,10 +856,10 @@ class HyperIT:
             include_intra      (bool, optional): Whether to include intra-brain analysis. Defaults to False.
             
         Returns:
-            np.ndarray: A matrix integrated information decomposition atom dictionaries. The shape of the matrix is determined by
+            np.ndarray: A matrix of integrated information decomposition atoms. The shape of the matrix is determined by
             the `include_intra` and `calc_statsig` flags:
-                - If `include_intra` is False, shape is (n_epo, n_freq_bands, n_chan, n_chan).
-                - If `include_intra` is True, shape is (n_epo, n_freq_bands, 2*n_chan, 2*n_chan).
+                - If `include_intra` is False, shape is (n_epo, n_freq_bands, n_chan, n_chan, 16).
+                - If `include_intra` is True, shape is (n_epo, n_freq_bands, 2*n_chan, 2*n_chan, 16).
                 
         Note:
             When `include_intra` is True, the matrix can be segmented accordingly:
