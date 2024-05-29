@@ -586,7 +586,8 @@ class HyperIT:
         with tqdm(total=self._n_epo * self._n_freq_bands * self._loop_range, disable=not self._show_tqdm) as tqdm_bar:
             for epoch in range(self._n_epo):
                 for freq_band in range(self._n_freq_bands):
-                    tqdm_bar.set_description(f"Computing Epoch {epoch+1}/{self._n_epo} | Frequency Band {list(self._freq_bands.keys())[freq_band]}")
+                    description = f"Computing Epoch {epoch+1}/{self._n_epo} | Frequency Band {list(self._freq_bands.keys())[freq_band]}" if self._freq_bands else f"Computing Epoch {epoch+1}/{self._n_epo}"
+                    tqdm_bar.set_description(description)
                     for i in range(self._loop_range):
                         for j in range(self._loop_range):
                             self.__compute_pair_or_group(epoch, freq_band, i, j)
