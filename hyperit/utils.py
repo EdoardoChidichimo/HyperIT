@@ -1,6 +1,5 @@
 import numpy as np
-from jpype import JClass
-from jpype.types import JArray, JDouble
+from jpype import JClass, JArray, JDouble
 import warnings
 
 warnings.filterwarnings("ignore", message="filter_length .* is longer than the signal .*")
