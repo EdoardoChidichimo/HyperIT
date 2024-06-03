@@ -7,7 +7,7 @@ _Hyperscanning Analyses using Information-Theoretic Measures!_
 
 The HyperIT Class is a framework that calculates **Mutual Information** (MI), **Transfer Entropy** (TE), and **Integrated Information Decomposition** ($\Phi\text{ID}$) for **both hyperscanning and intra-brain analyses**. 
 
-Handling continuous time-series data (epoched or otherwise), HyperIT computes these information-theoretic measures at **different frequency resolutions** and **different spatial scales of organisation** (micro, meso, and macro) — **compatible with EEG, MEG, fMRI, and fNIRS data**. Offers parameter customisation and estimator selection (Histogram/Binning, KSG, Box Kernel, Gaussian, and Symbolic) via JIDT. Most estimators are equipped with statistical significance testing based on permutation/bootstrapping approaches, too. Visualisations of MI/TE matrices also provided. 
+Handling continuous time-series data (epoched or otherwise), HyperIT computes these information-theoretic measures at **different spatial scales of organisation** (micro, meso, and macro) — **compatible with EEG, MEG, fMRI, and fNIRS data**. Offers parameter customisation and estimator selection (Histogram/Binning, KSG, Box Kernel, Gaussian, and Symbolic) via JIDT. Most estimators are equipped with statistical significance testing based on permutation/bootstrapping approaches, too. Visualisations of MI/TE matrices are also provided. 
 
 In all, HyperIT is designed to allow researchers to analyse various complex systems at different scales of organisation deploying information-theoretic measures, particularly focusing on neural time-series data in the context of hyperscanning. 
 
@@ -27,7 +27,7 @@ HyperIT.setup_JVM()
 # Gather your data here ...
 
 # Create instance
-it = HyperIT(data1, data2, channel_names, sfreq, freq_bands, verbose)
+it = HyperIT(data1, data2, channel_names, verbose)
 
 # ROIs can be specified and then reset back to default
 it.roi(roi_list)
@@ -36,20 +36,21 @@ it.reset_roi()
 # Calculate Mutual Information and Transfer Entropy
 mi = it.compute_mi(estimator='kernel',
                    include_intra=True,
+                   epoch_average=False
                    calc_sigstats=True,
                    vis=True,
-                   plot_epochs=[1,6],
+                   plot_epochs=[1,6], # use -1 to plot all epochs
                    kwargs) # Pass estimator-specific parameters here
 
 te = it.compute_te(estimator='gaussian',
                    include_intra=False,
+                   epoch_average=True
                    calc_sigstats=True,
                    vis=True,
-                   plot_epochs=[-1], # use -1 to plot all epochs
                    kwargs) 
 
 # Calculate Integrated Information Decomposition
-atoms = it.compute_atoms(tau=5, redundancy='MMI', include_intra=True)
+atoms = it.compute_atoms(tau=5, redundancy='MMI', include_intra=True, epoch_average=True)
 print({key: value for key, value in zip(PhiID_atoms_abbr, atoms)})
 ```
 
