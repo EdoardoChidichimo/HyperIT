@@ -51,7 +51,6 @@ class HyperIT:
         channel_names      (List[str], optional): A list of strings representing the channel names for each participant. [[channel_names_p1], [channel_names_p2]] or [[channel_names_p1]].
         standardise_data        (bool, optional): Whether to standardise the data before analysis. Defaults to True.
         verbose                 (bool, optional): Whether constructor and analyses should output details and progress. Defaults to False.
-        show_tqdm               (bool, optional): Whether to output the tqdm progress bar in the console output. Defaults to True (recommended).
 
     Note:
         This class requires numpy, mne, matplotlib, jpype (with the local infodynamics.jar file), and phyid as dependencies.
@@ -91,7 +90,7 @@ class HyperIT:
 
 
 
-    def __init__(self, data1: np.ndarray, data2: np.ndarray, channel_names: List[str] = None, standardise_data: bool = False, verbose: bool = False, show_tqdm = True) -> None:
+    def __init__(self, data1: np.ndarray, data2: np.ndarray, channel_names: List[str] = None, standardise_data: bool = False, verbose: bool = False) -> None:
 
         if not self.__class__._jvm_initialised:
             raise RuntimeError("JVM has not been started. Call setup_JVM() before creating any instances of HyperIT.")
@@ -103,7 +102,6 @@ class HyperIT:
         self._channel_indices2 = []
 
         self._standardise_data = standardise_data
-        self._show_tqdm = show_tqdm
         self._epoch_avg_later = False
 
         self._data1 = data1
@@ -606,7 +604,7 @@ class HyperIT:
                     self.__compute_pair_or_group(0, i, j)
 
         else:
-            for epoch in tqdm(range(self._n_epo)):
+            for epoch in tqdm(range(self._n_epo), desc=f"Computing Epoch {epoch+1}/{self._n_epo}..."):
                 for i in range(self._loop_range):
                     for j in range(self._loop_range):
                         self.__compute_pair_or_group(epoch, i, j)
