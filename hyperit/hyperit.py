@@ -14,7 +14,6 @@ from phyid.utils import PhiID_atoms_abbr
 from .utils import (
     setup_JArray, 
     ensure_three_dims,
-    bandpass_filter_data, 
     convert_names_to_indices, 
     convert_indices_to_names, 
     set_estimator
@@ -37,8 +36,7 @@ class HyperIT:
 
     HyperIT is equipped to compute pairwise and multivariate Mutual Information (MI), Transfer Entropy (TE),
     and Integrated Information Decomposition (ΦID) for continuous time-series data. Compatible for both
-    intra-brain and inter-brain analyses and for both epoched and unepoched data. Analyses can be conducted
-    at specified frequency bands (via bandpass filtering) and option to standardise data before computing measures.
+    intra-brain and inter-brain analyses and for both epoched and unepoched data. 
     
     Multiple estimator choices and parameter customisations (via JIDT) are available, including KSG, Kernel, Gaussian,
     Symbolic, and Histogram/Binning. 
@@ -51,12 +49,9 @@ class HyperIT:
         data1                       (np.ndarray): Time-series data for participant 1. Can take shape (n_epo, n_chan, n_samples) or (n_chan, n_samples) for epoched and unepoched data, respectively.
         data2                       (np.ndarray): Time-series data for participant 2. Must have the same shape as data1. 
         channel_names      (List[str], optional): A list of strings representing the channel names for each participant. [[channel_names_p1], [channel_names_p2]] or [[channel_names_p1]].
-        sfreq                  (float, optional): Sampling frequency of the data.
-        freq_bands              (dict, optional): Dictionary of frequency bands for bandpass filtering. {band_name: (low_freq, high_freq)}.
         standardise_data        (bool, optional): Whether to standardise the data before analysis. Defaults to True.
         verbose                 (bool, optional): Whether constructor and analyses should output details and progress. Defaults to False.
         show_tqdm               (bool, optional): Whether to output the tqdm progress bar in the console output. Defaults to True (recommended).
-        **filter_options        (dict, optional): Additional keyword arguments for bandpass filtering.
 
     Note:
         This class requires numpy, mne, matplotlib, jpype (with the local infodynamics.jar file), and phyid as dependencies.
@@ -96,7 +91,7 @@ class HyperIT:
 
 
 
-    def __init__(self, data1: np.ndarray, data2: np.ndarray, channel_names: List[str] = None, sfreq: float = None, freq_bands: dict = None, standardise_data: bool = False, verbose: bool = False, show_tqdm = True, **filter_options) -> None:
+    def __init__(self, data1: np.ndarray, data2: np.ndarray, channel_names: List[str] = None, standardise_data: bool = False, verbose: bool = False, show_tqdm = True) -> None:
 
         if not self.__class__._jvm_initialised:
             raise RuntimeError("JVM has not been started. Call setup_JVM() before creating any instances of HyperIT.")
@@ -106,11 +101,10 @@ class HyperIT:
             
         self._channel_indices1 = []
         self._channel_indices2 = []
-        self._sfreq = sfreq or None
-        self._freq_bands = freq_bands or None
-        self._filter_options = filter_options
+
         self._standardise_data = standardise_data
         self._show_tqdm = show_tqdm
+        self._epoch_avg_later = False
 
         self._data1 = data1
         self._data2 = data2
@@ -125,12 +119,10 @@ class HyperIT:
             print("HyperIT object created successfully.")
 
             if self._n_epo > 1:
-                print(f"{'Inter-Brain' if self._hyper else 'Intra-Brain'} analysis and epoched data detected. \nAssuming data passed have shape ({self._n_epo} epochs, {self._n_chan} channels, {self._n_samples} time points).")
+                print(f"Epoched data detected. \nAssuming data passed have shape ({self._n_epo} epochs, {self._n_chan} channels, {self._n_samples} time points).")
             else:
-                print(f"{'Inter-Brain' if self._hyper else 'Intra-Brain'} analysis and unepoched data detected. \nAssuming data passed have shape ({self._n_chan} channels, {self._n_samples} time points).")
+                print(f"Unepoched data detected. \nAssuming data passed have shape ({self._n_chan} channels, {self._n_samples} time points).")
 
-            if self._freq_bands:
-                print(f"Data has been bandpass filtered: {self._freq_bands}.")
 
 
     def __setup(self):
@@ -138,7 +130,7 @@ class HyperIT:
         self.__check_channels()
         self.__configure_data()
 
-        _, self._n_epo, self._n_freq_bands, self._n_chan, self._n_samples = self._all_data.shape
+        _, self._n_epo, self._n_chan, self._n_samples = self._all_data.shape
 
         self._it_matrix = None
         self._initialise_parameter = None
@@ -154,12 +146,8 @@ class HyperIT:
 
     def __repr__(self) -> str:
         """ String representation of HyperIT object. """
-        analysis_type = 'Hyperscanning' if self._hyper else 'Intra-Brain'
-        channel_info = f"{self._channel_names[0]}"  # Assuming self._channel_names[0] is a list of channel names for the first data set
-        
-        # Adding second channel name if interbrain analysis is being conducted
-        if self._hyper:
-            channel_info += f" and {self._channel_names[0][1]}"
+        analysis_type = 'Hyperscanning'
+        channel_info = f"{self._channel_names[0]} and {self._channel_names[0][1]}"  # Assuming self._channel_names[0] is a list of channel names for the first data set
 
         return (f"HyperIT Object: \n"
                 f"{analysis_type} Analysis with {self._n_epo} epochs, {self._n_chan} channels, "
@@ -187,16 +175,12 @@ class HyperIT:
             - Data shapes are consistent.
             - Data dimensions are either 2 or 3 dimensional.
             - Channel names are in correct format and match number of channels in data.
-            - Data are bandpass filtered, if frequency bands are specified.
             - Data are standardised, if specified.
         """
 
         if self._data2 is None or np.array_equal(self._data1, self._data2) or self._data2.shape == (0,):
             self._data2 = self._data1.copy()
-            self._hyper = False
             self._include_intra = False
-        else:
-            self._hyper = True
             
         if not all(isinstance(data, np.ndarray) for data in [self._data1, self._data2]):
             raise ValueError("Time-series data must be numpy arrays.")
@@ -208,7 +192,6 @@ class HyperIT:
             raise ValueError(f"Unexpected number of dimensions in time-series data: {self._data1.ndim}. Expected 3 dimensions (epochs, channels, time_points) or 2 dimensions (channels, time_points) or 1 dimension (time_points).")
 
         # Ensure data is 3 dimensional and has shape (n_epochs, n_channels, n_samples). 
-        # If freq_bands have been specified, this will become 4 dimensional: (n_epochs, n_freq_bands, n_channels, n_samples)
         self._data1, self._data2 = map(ensure_three_dims, (self._data1, self._data2))
 
     def __check_channel_names(self) -> None:
@@ -248,18 +231,15 @@ class HyperIT:
             self._channel_names = [np.arange(self._n_chan), np.arange(self._n_chan)]
             
     def __configure_data(self) -> None:
-        """ Configures the data for analysis by bandpass filtering and standardising. """
-
-        if self._freq_bands:
-            self._data1, self._data2 = bandpass_filter_data(self._data1, self._sfreq, self._freq_bands, **self._filter_options), bandpass_filter_data(self._data2, self._sfreq, self._freq_bands, **self._filter_options)
-        else:
-            self._data1, self._data2 = np.expand_dims(self._data1, axis=1), np.expand_dims(self._data2, axis=1)
+        """ Configures the data for analysis by standardising and storing original data to be recalled if roi resets. """
 
         if self._standardise_data:
             self._data1 = (self._data1 - np.mean(self._data1, axis=-1, keepdims=True)) / np.std(self._data1, axis=-1, keepdims=True)
             self._data2 = (self._data2 - np.mean(self._data2, axis=-1, keepdims=True)) / np.std(self._data2, axis=-1, keepdims=True)
             
         self._all_data = np.stack([self._data1, self._data2], axis=0)
+
+        # both data should now be three dimensional!
             
         
         
@@ -334,6 +314,7 @@ class HyperIT:
         self._initialise_parameter = None
         self._channel_indices1, self._channel_indices2 = self._orig_channel_indices_1, self._orig_channel_indices_2
         self._roi = []
+        
 
 
     ## HARD-CODED HISTOGRAM AND SYMBOLIC MI ESTIMATION FUNCTIONS
@@ -463,24 +444,24 @@ class HyperIT:
 
         # POINTWISE CHANNEL COMPARISON (If ROI is selected, this will pick specific channels, otherwise data stays the same)
         if self._scale_of_organisation == 1:
-            self._it_data1 = self._data1[:, :, self._channel_indices1, :]
-            self._it_data2 = self._data2[:, :, self._channel_indices2, :]
+            self._it_data1 = self._data1[:, self._channel_indices1, :]
+            self._it_data2 = self._data2[:, self._channel_indices2, :]
             self._n_chan = len(self._channel_indices1)
         else:
             self._it_data1 = self._data1.copy()
-            self._it_data1 = self._data2.copy()
+            self._it_data2 = self._data2.copy()
 
         self._loop_range = self._n_chan if self._scale_of_organisation == 1 else self._soi_groups
         
 
-        if self._hyper and self._include_intra:
+        if self._include_intra:
             self._loop_range *= 2 
-            # Will give shape (n_epo, n_freq_bands, n_chan_or_group*2, n_samples)
+            # Will give shape (n_epo, n_chan_or_group*2, n_samples)
             # Note that data1 and data2 will be identical
             temp1 = self._it_data1.copy()
             temp2 = self._it_data2.copy()
-            self._it_data1 = np.concatenate((temp1, temp2), axis=2)
-            self._it_data2 = np.concatenate((temp1, temp2), axis=2)
+            self._it_data1 = np.concatenate((temp1, temp2), axis=1)
+            self._it_data2 = np.concatenate((temp1, temp2), axis=1)
 
             if self._scale_of_organisation != 1:
                 temp_list = [self._roi[0],[[item + self._n_chan for item in sublist] for sublist in self._roi[1]]]
@@ -489,13 +470,13 @@ class HyperIT:
         if self._measure == MeasureType.MI or self._measure == MeasureType.TE:
 
             if self._calc_statsig:
-                self._it_matrix = np.zeros((self._n_epo, self._n_freq_bands, self._loop_range, self._loop_range, 4))
+                self._it_matrix = np.zeros((1, self._loop_range, self._loop_range, 4)) if self._epoch_average else np.zeros((self._n_epo, self._loop_range, self._loop_range, 4))
                 return
             
-            self._it_matrix = np.zeros((self._n_epo, self._n_freq_bands, self._loop_range, self._loop_range))
+            self._it_matrix = np.zeros((1, self._loop_range, self._loop_range)) if self._epoch_average else np.zeros((self._n_epo, self._loop_range, self._loop_range))
             return
         
-        self._it_matrix = np.zeros((self._n_epo, self._n_freq_bands, self._loop_range, self._loop_range, 16))
+        self._it_matrix = np.zeros((1, self._loop_range, self._loop_range, 16)) if self._epoch_average else np.zeros((self._n_epo, self._loop_range, self._loop_range, 16))
         
 
     def __estimate_it(self, s1: np.ndarray, s2: np.ndarray) -> float | np.ndarray:
@@ -513,8 +494,28 @@ class HyperIT:
             
         return float(result)
     
+    def __estimate_it_epoch_average(self, s1: np.ndarray, s2: np.ndarray) -> float:
+        """ Estimates Mutual Information or Transfer Entropy for a pair of time-series signals using JIDT estimators. 
+            s1 and s2 should have shape (epochs, samples) referring to a pairwise comparison of two channels."""
+
+        self._Calc.initialise(*self._initialise_parameter) if self._initialise_parameter else self._Calc.initialise()
+        self._Calc.startAddObservations()
+        for epoch in range(self._n_epo):
+            self._Calc.addObservations(setup_JArray(s1[epoch]), setup_JArray(s2[epoch]))
+
+        self._Calc.finaliseAddObservations()
+        result = self._Calc.computeAverageLocalOfObservations() * np.log(2)
+
+        # Conduct significance testing
+        if self._calc_statsig:
+            stat_sig = self._Calc.computeSignificance(self._stat_sig_perm_num)
+            return np.array([result, stat_sig.getMeanOfDistribution(), stat_sig.getStdOfDistribution(), stat_sig.pValue])
+
+        return result
+    
     def __estimate_atoms(self, s1: np.ndarray, s2: np.ndarray) -> np.ndarray:
-        """ Estimates Integrated Information Decomposition for a pair of time-series signals using phyid package. """
+        """ Estimates Integrated Information Decomposition for a pair of time-series signals using phyid package. 
+            If epoch_average, s1 and s2 should have shape (epochs, samples) referring to a pairwise comparison of two channels."""
         
         try:
             atoms_results_xy, _ = calc_PhiID(s1, s2, tau=self._tau, kind='gaussian', redundancy=self._redundancy)
@@ -525,10 +526,11 @@ class HyperIT:
             
         calc_atoms_xy = np.mean(np.array([atoms_results_xy[_] for _ in PhiID_atoms_abbr]), axis=1)
         return calc_atoms_xy
-        
+    
 
     def __filter_estimation(self, s1: np.ndarray, s2: np.ndarray) -> float | np.ndarray:
-        """ Filters the estimation in case incompatible with JIDT. """
+        """ Filters the estimation in case incompatible with JIDT. 
+            s1 and s2 should have shape (samples) if epoch_average = False; or (samples, epochs) if epoch_average = True, referring to a pairwise comparison of two channels. """
 
         if self._measure == MeasureType.MI:
             match self._estimator:
@@ -540,9 +542,10 @@ class HyperIT:
         elif self._measure == MeasureType.PhyID:
             return self.__estimate_atoms(s1, s2)
 
-        return self.__estimate_it(s1, s2)
+        return self.__estimate_it_epoch_average(s1, s2) if self._epoch_average else self.__estimate_it(s1, s2)
+    
 
-    def __compute_pair_or_group(self, epoch: int, freq_band: int, i: int, j: int) -> None:
+    def __compute_pair_or_group(self, epoch: int, i: int, j: int) -> None:
         """ Computes the Mutual Information or Transfer Entropy for a pair of channels or groups of channels. """
 
         channel_or_group_i = i if self._scale_of_organisation == 1 else self._roi[i]
@@ -551,64 +554,100 @@ class HyperIT:
         # Data needs to have shape (samples, channels/groups), if not pointwise comparison 
         # (this is how both JIDT and phyid handle and expect incoming multivariate data)
         # (Note that .T does not affect pointwise comparison as it is already in the correct shape)
-        s1, s2 = self._it_data1[epoch, freq_band, channel_or_group_i, :].T, self._it_data2[epoch, freq_band, channel_or_group_j, :].T
+        # If epoch_average, epoch = 0 (this dimension will later be squeezed out but left here for similarity in data structure handling)
 
-        if ((not self._hyper) or self._include_intra) and not i==j:
-            
-            if self._measure == MeasureType.MI and j < i:
-                result = self.__filter_estimation(s1, s2)
-                self._it_matrix[epoch, freq_band, i, j] = result
-                self._it_matrix[epoch, freq_band, j, i] = result
+        if self._epoch_average:
+            s1, s2 = self._it_data1[:, channel_or_group_i, :].T, self._it_data2[:, channel_or_group_j, :].T
+        else:
+            s1, s2 = self._it_data1[epoch, channel_or_group_i, :].T, self._it_data2[epoch, channel_or_group_j, :].T
+
+
+        if self._include_intra:
+
+            # Avoid self-connections in matrix
+            if i == j:
                 return
-                
-            self._it_matrix[epoch, freq_band, i, j] = self.__filter_estimation(s1, s2)
+            
+            # MI is symmetric so only compute half of matrix
+            if self._measure == MeasureType.MI:
+                if i > j:
+                    result = self.__filter_estimation(s1, s2)
+                    self._it_matrix[epoch, i, j] = result
+                    self._it_matrix[epoch, j, i] = result
+                    return
+                else:
+                    return
+            
+            self._it_matrix[epoch, i, j] = self.__filter_estimation(s1, s2)
             return
 
-        if self._measure == MeasureType.MI and j <= i:
-            result = self.__filter_estimation(s1, s2)
-            self._it_matrix[epoch, freq_band, i, j] = result
-            self._it_matrix[epoch, freq_band, j, i] = result
-            return
-            
-        self._it_matrix[epoch, freq_band, i, j] = self.__filter_estimation(s1, s2)
+        # ELSE:
+        
+        # MI is symmetric so only compute half of matrix
+        if self._measure == MeasureType.MI:
+            # The diagonal should be computed! (As this refers to B1Ch1 --> B2Ch1 rather than B1Ch1 --> B1Ch1)
+            if i >= j:
+                result = self.__filter_estimation(s1, s2)
+                self._it_matrix[epoch, i, j] = result
+                self._it_matrix[epoch, j, i] = result
+                return
+            else:
+                return
+
+        self._it_matrix[epoch, i, j] = self.__filter_estimation(s1, s2)
         return
+
+
+    def __build_matrix(self) -> None:
+
+        if self._epoch_average:
+            for i in range(self._loop_range):
+                for j in range(self._loop_range):
+                    self.__compute_pair_or_group(0, i, j)
+
+        else:
+            for epoch in tqdm(range(self._n_epo)):
+                for i in range(self._loop_range):
+                    for j in range(self._loop_range):
+                        self.__compute_pair_or_group(epoch, i, j)
+
 
 
     ## MAIN CALCULATION FUNCTIONS         
 
     def __main_calc(self) -> np.ndarray:
 
-        if self._include_intra and not self._hyper:
-            raise ValueError("Intra-brain analyses are only available for hyperscanning set-ups. Identical data or only one set of data was detected.")
-
         self.__setup_matrix()
 
-        with tqdm(total=self._n_epo * self._n_freq_bands * self._loop_range, disable=not self._show_tqdm) as tqdm_bar:
-            for epoch in range(self._n_epo):
-                for freq_band in range(self._n_freq_bands):
-                    description = f"Computing Epoch {epoch+1}/{self._n_epo} | Frequency Band {list(self._freq_bands.keys())[freq_band]}" if self._freq_bands else f"Computing Epoch {epoch+1}/{self._n_epo}"
-                    tqdm_bar.set_description(description)
-                    for i in range(self._loop_range):
-                        for j in range(self._loop_range):
-                            self.__compute_pair_or_group(epoch, freq_band, i, j)
-                        tqdm_bar.update(1)
-                
+        self.__build_matrix()
+
+        if self._epoch_average:
+            self._it_matrix = np.squeeze(self._it_matrix, axis=0) # remove redundant epoch dimension to give shape (2*ch, 2*ch, :)
+        if self._epoch_avg_later:
+            self._it_matrix = np.squeeze(np.mean(self._it_matrix, axis=0))
+
         if self._vis:
             self.__prepare_vis()
 
         return self._it_matrix
 
-    def __setup_mite_calc(self, estimator: str, include_intra: bool, calc_statsig: bool, stat_sig_perm_num: int, p_threshold: float, vis: bool, plot_epochs: List, **kwargs) -> np.ndarray:
+    def __setup_mite_calc(self, estimator: str, include_intra: bool, calc_statsig: bool, stat_sig_perm_num: int, p_threshold: float, epoch_average: bool, vis: bool, plot_epochs: List, **kwargs) -> np.ndarray:
         """ General function for computing Mutual Information or Transfer Entropy. """
 
         self._estimator = estimator.lower() if not (self._measure == MeasureType.MI and estimator.lower() == 'ksg') else 'ksg1'
         self._calc_statsig = calc_statsig
         self._include_intra = include_intra
         self._vis = vis
-        self._plot_epochs = (plot_epochs or None) if self._vis else None
+        self._plot_epochs = (plot_epochs or None) if self._vis and not epoch_average else None
         self._params = kwargs
         self._stat_sig_perm_num = stat_sig_perm_num
         self._p_threshold = p_threshold
+        self._epoch_average = epoch_average
+        self._epoch_avg_later = False
+
+        if (self._measure == MeasureType.MI and self._estimator in ["histogram", "symbolic"]) or (self._roi != []):
+            self._epoch_average = False
+            self._epoch_avg_later = True
         
         # Set up the estimator and properties
         self.__which_estimator(str(self._measure))
@@ -639,6 +678,9 @@ class HyperIT:
             if not self._plot_epochs:
                 raise ValueError("No valid epochs found in the input list.")
             
+        if self._epoch_average or self._epoch_avg_later:
+            self._plot_epochs = None
+            
         if self._n_chan == 1:
             print("Single channel detected. No visualisation possible.")
             return
@@ -648,6 +690,61 @@ class HyperIT:
     
         self.__plot_it()
 
+    def __plot_matrix(self, results: np.ndarray, epoch: int, title: str, global_max: float, source_channel_names: List, target_channel_names: List, source_str: List, target_str: List) -> None:
+
+        plt.figure(figsize=(12, 10))
+        img = plt.imshow(results, cmap='BuPu', vmin=0, vmax=global_max, aspect='auto')
+
+        if epoch is not None:
+            plt.title(f'{title} Epoch {epoch+1}', pad=20)
+        else:
+            plt.title(title, pad=20)
+            
+        if self._calc_statsig:
+            for i in range(self._loop_range):
+                for j in range(self._loop_range):
+                    if i == j:
+                        continue
+                    p_val = float(self._it_matrix[epoch, i, j, 3]) if epoch is not None else float(self._it_matrix[i, j, 3])
+                    if p_val < self._p_threshold:
+                        value = self._it_matrix[epoch, i, j, 0] if epoch is not None else self._it_matrix[i, j, 0]
+                        normalised_value = (value - np.min(results)) / (np.max(results) - np.min(results))
+                        text_colour = 'white' if normalised_value > 0.5 else 'black'
+                        plt.text(j, i, f'p={p_val:.2f}', ha='center', va='center', color=text_colour, fontsize=8, fontweight='bold')
+
+
+        cbar = plt.colorbar(img)
+        cbar.set_label(self._measure_title, rotation=270, labelpad=20)
+        n_ticks = 8
+        ticks = np.linspace(0, global_max, n_ticks)
+        cbar.set_ticks(ticks)
+        cbar.set_ticklabels([f"{tick:.2f}" if tick != global_max else f"{tick:.2f} (max)" for tick in ticks])
+
+        x_tick_label = target_channel_names.copy()
+        y_tick_label = source_channel_names.copy()
+        ticks = range(self._loop_range)
+        rotate_x = 90 
+        rotate_y = 0 
+
+        if self._include_intra:
+            if self._scale_of_organisation != 1:
+                x_tick_label = source_str + target_str
+            else:
+                x_tick_label = ['X_' + str(s) for s in y_tick_label] + ['Y_' + str(s) for s in x_tick_label]
+            
+            y_tick_label = x_tick_label
+        else:
+            plt.xlabel('Target')
+            plt.ylabel('Source')
+
+        plt.xticks(ticks, x_tick_label, rotation=rotate_x) 
+        plt.yticks(ticks, y_tick_label, rotation=rotate_y)
+
+        plt.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False, labeltop=True)
+        plt.tick_params(axis='y', which='both', right=False, left=True, labelleft=True)
+        plt.show()
+
+
     def __plot_it(self) -> None:
         """Plots the Mutual Information or Transfer Entropy matrix for visualisation. 
         Axes labelled with source and target channel names. 
@@ -656,6 +753,8 @@ class HyperIT:
         title = f'{self._measure_title} | {self._estimator_name} \n'
         source_channel_names = convert_indices_to_names(self._channel_names, self._channel_indices1, 0) 
         target_channel_names = convert_indices_to_names(self._channel_names, self._channel_indices2, 1)
+        source_str = []
+        target_str = []
 
         global_max = np.max(self._it_matrix[..., 0]) if self._calc_statsig else np.max(self._it_matrix)
 
@@ -663,98 +762,39 @@ class HyperIT:
             
             print("Plotting for grouped channels.")
             print("Source Groups:")
-            source_str = []
             for i in range(self._soi_groups):
                 source_str.append(f'X{i+1}_{source_channel_names[i]}')
                 print(f"{i+1}: {source_channel_names[i]}")
 
             print("\nTarget Groups:")
-            target_str = []
             for i in range(self._soi_groups):
                 target_str.append(f'Y{i+1}_{target_channel_names[i]}')
                 print(f"{i+1}: {target_channel_names[i]}")
 
+        if self._plot_epochs is None:
+            results = self._it_matrix[:, :, 0] if self._calc_statsig else self._it_matrix[:, :]
+            self.__plot_matrix(results, None, title, global_max, source_channel_names, target_channel_names, source_str, target_str)
+            return
+
         for epoch in self._plot_epochs:
-            for freq_band in range(self._n_freq_bands):
-                results = self._it_matrix[epoch, freq_band, :, :, 0] if self._calc_statsig else self._it_matrix[epoch, freq_band, :, :]
-                
-                plt.figure(figsize=(12, 10))
-                img = plt.imshow(results, cmap='BuPu', vmin=0, vmax=global_max, aspect='auto')
-
-                band_description = ""
-                if self._freq_bands:
-                    band_name, band_range = list(self._freq_bands.items())[freq_band]
-                    band_description = f"{band_name}: {band_range}"
-
-                if self._n_epo > 1:
-                    if band_description:
-                        plt.title(f'{title} Epoch {epoch+1}, Frequency Band {band_description}', pad=20)
-                    else:
-                        plt.title(f'{title} Epoch {epoch+1}', pad=20)
-                else:
-                    if band_description:
-                        plt.title(f'{title} Frequency Band {band_description}', pad=20)
-                    else:
-                        plt.title(title, pad=20)
-                    
-                if self._calc_statsig:
-                    for i in range(self._loop_range):
-                        for j in range(self._loop_range):
-                            if i == j:
-                                continue
-                            p_val = float(self._it_matrix[epoch, freq_band, i, j, 3])
-                            if p_val < self._p_threshold:
-                                normalised_value = (self._it_matrix[epoch, freq_band, i, j, 0] - np.min(results)) / (np.max(results) - np.min(results))
-                                text_colour = 'white' if normalised_value > 0.5 else 'black'
-                                plt.text(j, i, f'p={p_val:.2f}', ha='center', va='center', color=text_colour, fontsize=8, fontweight='bold')
-
-
-                cbar = plt.colorbar(img)
-                cbar.set_label(self._measure_title, rotation=270, labelpad=20)
-                n_ticks = 8
-                ticks = np.linspace(0, global_max, n_ticks)
-                # ticks = list(cbar.get_ticks())
-                # if global_max not in ticks:
-                #     ticks.append(global_max)
-                # ticks = sorted(set(ticks))
-                cbar.set_ticks(ticks)
-                cbar.set_ticklabels([f"{tick:.2f}" if tick != global_max else f"{tick:.2f} (max)" for tick in ticks])
-
-                x_tick_label = target_channel_names.copy()
-                y_tick_label = source_channel_names.copy()
-                ticks = range(self._loop_range)
-                rotate_x = 90 
-                rotate_y = 0 
-
-                if self._hyper and self._include_intra:
-                    if self._scale_of_organisation != 1:
-                        x_tick_label = str(source_str) + str(target_str)
-                    else:
-                        x_tick_label = ['X_' + str(s) for s in y_tick_label] + ['Y_' + str(s) for s in x_tick_label]
-                    
-                    y_tick_label = x_tick_label
-                else:
-                    plt.xlabel('Target')
-                    plt.ylabel('Source')
-
-                plt.xticks(ticks, x_tick_label, rotation=rotate_x) 
-                plt.yticks(ticks, y_tick_label, rotation=rotate_y)
-
-                plt.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False, labeltop=True)
-                plt.tick_params(axis='y', which='both', right=False, left=True, labelleft=True)
-                plt.show()
+            results = self._it_matrix[epoch, :, :, 0] if self._calc_statsig else self._it_matrix[epoch, :, :]
+            self.__plot_matrix(results, epoch, title, global_max, source_channel_names, target_channel_names, source_str, target_str)
+        
 
 
     ## HIGH-LEVEL INTERFACE FUNCTIONS
 
-    def compute_mi(self, estimator: str = 'kernel', include_intra: bool = False, calc_statsig: bool = False, stat_sig_perm_num: int = 100, p_threshold: float = 0.05, vis: bool = False, plot_epochs: List[int] = None, **kwargs) -> np.ndarray:
+    def compute_mi(self, estimator: str = 'kernel', include_intra: bool = False, epoch_average: bool = True, calc_statsig: bool = False, stat_sig_perm_num: int = 100, p_threshold: float = 0.05, vis: bool = False, plot_epochs: List[int] = None, **kwargs) -> np.ndarray:
         """
         Computes Mutual Information (MI) between data (time-series signals) using specified estimator.
 
         Args:
             estimator               (str, optional): Specifies the MI estimator to use. Defaults to 'kernel'.
             include_intra          (bool, optional): If True, includes intra-brain analyses. Defaults to False.
+            epoch_average         (bool, optional): If True, results are averaged across epochs. Defaults to True.
             calc_statsig          (bool, optional): If True, performs statistical significance testing. Defaults to False.
+            stat_sig_perm_num      (int, optional): Number of permutations for statistical significance testing. Defaults to 100.
+            p_threshold           (float, optional): Threshold for statistical significance testing. Defaults to 0.05.
             vis                    (bool, optional): If True, results will be visualised. Defaults to False.
             plot_epochs       (List[int], optional): Specifies which epochs to plot. None plots all. Defaults to None.
             **kwargs                               : Additional keyword arguments for the MI estimator.
@@ -762,8 +802,8 @@ class HyperIT:
         Returns:
             np.ndarray: A symmetric mutual information matrix. The shape of the matrix is determined by
             the `include_intra` and `calc_statsig` flags:
-                - If `include_intra` is False, shape is (n_epo, n_freq_bands, n_chan, n_chan).
-                - If `include_intra` is True, shape is (n_epo, n_freq_bands, 2*n_chan, 2*n_chan).
+                - If `include_intra` is False, shape is (n_epo, n_chan, n_chan).
+                - If `include_intra` is True, shape is (n_epo, 2*n_chan, 2*n_chan).
                 - If `calc_statsig` is True, an additional last dimension (size 4) contains statistical
                 significance results: [MI value, mean, standard deviation, p-value].
 
@@ -794,16 +834,19 @@ class HyperIT:
         """
         self._measure = MeasureType.MI
         self._measure_title = 'Mutual Information'
-        return self.__setup_mite_calc(estimator, include_intra, calc_statsig, stat_sig_perm_num, p_threshold, vis, plot_epochs, **kwargs)
+        return self.__setup_mite_calc(estimator, include_intra, calc_statsig, stat_sig_perm_num, p_threshold, epoch_average, vis, plot_epochs, **kwargs)
 
-    def compute_te(self, estimator: str = 'kernel', include_intra: bool = False, calc_statsig: bool = False, stat_sig_perm_num: int = 100, p_threshold: float = 0.05, vis: bool = False, plot_epochs: List[int] = None, **kwargs) -> np.ndarray:
+    def compute_te(self, estimator: str = 'kernel', include_intra: bool = False, epoch_average: bool = True, calc_statsig: bool = False, stat_sig_perm_num: int = 100, p_threshold: float = 0.05,  vis: bool = False, plot_epochs: List[int] = None, **kwargs) -> np.ndarray:
         """
         Computes Transfer Entropy (TE) between time-series data using a specified estimator. This function allows for intra-brain and inter-brain analyses and includes optional statistical significance testing. Data1 is considered the source and Data2 the target.
 
         Args:
             estimator               (str, optional): Specifies the TE estimator to use. Defaults to 'kernel'.
             include_intra          (bool, optional): Whether to include intra-brain comparisons in the output matrix. Defaults to False.
-            calc_statsig          (bool, optional): Whether to calculate statistical significance of TE values. Defaults to False.
+            epoch_average          (bool, optional): If True, results are averaged across epochs. Defaults to True.
+            calc_statsig           (bool, optional): Whether to calculate statistical significance of TE values. Defaults to False.
+            stat_sig_perm_num       (int, optional): Number of permutations for statistical significance testing. Defaults to 100.
+            p_threshold           (float, optional): Threshold for statistical significance testing. Defaults to 0.05.
             vis                    (bool, optional): Enables visualisation of the TE matrix if set to True. Defaults to False.
             plot_epochs       (List[int], optional): Specifies which epochs to plot. If None, plots all epochs. Defaults to None.
             **kwargs                               : Additional parameters for the TE estimator.
@@ -811,8 +854,8 @@ class HyperIT:
         Returns:
             np.ndarray: A transfer entropy matrix. The shape of the matrix is determined by
             the `include_intra` and `calc_statsig` flags:
-                - If `include_intra` is False, shape is (n_epo, n_freq_bands, n_chan, n_chan).
-                - If `include_intra` is True, shape is (n_epo, n_freq_bands, 2*n_chan, 2*n_chan).
+                - If `include_intra` is False, shape is (n_epo, n_chan, n_chan).
+                - If `include_intra` is True, shape is (n_epo, 2*n_chan, 2*n_chan).
                 - If `calc_statsig` is True, an additional last dimension (size 4) contains statistical
                 significance results: [MI value, mean, standard deviation, p-value].
         Note:
@@ -844,10 +887,10 @@ class HyperIT:
         """
         self._measure = MeasureType.TE
         self._measure_title = 'Transfer Entropy'
-        return self.__setup_mite_calc(estimator, include_intra, calc_statsig, stat_sig_perm_num, p_threshold, vis, plot_epochs, **kwargs)
+        return self.__setup_mite_calc(estimator, include_intra, calc_statsig, stat_sig_perm_num, p_threshold, epoch_average, vis, plot_epochs, **kwargs)
 
 
-    def compute_atoms(self, tau: int = 1, redundancy: str = 'MMI', include_intra: bool = False) -> Tuple[np.ndarray, np.ndarray]:
+    def compute_atoms(self, tau: int = 1, redundancy: str = 'MMI', include_intra: bool = False, epoch_average: bool = True) -> Tuple[np.ndarray, np.ndarray]:
         """
         Function to compute Integrated Information Decomposition (ΦID) between data (time-series signals) instantiated in the HyperIT object.
 
@@ -855,12 +898,13 @@ class HyperIT:
             tau                 (int, optional): Time-lag parameter. Defaults to 1.
             redundancy          (str, optional): Redundancy function to use. Defaults to 'MMI' (Minimum Mutual Information).
             include_intra      (bool, optional): Whether to include intra-brain analysis. Defaults to False.
+            epoch_average      (bool, optional): If True, results are averaged across epochs. Defaults to True.
             
         Returns:
             np.ndarray: A matrix of integrated information decomposition atoms. The shape of the matrix is determined by
             the `include_intra` and `calc_statsig` flags:
-                - If `include_intra` is False, shape is (n_epo, n_freq_bands, n_chan, n_chan, 16).
-                - If `include_intra` is True, shape is (n_epo, n_freq_bands, 2*n_chan, 2*n_chan, 16).
+                - If `include_intra` is False, shape is (n_epo, n_chan, n_chan, 16).
+                - If `include_intra` is True, shape is (n_epo, 2*n_chan, 2*n_chan, 16).
                 
         Note:
             When `include_intra` is True, the matrix can be segmented accordingly:
@@ -878,4 +922,9 @@ class HyperIT:
         
         self._measure = MeasureType.PhyID
         self._measure_title = 'Integrated Information Decomposition'
+
+        # Given phyid only takes (samples, n), cannot pass multiple channels (ROIs) with epochs. 
+        # Revert back to looping through each epoch and channel combination and average at the end.
+        self._epoch_average = False if self._roi is not None else epoch_average 
+        self._epoch_avg_later = True
         return self.__setup_atom_calc(tau, redundancy, include_intra)
