@@ -604,8 +604,9 @@ class HyperIT:
                     self.__compute_pair_or_group(0, i, j)
 
         else:
-            for epoch in tqdm(range(self._n_epo), desc=f"Computing Epoch {epoch+1}/{self._n_epo}..."):
-                for i in range(self._loop_range):
+            for epoch in range(self._n_epo):
+                tqdm_desc = f"Computing Epoch {epoch+1}/{self._n_epo}..."
+                for i in tqdm(range(self._loop_range), desc=tqdm_desc):
                     for j in range(self._loop_range):
                         self.__compute_pair_or_group(epoch, i, j)
 
