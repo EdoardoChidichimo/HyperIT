@@ -96,7 +96,8 @@ class HyperIT:
         if not self.__class__._jvm_initialised:
             raise RuntimeError("JVM has not been started. Call setup_JVM() before creating any instances of HyperIT.")
 
-        self._verbose: bool = verbose
+        self._verbose = verbose
+        self._show_tqdm = show_tqdm
         self._channel_names = channel_names or None   
             
         self._channel_indices1 = []
