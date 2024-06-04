@@ -128,7 +128,7 @@ class HyperIT:
         self.__check_channels()
         self.__configure_data()
 
-        _, self._n_epo, self._n_chan, self._n_samples = self._all_data.shape
+        self._n_epo, self._n_chan, self._n_samples = self._all_data.shape
 
         self._it_matrix = None
         self._initialise_parameter = None
