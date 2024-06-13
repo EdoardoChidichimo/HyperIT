@@ -483,7 +483,15 @@ class HyperIT:
         """ Estimates Mutual Information or Transfer Entropy for a pair of time-series signals using JIDT estimators. """
 
         # Initialise parameter describes the dimensions of the data
-        self._Calc.initialise(*self._initialise_parameter) if self._initialise_parameter else self._Calc.initialise()
+        
+        if not self._initialise_parameter:
+            self._Calc.initialise()
+        else:
+            if self._measure == MeasureType.TE and self._estimator == 'symbolic': # symbolic estimator takes only one argument so cannot be unrolled.
+                self._Calc.initialise(self._initialise_parameter) 
+            else:
+                self._Calc.initialise(*self._initialise_parameter)
+                
         self._Calc.setObservations(setup_JArray(s1), setup_JArray(s2))
         result = self._Calc.computeAverageLocalOfObservations() * np.log(2)
 
@@ -498,7 +506,14 @@ class HyperIT:
         """ Estimates Mutual Information or Transfer Entropy for a pair of time-series signals using JIDT estimators. 
             s1 and s2 should have shape (epochs, samples) referring to a pairwise comparison of two channels."""
 
-        self._Calc.initialise(*self._initialise_parameter) if self._initialise_parameter else self._Calc.initialise()
+        if not self._initialise_parameter:
+            self._Calc.initialise()
+        else:
+            if self._measure == MeasureType.TE and self._estimator == 'symbolic': # symbolic estimator takes only one argument so cannot be unrolled.
+                self._Calc.initialise(self._initialise_parameter) 
+            else:
+                self._Calc.initialise(*self._initialise_parameter)
+            
         self._Calc.startAddObservations()
         for epoch in range(self._n_epo):
             self._Calc.addObservations(setup_JArray(s1[epoch]), setup_JArray(s2[epoch]))
