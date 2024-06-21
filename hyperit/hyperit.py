@@ -427,8 +427,8 @@ class HyperIT:
     def __delay_timeseries(self, lag: int) -> None:
         """ Only for Kernel TE which currently has no built-in delay function. Manually delay data2 by specified lag"""
 
-        newY = np.array(self._data2[..., lag:])
-        newX = np.array(self._data1[..., :-lag])
+        newY = np.array(self._data1[..., lag:])
+        newX = np.array(self._data2[..., :-lag])
         
         self._data1 = newX
         self._data2 = newY
