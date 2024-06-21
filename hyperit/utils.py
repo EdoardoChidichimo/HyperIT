@@ -104,7 +104,10 @@ def set_estimator(estimator_type: str, measure: str, params: dict) -> tuple:
                 "l_HISTORY": str(params.get('l', 1)), "l_TAU": str(params.get('l_tau', 1)),
                 "DELAY": str(params.get('delay', 1)), "k": str(params.get('kraskov_param', 4))
             }),
-            'kernel': ('Box Kernel Estimator', 'infodynamics.measures.continuous.kernel.TransferEntropyCalculatorMultiVariateKernel', {'KERNEL_WIDTH': str(params.get('kernel_width', 0.5))}),
+            'kernel': ('Box Kernel Estimator', 'infodynamics.measures.continuous.kernel.TransferEntropyCalculatorMultiVariateKernel', {
+                "KERNEL_WIDTH": str(params.get('kernel_width', 0.5)), 
+                "DELAY": str(params.get('delay', 1))
+            }),
             'gaussian': ('Gaussian Estimator', 'infodynamics.measures.continuous.gaussian.TransferEntropyCalculatorMultiVariateGaussian', {
                 "k_HISTORY": str(params.get('k', 1)), "k_TAU": str(params.get('k_tau', 1)),
                 "l_HISTORY": str(params.get('l', 1)), "l_TAU": str(params.get('l_tau', 1)),
