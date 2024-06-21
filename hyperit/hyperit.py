@@ -661,7 +661,7 @@ class HyperIT:
         self._epoch_average = epoch_average
         self._epoch_avg_later = False
 
-        if (self._measure == MeasureType.MI and self._estimator in ["histogram", "symbolic"]) or (self._roi != []):
+        if self._epoch_average and ((self._measure == MeasureType.MI and self._estimator in ["histogram", "symbolic"]) or (self._roi != [])):
             self._epoch_average = False
             self._epoch_avg_later = True
         
