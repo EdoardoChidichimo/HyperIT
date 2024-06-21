@@ -449,7 +449,7 @@ class HyperIT:
         if initialise_parameter:
             self._initialise_parameter = initialise_parameter
 
-        if self._measure = MeasureType.TE and self._estimator_name == 'kernel':
+        if self._measure == MeasureType.TE and self._estimator_name == 'kernel':
             __delay_timeseries(int(self._params.get("delay",1)))
             
 
