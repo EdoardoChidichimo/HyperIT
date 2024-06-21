@@ -785,16 +785,16 @@ class HyperIT:
 
     ## HIGH-LEVEL INTERFACE FUNCTIONS
 
-    def compute_mi(self, estimator: str = 'kernel', include_intra: bool = False, epoch_average: bool = True, calc_statsig: bool = False, stat_sig_perm_num: int = 100, p_threshold: float = 0.05, vis: bool = False, plot_epochs: List[int] = None, **kwargs) -> np.ndarray:
+    def compute_mi(self, estimator: str = 'gaussian', include_intra: bool = False, epoch_average: bool = True, calc_statsig: bool = False, stat_sig_perm_num: int = 100, p_threshold: float = 0.05, vis: bool = False, plot_epochs: List[int] = None, **kwargs) -> np.ndarray:
         """
         Computes Mutual Information (MI) between data (time-series signals) using specified estimator.
 
         Args:
-            estimator               (str, optional): Specifies the MI estimator to use. Defaults to 'kernel'.
+            estimator               (str, optional): Specifies the MI estimator to use. Defaults to 'gaussian'.
             include_intra          (bool, optional): If True, includes intra-brain analyses. Defaults to False.
-            epoch_average         (bool, optional): If True, results are averaged across epochs. Defaults to True.
-            calc_statsig          (bool, optional): If True, performs statistical significance testing. Defaults to False.
-            stat_sig_perm_num      (int, optional): Number of permutations for statistical significance testing. Defaults to 100.
+            epoch_average          (bool, optional): If True, results are averaged across epochs. Defaults to True.
+            calc_statsig           (bool, optional): If True, performs statistical significance testing. Defaults to False.
+            stat_sig_perm_num       (int, optional): Number of permutations for statistical significance testing. Defaults to 100.
             p_threshold           (float, optional): Threshold for statistical significance testing. Defaults to 0.05.
             vis                    (bool, optional): If True, results will be visualised. Defaults to False.
             plot_epochs       (List[int], optional): Specifies which epochs to plot. None plots all. Defaults to None.
@@ -802,11 +802,15 @@ class HyperIT:
 
         Returns:
             np.ndarray: A symmetric mutual information matrix. The shape of the matrix is determined by
-            the `include_intra` and `calc_statsig` flags:
-                - If `include_intra` is False, shape is (n_epo, n_chan, n_chan).
-                - If `include_intra` is True, shape is (n_epo, 2*n_chan, 2*n_chan).
-                - If `calc_statsig` is True, an additional last dimension (size 4) contains statistical
-                significance results: [MI value, mean, standard deviation, p-value].
+            the `include_intra`, `epoch_average`, and `calc_statsig` flags:
+                - If `include_intra` is False, shape is (..., n_chan, n_chan, ...).
+                - If `include_intra` is True, shape is (..., 2*n_chan, 2*n_chan, ...).
+
+                - If `epoch_average` is True, shape is (n_chan, n_chan, ...) or (2*n_chan, 2*n_chan, ...).
+                - If `epoch_average` is False, shape is (n_epo, n_chan, n_chan, ...) or (n_epo, 2*n_chan, 2*n_chan, ...).
+
+                - If `calc_statsig` is True, an additional last dimension (size 4) contains statistical significance results: [MI value, mean, standard deviation, p-value].
+                
 
         Note:
             When `include_intra` is True, the matrix can be segmented accordingly:
@@ -837,12 +841,12 @@ class HyperIT:
         self._measure_title = 'Mutual Information'
         return self.__setup_mite_calc(estimator, include_intra, calc_statsig, stat_sig_perm_num, p_threshold, epoch_average, vis, plot_epochs, **kwargs)
 
-    def compute_te(self, estimator: str = 'kernel', include_intra: bool = False, epoch_average: bool = True, calc_statsig: bool = False, stat_sig_perm_num: int = 100, p_threshold: float = 0.05,  vis: bool = False, plot_epochs: List[int] = None, **kwargs) -> np.ndarray:
+    def compute_te(self, estimator: str = 'gaussian', include_intra: bool = False, epoch_average: bool = True, calc_statsig: bool = False, stat_sig_perm_num: int = 100, p_threshold: float = 0.05,  vis: bool = False, plot_epochs: List[int] = None, **kwargs) -> np.ndarray:
         """
         Computes Transfer Entropy (TE) between time-series data using a specified estimator. This function allows for intra-brain and inter-brain analyses and includes optional statistical significance testing. Data1 is considered the source and Data2 the target.
 
         Args:
-            estimator               (str, optional): Specifies the TE estimator to use. Defaults to 'kernel'.
+            estimator               (str, optional): Specifies the TE estimator to use. Defaults to 'gaussian'.
             include_intra          (bool, optional): Whether to include intra-brain comparisons in the output matrix. Defaults to False.
             epoch_average          (bool, optional): If True, results are averaged across epochs. Defaults to True.
             calc_statsig           (bool, optional): Whether to calculate statistical significance of TE values. Defaults to False.
@@ -854,11 +858,15 @@ class HyperIT:
 
         Returns:
             np.ndarray: A transfer entropy matrix. The shape of the matrix is determined by
-            the `include_intra` and `calc_statsig` flags:
-                - If `include_intra` is False, shape is (n_epo, n_chan, n_chan).
-                - If `include_intra` is True, shape is (n_epo, 2*n_chan, 2*n_chan).
-                - If `calc_statsig` is True, an additional last dimension (size 4) contains statistical
-                significance results: [MI value, mean, standard deviation, p-value].
+            the `include_intra`, `epoch_average`, and `calc_statsig` flags:
+                - If `include_intra` is False, shape is (..., n_chan, n_chan, ...).
+                - If `include_intra` is True, shape is (..., 2*n_chan, 2*n_chan, ...).
+
+                - If `epoch_average` is True, shape is (n_chan, n_chan, ...) or (2*n_chan, 2*n_chan, ...).
+                - If `epoch_average` is False, shape is (n_epo, n_chan, n_chan, ...) or (n_epo, 2*n_chan, 2*n_chan, ...).
+
+                - If `calc_statsig` is True, an additional last dimension (size 4) contains statistical significance results: [MI value, mean, standard deviation, p-value].
+                
         Note:
             When `include_intra` is True, the matrix can be segmented accordingly:
                 - `intra1`: matrix[:, :, :n_chan, :n_chan]
@@ -903,9 +911,14 @@ class HyperIT:
             
         Returns:
             np.ndarray: A matrix of integrated information decomposition atoms. The shape of the matrix is determined by
-            the `include_intra` and `calc_statsig` flags:
-                - If `include_intra` is False, shape is (n_epo, n_chan, n_chan, 16).
-                - If `include_intra` is True, shape is (n_epo, 2*n_chan, 2*n_chan, 16).
+            the `include_intra`, `epoch_average`, and `calc_statsig` flags:
+                - If `include_intra` is False, shape is (..., n_chan, n_chan, ...).
+                - If `include_intra` is True, shape is (..., 2*n_chan, 2*n_chan, ...).
+
+                - If `epoch_average` is True, shape is (n_chan, n_chan, ...) or (2*n_chan, 2*n_chan, ...).
+                - If `epoch_average` is False, shape is (n_epo, n_chan, n_chan, ...) or (n_epo, 2*n_chan, 2*n_chan, ...).
+
+                - If `calc_statsig` is True, an additional last dimension (size 4) contains statistical significance results: [MI value, mean, standard deviation, p-value].
                 
         Note:
             When `include_intra` is True, the matrix can be segmented accordingly:
