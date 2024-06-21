@@ -424,6 +424,16 @@ class HyperIT:
 
     ## ESTIMATION AND HELPER FUNCTIONS
 
+    def __delay_timeseries(self, lag: int) -> None:
+        """ Only for Kernel TE which currently has no built-in delay function. Manually delay data2 by specified lag"""
+
+        newY = np.array(self._data2[..., lag:])
+        newX = np.array(self._data1[..., :-lag])
+        
+        self._data1 = newX
+        self._data2 = newY
+        self._n_samples = newX.shape[-1]
+
     def __which_estimator(self, measure: str) -> None:
         """Determines the estimator to use based on the measure type and sets the estimator, properties, and initialisation parameters."""
 
@@ -438,6 +448,10 @@ class HyperIT:
 
         if initialise_parameter:
             self._initialise_parameter = initialise_parameter
+
+        if self._measure = MeasureType.TE and self._estimator_name == 'kernel':
+            __delay_timeseries(int(self._params.get("delay",1)))
+            
 
     def __setup_matrix(self) -> None:
         """ Sets up the matrices for Mutual Information, Transfer Entropy, or Integrated Information Decomposition. """
@@ -814,7 +828,7 @@ class HyperIT:
             p_threshold           (float, optional): Threshold for statistical significance testing. Defaults to 0.05.
             vis                    (bool, optional): If True, results will be visualised. Defaults to False.
             plot_epochs       (List[int], optional): Specifies which epochs to plot. None plots all. Defaults to None.
-            **kwargs                               : Additional keyword arguments for the MI estimator.
+            **kwargs                               : Additional keyword arguments for MI estimators.
 
         Returns:
             np.ndarray: A symmetric mutual information matrix. The shape of the matrix is determined by
@@ -870,7 +884,7 @@ class HyperIT:
             p_threshold           (float, optional): Threshold for statistical significance testing. Defaults to 0.05.
             vis                    (bool, optional): Enables visualisation of the TE matrix if set to True. Defaults to False.
             plot_epochs       (List[int], optional): Specifies which epochs to plot. If None, plots all epochs. Defaults to None.
-            **kwargs                               : Additional parameters for the TE estimator.
+            **kwargs                               : Additional parameters for TE estimators.
 
         Returns:
             np.ndarray: A transfer entropy matrix. The shape of the matrix is determined by
@@ -899,6 +913,7 @@ class HyperIT:
                 - normalise (bool, default=True).
             - `kernel`:
                 - kernel_width (float, default=0.5).
+                - delay (int, default=1)
                 - normalise (bool, default=True).
             - `gaussian`:
                 - k, k_tau (int, default=1): Target and source embedding history length.
