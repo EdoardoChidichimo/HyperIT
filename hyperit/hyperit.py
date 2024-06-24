@@ -440,11 +440,21 @@ class HyperIT:
         self._estimator_name, calculator, properties, initialise_parameter = set_estimator(self._estimator, measure, self._params) # from utils.py function
 
         if calculator:
+            self._CalcClass = calculator
             self._Calc = calculator()
 
         if properties:
             for key, value in properties.items():
-                self._Calc.setProperty(key, value)
+                if key == "K":
+                    self._Calc.setProperty(self._CalcClass.K_PROP_NAME, value)
+                elif key == "K_TAU":
+                    self._Calc.setProperty(self._CalcClass.K_TAU_PROP_NAME, value)
+                elif key == "L":
+                    self._Calc.setProperty(self._CalcClass.L_PROP_NAME, value)
+                elif key == "L_TAU":
+                    self._Calc.setProperty(self._CalcClass.L_TAU_PROP_NAME, value)
+                else:
+                    self._Calc.setProperty(key, value)
 
         if initialise_parameter:
             self._initialise_parameter = initialise_parameter
@@ -529,7 +539,6 @@ class HyperIT:
                 self._Calc.initialise(*self._initialise_parameter)
             
         self._Calc.startAddObservations()
-        print(f"N. EPOS: {self._n_epo}", flush=True)
         for epoch in range(self._n_epo):
             self._Calc.addObservations(setup_JArray(s1[epoch]), setup_JArray(s2[epoch]))
 
