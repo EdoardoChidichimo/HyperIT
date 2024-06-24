@@ -492,7 +492,7 @@ class HyperIT:
         
         self._it_matrix = np.zeros((1, self._loop_range, self._loop_range, 16)) if self._epoch_average else np.zeros((self._n_epo, self._loop_range, self._loop_range, 16))
         
-    def __initialise_estimator(self, s1: np.ndarray, s2: np.ndarray) -> None:
+    def __initialise_estimator(self) -> None:
         
         if not self._initialise_parameter:
             self._Calc.initialise()
@@ -502,10 +502,6 @@ class HyperIT:
             if self._estimator == 'symbolic': # symbolic estimator takes only one argument so cannot be unrolled.
                 self._Calc.initialise(self._initialise_parameter) 
                 return
-
-            # self._Calc.initialise(1, 1, *self._initialise_parameter)
-            self._Calc.initialise()
-            return
         
         self._Calc.initialise(*self._initialise_parameter)
     
