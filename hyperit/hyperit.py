@@ -529,6 +529,7 @@ class HyperIT:
                 self._Calc.initialise(*self._initialise_parameter)
             
         self._Calc.startAddObservations()
+        print(f"N. EPOS: {self._n_epo}", flush=True)
         for epoch in range(self._n_epo):
             self._Calc.addObservations(setup_JArray(s1[epoch]), setup_JArray(s2[epoch]))
 
