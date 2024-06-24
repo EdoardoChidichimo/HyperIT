@@ -99,35 +99,20 @@ def set_estimator(estimator_type: str, measure: str, params: dict) -> tuple:
             'symbolic': ('Symbolic Estimator', None, {})
         },
         'te': {
-            'ksg': ('KSG Estimator', 
-                    'infodynamics.measures.continuous.kraskov.TransferEntropyCalculatorMultiVariateKraskov', 
-                    {
-                        "k_HISTORY": str(params.get('k', 1)), "k_TAU": str(params.get('k_tau', 1)),
-                        "l_HISTORY": str(params.get('l', 1)), "l_TAU": str(params.get('l_tau', 1)),
-                        "DELAY": str(params.get('delay', 1)), "k": str(params.get('kraskov_param', 4))
-                    }), 
-                    # TEviaCondMI requires initialise(sourceDim, destDim, k, ktau, l, ltau, delay) so sourceDim and destDim will be added later
-            
-            'kernel': ('Box Kernel Estimator', 
-                       'infodynamics.measures.continuous.kernel.TransferEntropyCalculatorMultiVariateKernel', 
-                       {
-                            "KERNEL_WIDTH": str(params.get('kernel_width', 0.5))
-                        }), 
-            
-            'gaussian': ('Gaussian Estimator', 
-                         'infodynamics.measures.continuous.gaussian.TransferEntropyCalculatorMultiVariateGaussian', 
-                         {
-                            "k_HISTORY": str(params.get('k', 1)), "k_TAU": str(params.get('k_tau', 1)),
-                            "l_HISTORY": str(params.get('l', 1)), "l_TAU": str(params.get('l_tau', 1)),
-                            "DELAY": str(params.get('delay', 1)), "BIAS_CORRECTION": str(params.get('bias_correction', False)).lower()
-                        }),  
-            
-            'symbolic': ('Symbolic Estimator', 
-                         'infodynamics.measures.continuous.symbolic.TransferEntropyCalculatorSymbolic', 
-                         {
-                             "k_HISTORY": str(params.get('k', 1))
-                         }, 
-                        2)
+            'ksg': ('KSG Estimator', 'infodynamics.measures.continuous.kraskov.TransferEntropyCalculatorMultiVariateKraskov', {
+                "k_HISTORY": str(params.get('k', 1)), "k_TAU": str(params.get('k_tau', 1)),
+                "l_HISTORY": str(params.get('l', 1)), "l_TAU": str(params.get('l_tau', 1)),
+                "DELAY": str(params.get('delay', 1)), "k": str(params.get('kraskov_param', 4))
+            }),
+            'kernel': ('Box Kernel Estimator', 'infodynamics.measures.continuous.kernel.TransferEntropyCalculatorMultiVariateKernel', {
+                "KERNEL_WIDTH": str(params.get('kernel_width', 0.5))
+            }),
+            'gaussian': ('Gaussian Estimator', 'infodynamics.measures.continuous.gaussian.TransferEntropyCalculatorMultiVariateGaussian', {
+                "k_HISTORY": str(params.get('k', 1)), "k_TAU": str(params.get('k_tau', 1)),
+                "l_HISTORY": str(params.get('l', 1)), "l_TAU": str(params.get('l_tau', 1)),
+                "DELAY": str(params.get('delay', 1)), "BIAS_CORRECTION": str(params.get('bias_correction', False)).lower()
+            }),
+            'symbolic': ('Symbolic Estimator', 'infodynamics.measures.continuous.symbolic.TransferEntropyCalculatorSymbolic', {"k_HISTORY": str(params.get('k', 1))}, 2)
         }
     }
 
