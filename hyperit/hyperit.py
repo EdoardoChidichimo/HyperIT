@@ -504,6 +504,8 @@ class HyperIT:
                 return
             if s1.ndim > 1:
                 self._Calc.initialise(s1.ndim, s2.ndim, *self._initialise_parameter)
+                return
+            self._Calc.initialise() # univariate TE addObservations should not specify
             return
         
         self._Calc.initialise(*self._initialise_parameter)
