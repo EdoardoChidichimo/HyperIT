@@ -565,7 +565,7 @@ class HyperIT:
         elif self._measure == MeasureType.PhyID:
             return self.__estimate_atoms(s1, s2)
 
-        self.__initialise_estimator(s1, s2)
+        self.__initialise_estimator()
 
         return self.__estimate_it_epoch_average(s1, s2) if self._epoch_average else self.__estimate_it(s1, s2)
     
