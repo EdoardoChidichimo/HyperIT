@@ -503,7 +503,8 @@ class HyperIT:
                 self._Calc.initialise(self._initialise_parameter) 
                 return
 
-            self._Calc.initialise(30, 30, *self._initialise_parameter)
+            # self._Calc.initialise(1, 1, *self._initialise_parameter)
+            self._Calc.initialise()
             return
         
         self._Calc.initialise(*self._initialise_parameter)
