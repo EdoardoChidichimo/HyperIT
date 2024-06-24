@@ -502,8 +502,8 @@ class HyperIT:
             if self._estimator == 'symbolic': # symbolic estimator takes only one argument so cannot be unrolled.
                 self._Calc.initialise(self._initialise_parameter) 
                 return
-            
-            self._Calc.initialise(s1.ndim, s2.ndim, *self._initialise_parameter)
+            if s1.ndim > 1:
+                self._Calc.initialise(s1.ndim, s2.ndim, *self._initialise_parameter)
             return
         
         self._Calc.initialise(*self._initialise_parameter)
