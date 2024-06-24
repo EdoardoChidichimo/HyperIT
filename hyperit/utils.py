@@ -138,4 +138,6 @@ def set_estimator(estimator_type: str, measure: str, params: dict) -> tuple:
     else:
         raise ValueError(f"Estimator type {estimator_type} not supported for measure {measure}.")
 
+    print(properties, flush=True)
+    print(initialise_parameter, flush=True)
     return estimator_name, calculator, properties, initialise_parameter
