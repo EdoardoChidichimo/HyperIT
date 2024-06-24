@@ -445,13 +445,13 @@ class HyperIT:
 
         if properties:
             for key, value in properties.items():
-                if key == "K":
+                if key == "k_HISTORY":
                     self._Calc.setProperty(self._CalcClass.K_PROP_NAME, value)
-                elif key == "K_TAU":
+                elif key == "k_TAU":
                     self._Calc.setProperty(self._CalcClass.K_TAU_PROP_NAME, value)
-                elif key == "L":
+                elif key == "l_HISTORY":
                     self._Calc.setProperty(self._CalcClass.L_PROP_NAME, value)
-                elif key == "L_TAU":
+                elif key == "l_TAU":
                     self._Calc.setProperty(self._CalcClass.L_TAU_PROP_NAME, value)
                 else:
                     self._Calc.setProperty(key, value)
