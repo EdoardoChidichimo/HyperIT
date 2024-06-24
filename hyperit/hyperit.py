@@ -440,21 +440,11 @@ class HyperIT:
         self._estimator_name, calculator, properties, initialise_parameter = set_estimator(self._estimator, measure, self._params) # from utils.py function
 
         if calculator:
-            self._CalcClass = calculator
             self._Calc = calculator()
 
         if properties:
             for key, value in properties.items():
-                if key == "k_HISTORY":
-                    self._Calc.setProperty(self._CalcClass.K_PROP_NAME, value)
-                elif key == "k_TAU":
-                    self._Calc.setProperty(self._CalcClass.K_TAU_PROP_NAME, value)
-                elif key == "l_HISTORY":
-                    self._Calc.setProperty(self._CalcClass.L_PROP_NAME, value)
-                elif key == "l_TAU":
-                    self._Calc.setProperty(self._CalcClass.L_TAU_PROP_NAME, value)
-                else:
-                    self._Calc.setProperty(key, value)
+                self._Calc.setProperty(key, value)
 
         if initialise_parameter:
             self._initialise_parameter = initialise_parameter
