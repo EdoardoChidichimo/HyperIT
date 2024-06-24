@@ -447,6 +447,9 @@ class HyperIT:
                 self._Calc.setProperty(key, value)
 
         if initialise_parameter:
+            if self._measure == MeasureType.TE:
+                dataDim = self._data1.ndim
+                self._initialise_parameter = (dataDim, dataDim, *initialise_parameter)
             self._initialise_parameter = initialise_parameter
 
         if self._measure == MeasureType.TE and self._estimator_name == 'kernel':
