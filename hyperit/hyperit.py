@@ -728,10 +728,10 @@ class HyperIT:
         plt.figure(figsize=(12, 10))
         img = plt.imshow(results, cmap='BuPu', vmin=0, vmax=global_max, aspect='auto')
 
-        if epoch is not None:
-            plt.title(f'{title} Epoch {epoch+1}', pad=20)
-        else:
-            plt.title(title, pad=20)
+        # if epoch is not None:
+            # plt.title(f'{title} Epoch {epoch+1}', pad=20)
+        # else:
+        plt.title(title, pad=20)
             
         if self._calc_statsig:
             for i in range(self._loop_range):
