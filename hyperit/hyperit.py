@@ -191,6 +191,10 @@ class HyperIT:
         if self._data1.ndim not in [1,2,3]:
             raise ValueError(f"Unexpected number of dimensions in time-series data: {self._data1.ndim}. Expected 3 dimensions (epochs, channels, time_points) or 2 dimensions (channels, time_points) or 1 dimension (time_points).")
 
+        self._cannot_be_epoched = False
+        if self._data1.ndim == 1:
+            self._cannot_be_epoched = True
+        
         # Ensure data is 3 dimensional and has shape (n_epochs, n_channels, n_samples). 
         self._data1, self._data2 = map(ensure_three_dims, (self._data1, self._data2))
 
@@ -669,6 +673,8 @@ class HyperIT:
         self._params = kwargs
         self._stat_sig_perm_num = stat_sig_perm_num
         self._p_threshold = p_threshold
+        if epoch_average and self._cannot_be_epoched:
+            raise ValueError("epoch_average cannot be true when data is 1-dimensional!")
         self._epoch_average = epoch_average
         self._epoch_avg_later = False
 
