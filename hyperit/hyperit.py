@@ -743,12 +743,14 @@ class HyperIT:
                         value = self._it_matrix[epoch, i, j, 0] if epoch is not None else self._it_matrix[i, j, 0]
                         normalised_value = (value - np.min(results)) / (np.max(results) - np.min(results))
                         text_colour = 'white' if normalised_value > 0.5 else 'black'
-                        p_value_text = 'p<0.01' if p_val < 0.01 else f'p={p_val:.2f}'
+                        p_value_text = f'p={p_val:.3f}'
+                        if p_value_text == 'p=0.000':
+                            p_value_text = 'p<0.001'
                         plt.text(j, i, p_value_text, ha='center', va='center', color=text_colour, fontsize=8, fontweight='bold')
 
 
         cbar = plt.colorbar(img)
-        cbar.set_label(self._measure_title, rotation=270, labelpad=20)
+        # cbar.set_label(self._measure_title, rotation=270, labelpad=20)
         n_ticks = 8
         ticks = np.linspace(0, global_max, n_ticks)
         cbar.set_ticks(ticks)
